@@ -1,26 +1,18 @@
-# Complete README.md & GitHub Push Guide
+# PBL Management System — Beaconhouse National University
 
-Here's your complete README.md file and step-by-step instructions to push it to GitHub.
-
----
-
-## 1. README.md (Full Version)
-
-Create this file in your project root. I'll provide it as a complete, copy-paste-ready file:
-
-```markdown
-# 🎓 PBL Management System
-
-> **Project-Based Learning Management System** — A complete web platform for managing Final Year Projects (FYP) at Superior University.
+> **Project-Based Learning Management System** — A comprehensive web platform for managing Final Year Projects (FYP) at Beaconhouse National University (BNU).
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Status](https://img.shields.io/badge/status-development-yellow)
+![BNU](https://img.shields.io/badge/BNU-Beaconhouse%20National%20University-purple)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Team](https://img.shields.io/badge/team-4%20members-purple)
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![Flask](https://img.shields.io/badge/flask-2.3.3-lightgrey)
+![React](https://img.shields.io/badge/react-18-61DAFB)
 
 ---
 
-## 📋 Table of Contents
+## 📖 Table of Contents
 
 - [Project Overview](#-project-overview)
 - [Key Features](#-key-features)
@@ -28,111 +20,124 @@ Create this file in your project root. I'll provide it as a complete, copy-paste
 - [Technology Stack](#-technology-stack)
 - [Quick Start](#-quick-start)
 - [Project Structure](#-project-structure)
+- [API Documentation](#-api-documentation)
 - [Development Phases](#-development-phases)
-- [Team Members](#-team-members)
+- [Team](#-team)
 - [Contributing](#-contributing)
-- [Deployment](#-deployment)
 - [Environment Variables](#-environment-variables)
+- [Deployment](#-deployment)
 - [License](#-license)
 
 ---
 
 ## 🎯 Project Overview
 
-The **PBL Management System** is a comprehensive web-based solution designed to digitize and streamline the entire Final Year Project (FYP) lifecycle at Superior University.
+The **PBL Management System** is a web-based solution designed specifically for **Beaconhouse National University (BNU)** to digitize and streamline the entire Final Year Project (FYP) lifecycle.
 
-### What It Does
+### The Problem We Solve
 
-| Phase | Description |
-|-------|-------------|
-| 📚 **Course Setup** | Configure courses with department, group size limits, and deadlines |
-| 👥 **Student Enrollment** | Add students individually or bulk import via Excel with auto-generated credentials |
-| 🤝 **Group Formation** | Students create/join groups, leaders approve requests, managers oversee |
-| 📝 **Iteration Management** | Define project milestones with weighted rubrics (0-5 scale) |
-| ✅ **Evaluation System** | Rubric-based scoring with locked submissions (no edits after submit) |
-| 🎪 **Exhibition** | Final project evaluation with dedicated criteria (4 categories) |
-| 📊 **Feedback & Surveys** | Create and analyze feedback surveys with visual reports |
-| 📢 **Announcements** | Publish updates with file attachments |
-| 📈 **Reporting** | Group performance, iteration completion, and department-wise reports |
+| Challenge | Our Solution |
+|-----------|--------------|
+| Manual group formation | Online group creation with join requests |
+| Paper-based submissions | Digital iteration submissions with deadlines |
+| Inconsistent evaluation | Standardized rubric-based scoring |
+| Fragmented communication | Centralized announcements and meeting logs |
+| No visibility for HOD/Dean | Real-time dashboards with analytics |
+
+### Complete FYP Lifecycle
+
+```text
+Course Setup → Student Enrollment → Group Formation → Iteration Submissions → Evaluation → Exhibition → Reporting
+```
+
+Here is the complete, cleaned, and professionally formatted `README.md` file for your GitHub repository. All non-standard characters and indentation issues have been resolved, and it is ready to copy and paste directly into your project.
+
+```
 
 ---
 
-## ⭐ Key Features
+## ✨ Key Features
 
-### For PBL Manager
-- ✅ Full CRUD on Students, Teachers, Departments, Courses
-- ✅ Bulk import students via Excel (auto-emails credentials)
-- ✅ View students without groups + send reminders
-- ✅ Create and manage iterations with rubrics
-- ✅ Approve/drop groups
-- ✅ Assign groups to evaluators
-- ✅ Create surveys and view aggregated reports
-- ✅ Publish announcements with attachments
-- ✅ Recycle bin (soft delete + recover)
-
-### For Students
-- ✅ Create, browse, and join groups
-- ✅ Accept/reject join requests (if leader)
-- ✅ View group members and status
-- ✅ Submit iteration work (with late detection)
-- ✅ Fill surveys (one response per survey)
-- ✅ View announcements
-
-### For Evaluators
-- ✅ View assigned groups
-- ✅ Evaluate iterations with rubrics (locked after submission)
-- ✅ Exhibition evaluation (4 criteria, locked after submission)
-- ✅ Record meeting minutes
-
-### For HOD / HOD I&C
-- ✅ Department-scoped read-only dashboard
-- ✅ View groups, reports, and charts
-- ✅ Export to PDF
-
-### For Dean
-- ✅ University-wide read-only dashboard
-- ✅ Department-wise breakdown
-- ✅ View students without groups (all departments)
-- ✅ Export to PDF
+| Category | Feature | Description |
+| --- | --- | --- |
+| **Student Management** | Individual Add | Add students with auto-generated credentials |
+|  | Bulk Import | Excel/CSV upload with email notifications |
+|  | Recycle Bin | Soft-delete and recover students |
+|  | Filters | Search by department, section, session |
+| **Group Management** | Create Group | Students form groups with project titles |
+|  | Join Requests | Browse and request to join groups |
+|  | Leader Approval | Accept/reject join requests |
+|  | Approve Groups | PBL Manager approves groups |
+| **Course Management** | Course CRUD | Configure courses with group size limits |
+|  | Department CRUD | Manage academic departments |
+|  | Teacher CRUD | Internal and external evaluators |
+| **Iterations** | Create Iterations | Define milestones with deadlines |
+|  | Rubrics Builder | Weighted criteria with 0-5 levels |
+|  | Submissions | File uploads with late detection |
+| **Evaluation** | Rubric Scoring | Weighted evaluation with auto-calculated totals |
+|  | Exhibition Evaluation | Final project showcase evaluation |
+|  | Locked Submissions | Once submitted, cannot be changed |
+| **Surveys** | Create Surveys | Custom questions with 1-5 scale |
+|  | Student Responses | One response per student |
+|  | Reports | Visual charts and detailed data |
+| **Communication** | Announcements | Rich text updates with attachments |
+|  | Meeting Logs | Record supervision meetings |
+| **Oversight** | HOD Dashboard | Department-scoped read-only access |
+|  | Dean Dashboard | University-wide cross-department view |
+|  | Reports | Group and iteration performance |
 
 ---
 
 ## 👥 User Roles
 
-| Role | Login | Access Level | Scope |
-|------|-------|--------------|-------|
-| **PBL Manager** | `manager@superior.edu.pk` | Full CRUD on everything | University-wide |
-| **Student** | `ROLL-NO@SUPERIOR.EDU.PK` | Own profile + own group | Personal + Group |
-| **Evaluator** | Personal email | Assigned groups only | Assigned Groups |
-| **HOD** | `hod@superior.edu.pk` | Read-only | Own Department |
-| **HOD I&C** | `hodic@superior.edu.pk` | Read-only | Own Department |
-| **Dean** | `dean@superior.edu.pk` | Read-only | University-wide |
+| Role | Login Credentials | Access Scope |
+| --- | --- | --- |
+| **PBL Manager** | `manager@bnu.edu.pk` | Full CRUD on everything, approves groups, assigns evaluators, publishes announcements/surveys/iterations |
+| **Student** | `ROLL-NO@BNU.EDU.PK` | Own profile, own group, create/browse/join groups, submit work, fill surveys |
+| **Evaluator** | Own email | Assigned groups only, rubric scoring, exhibition evaluation, meeting logs |
+| **HOD** | `hod@bnu.edu.pk` | Read-only, department-scoped oversight |
+| **HOD I&C** | `hodic@bnu.edu.pk` | Read-only, department-scoped oversight |
+| **Dean** | `dean@bnu.edu.pk` | Read-only, university-wide oversight |
 
-> ⚠️ **Security Note:** Role-based access is enforced **server-side** (Flask), not just hidden in the UI.
+### Permission Matrix
+
+| Action | Manager | Student | Evaluator | HOD | Dean |
+| --- | --- | --- | --- | --- | --- |
+| CRUD Students | ✅ | ❌ | ❌ | ❌ | ❌ |
+| CRUD Courses | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Approve Groups | ✅ | ❌ | ✅ | ❌ | ❌ |
+| Create Group | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Join Group | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Submit Work | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Evaluate | ❌ | ❌ | ✅ | ❌ | ❌ |
+| View Reports | ✅ | ❌ | ❌ | ✅ | ✅ |
 
 ---
 
 ## 🏗️ Technology Stack
 
 | Layer | Technology | Version | Purpose |
-|-------|------------|---------|---------|
-| **Frontend** | React | 18+ | Component-based UI |
-| | Vite | Latest | Fast build tool |
-| | Tailwind CSS | Latest | Utility-first styling |
-| | Axios | Latest | HTTP client |
-| | React Router DOM | 6+ | Client-side routing |
-| **Backend** | Python Flask | 2.x | REST API |
-| | Flask-CORS | Latest | Cross-origin support |
-| | PyMongo | Latest | MongoDB driver |
-| | PyJWT | Latest | JWT authentication |
-| | bcrypt | Latest | Password hashing |
+| --- | --- | --- | --- |
+| **Frontend** | React | 18.2+ | Component-based UI |
+|  | Vite | Latest | Fast build tool |
+|  | Tailwind CSS | Latest | Utility-first styling |
+|  | React Router DOM | 6+ | Client-side routing |
+|  | Axios | Latest | HTTP client |
+| **Backend** | Python Flask | 2.3.3 | REST API framework |
+|  | Flask-CORS | 4.0.0 | Cross-origin support |
+|  | Flask-PyMongo | 2.3.0 | MongoDB driver |
+|  | PyJWT | 2.8.0 | JWT authentication |
+|  | Bcrypt | 4.0.1 | Password hashing |
 | **Database** | MongoDB Atlas | M0 (free) | Document database |
+| **Authentication** | JWT + bcrypt | Custom | Secure token-based auth |
+| **File Storage** | Cloudinary | Dev | Free tier for testing |
+|  | Local Server | Prod | Full control |
 | **Dev Environment** | Docker | Latest | Containerization |
-| | Docker Compose | Latest | Multi-container orchestration |
-| **Version Control** | Git + GitHub | - | Code management |
+|  | Docker Compose | Latest | Multi-container orchestration |
+| **Version Control** | Git + GitHub | - | Code collaboration |
 | **Hosting (Dev)** | Vercel | Free | Frontend deployment |
-| | Render | Free | Backend deployment |
-| **Hosting (Prod)** | University Linux Server | - | Full control deployment |
+|  | Render | Free | Backend deployment |
+| **Hosting (Prod)** | BNU Linux Server | - | Full control deployment |
 | **Process Manager** | Gunicorn + systemd | - | Production process management |
 
 ---
@@ -141,67 +146,69 @@ The **PBL Management System** is a comprehensive web-based solution designed to 
 
 ### Prerequisites
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed
-- [Git](https://git-scm.com/downloads) installed
-- Ports: 5000 (backend), 27017 (MongoDB) available
+* [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed
+* [Git](https://git-scm.com/downloads) installed
+* Basic knowledge of terminal/command line
 
-### Installation
+### 1. Clone the Repository
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/ismailrzw/pbl-management-system.git
+git clone [https://github.com/ismailrzw/pbl-management-system.git](https://github.com/ismailrzw/pbl-management-system.git)
 cd pbl-management-system
 
-# 2. Start all services (MongoDB + Backend + Frontend)
+```
+
+### 2. Start the Application
+
+```bash
+# Start all services (MongoDB + Backend + Frontend)
 docker compose up --build
 
-# 3. In a new terminal, test the backend
-curl http://localhost:5000/api/health
 ```
 
-### Expected Response
-
-```json
-{
-  "status": "ok",
-  "message": "Backend is running"
-}
-```
-
-### Access Points
+### 3. Access the Application
 
 | Service | URL |
-|---------|-----|
+| --- | --- |
 | **Frontend** | http://localhost:5173 |
 | **Backend API** | http://localhost:5000/api |
-| **MongoDB** | mongodb://localhost:27017 |
 | **Health Check** | http://localhost:5000/api/health |
+| **MongoDB** | mongodb://localhost:27017 |
 
-### Stop Everything
+### 4. Test the Backend
 
 ```bash
-docker compose down
+# Health check
+curl http://localhost:5000/api/health
+
+# Expected response:
+# {"status":"ok","message":"Backend is running"}
+
 ```
 
-### Fresh Start (Delete Data)
+### 5. Stop the Application
 
 ```bash
+# Stop all containers
+docker compose down
+
+# Stop and remove volumes (fresh start)
 docker compose down -v
-docker compose up --build
+
 ```
 
 ---
 
 ## 📁 Project Structure
 
-```
+```text
 pbl-management-system/
-├── backend/                          # Flask REST API
+├── backend/                     # Flask REST API
 │   ├── app/
-│   │   ├── __init__.py              # Flask app factory
-│   │   ├── config.py                # Configuration
-│   │   ├── extensions.py            # Extensions (MongoDB, CORS)
-│   │   ├── models/                  # MongoDB schemas
+│   │   ├── __init__.py          # Flask app factory
+│   │   ├── config.py            # Configuration
+│   │   ├── extensions.py        # MongoDB connection
+│   │   ├── models/              # MongoDB schemas
 │   │   │   ├── user.py
 │   │   │   ├── student.py
 │   │   │   ├── teacher.py
@@ -212,466 +219,345 @@ pbl-management-system/
 │   │   │   ├── evaluation.py
 │   │   │   ├── survey.py
 │   │   │   └── meeting.py
-│   │   ├── routes/                  # API endpoints (Blueprints)
+│   │   ├── routes/              # API endpoints
 │   │   │   ├── auth.py
-│   │   │   ├── manager/
-│   │   │   │   ├── students.py
-│   │   │   │   ├── departments.py
-│   │   │   │   ├── courses.py
-│   │   │   │   ├── teachers.py
-│   │   │   │   ├── groups.py
-│   │   │   │   └── iterations.py
-│   │   │   ├── student/
-│   │   │   │   ├── groups.py
-│   │   │   │   ├── iterations.py
-│   │   │   │   └── surveys.py
-│   │   │   ├── evaluator/
-│   │   │   │   ├── evaluations.py
-│   │   │   │   ├── exhibition.py
-│   │   │   │   └── meetings.py
-│   │   │   └── oversight/           # HOD, HODI&C, Dean
-│   │   ├── services/                # Business logic
+│   │   │   ├── students.py
+│   │   │   ├── groups.py
+│   │   │   ├── iterations.py
+│   │   │   ├── evaluations.py
+│   │   │   ├── surveys.py
+│   │   │   └── reports.py
+│   │   ├── services/            # Business logic
+│   │   │   ├── student_service.py
+│   │   │   ├── group_service.py
 │   │   │   ├── email_service.py
-│   │   │   ├── storage_service.py
-│   │   │   └── group_service.py
-│   │   └── utils/                   # Helpers & decorators
-│   │       ├── decorators.py        # @role_required
-│   │       ├── validators.py
-│   │       └── jwt_utils.py
-│   ├── tests/                       # Unit tests (pytest)
-│   ├── uploads/                     # File storage
-│   ├── postman/                     # Postman collection
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   ├── .env.example
-│   └── wsgi.py                      # Production entrypoint
+│   │   │   └── storage_service.py
+│   │   └── utils/               # Helpers
+│   │       ├── decorators.py    # Role-based decorators
+│   │       └── validators.py
+│   ├── tests/                   # Unit tests (pytest)
+│   ├── uploads/                 # File upload storage
+│   ├── requirements.txt         # Python dependencies
+│   ├── Dockerfile               # Backend container
+│   ├── .env.example             # Environment template
+│   └── wsgi.py                  # Production entrypoint
 │
-├── frontend/                        # React + Vite
+├── frontend/                    # React + Vite
 │   ├── src/
 │   │   ├── main.jsx
 │   │   ├── App.jsx
-│   │   ├── routes/
-│   │   │   ├── ProtectedRoute.jsx
-│   │   │   └── roleHome.js
-│   │   ├── context/
-│   │   │   └── AuthContext.jsx
-│   │   ├── api/
+│   │   ├── pages/               # Role-based pages
+│   │   │   ├── manager/         # PBL Manager
+│   │   │   ├── student/         # Student
+│   │   │   ├── evaluator/       # Evaluator
+│   │   │   ├── hod/             # HOD
+│   │   │   └── dean/            # Dean
+│   │   ├── components/          # Reusable UI
+│   │   │   ├── layout/          # Navbar, Sidebar
+│   │   │   ├── common/          # Card, Table, Modal
+│   │   │   └── forms/           # Input, Select, FileUpload
+│   │   ├── api/                 # API clients
 │   │   │   ├── axiosClient.js
 │   │   │   ├── students.js
 │   │   │   ├── groups.js
 │   │   │   └── iterations.js
-│   │   ├── pages/
-│   │   │   ├── manager/
-│   │   │   ├── student/
-│   │   │   ├── evaluator/
-│   │   │   ├── hod/
-│   │   │   └── dean/
-│   │   ├── components/
-│   │   │   ├── layout/
-│   │   │   ├── ui/
-│   │   │   └── charts/
-│   │   └── styles/
-│   │       └── tailwind.config.js
-│   ├── index.html
-│   ├── vite.config.js
-│   └── Dockerfile
+│   │   ├── context/             # State management
+│   │   │   └── AuthContext.jsx
+│   │   └── utils/               # Helpers, constants
+│   ├── Dockerfile
+│   ├── package.json
+│   └── vite.config.js
 │
-├── docker-compose.yml               # Multi-container setup
+├── docker-compose.yml           # Multi-container setup
+├── .github/                     # GitHub workflows
+│   ├── workflows/
+│   │   └── ci.yml               # CI pipeline
+│   └── PULL_REQUEST_TEMPLATE.md
 ├── .gitignore
-├── CONTRIBUTING.md                  # Team guidelines
-├── LICENSE
-└── README.md                        # This file
+├── CONTRIBUTING.md              # Team guidelines
+└── README.md                    # Project README
+
 ```
+
+---
+
+## 📡 API Documentation
+
+### Authentication Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/api/auth/login` | Login with email/password |
+| `POST` | `/api/auth/change-password` | Change current user password |
+| `GET` | `/api/auth/me` | Get current user info (protected) |
+
+### Student Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/students` | List all students (with filters) |
+| `POST` | `/api/students` | Add a new student |
+| `POST` | `/api/students/import` | Bulk import students (Excel) |
+| `PUT` | `/api/students/:id` | Update student |
+| `DELETE` | `/api/students/:id` | Soft delete student |
+| `POST` | `/api/students/:id/recover` | Recover soft-deleted student |
+
+### Group Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/api/groups` | Create a new group |
+| `GET` | `/api/groups/my` | Get current user's group |
+| `GET` | `/api/groups/browse` | Browse available groups |
+| `POST` | `/api/groups/:id/join-request` | Request to join a group |
+| `POST` | `/api/join-requests/:id/accept` | Accept join request (leader only) |
+| `POST` | `/api/join-requests/:id/reject` | Reject join request (leader only) |
+| `DELETE` | `/api/groups/:id/leave` | Leave group |
+| `PUT` | `/api/groups/:id/approve` | Approve group (manager/evaluator) |
+
+### Iteration Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/iterations` | List all iterations |
+| `POST` | `/api/iterations` | Create a new iteration |
+| `GET` | `/api/iterations/:id` | Get iteration details |
+| `POST` | `/api/iterations/:id/submit` | Submit work (file upload) |
+| `POST` | `/api/iterations/:id/evaluate` | Evaluate a submission |
+| `GET` | `/api/iterations/:id/rubrics` | Get rubrics for iteration |
+
+### Survey Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/surveys` | List all surveys |
+| `POST` | `/api/surveys` | Create a new survey |
+| `POST` | `/api/surveys/:id/respond` | Submit survey response |
+| `GET` | `/api/surveys/:id/report` | Get survey report with stats |
+
+### Exhibition Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/api/exhibition/evaluate` | Submit exhibition evaluation |
+| `GET` | `/api/exhibition/assignments` | Get evaluator assignments |
+
+### Report Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/reports/groups` | Group performance report |
+| `GET` | `/api/reports/iterations` | Iteration completion report |
 
 ---
 
 ## 🗓️ Development Phases
 
-| Phase | Timeline | Focus | Key Deliverables |
-|-------|----------|-------|------------------|
-| **Phase 1** | Week 1 | Foundation & Auth | Docker setup, JWT auth, role-based routing |
-| **Phase 2** | Week 2-3 | Core CRUD | Department, Course, Student, Teacher CRUD |
-| **Phase 3** | Week 3-4 | Groups | Create, browse, join, approve, leave |
-| **Phase 4** | Week 5-6 | Iterations | Rubrics, submissions, evaluation |
-| **Phase 5** | Week 6-7 | Exhibition & Surveys | Exhibition evaluation, surveys, reports |
-| **Phase 6** | Week 7-8 | Polish | Announcements, meetings, reports |
-| **Phase 7** | Week 8-9 | Testing & Deployment | Bug fixes, production deployment |
+| Phase | Duration | Focus | Deliverable |
+| --- | --- | --- | --- |
+| **Phase 1** | Week 1 | Docker setup, Authentication, Role-based routing | Login working, Docker environment |
+| **Phase 2** | Week 2-3 | Department, Course, Student, Teacher CRUD | All CRUD operations working |
+| **Phase 3** | Week 3-4 | Group management (create, join, approve) | Group formation live |
+| **Phase 4** | Week 5-6 | Iterations, rubrics, submissions, evaluation | Submission workflow complete |
+| **Phase 5** | Week 6-7 | Exhibition evaluation, surveys, reports | Exhibition and surveys working |
+| **Phase 6** | Week 7-8 | Announcements, meetings, final polish | All features complete |
+| **Phase 7** | Week 8-9 | Testing, bug fixes, deployment | Production ready |
 
-### Immediate Milestone: Group Formation Live by Friday
+### Current Focus: Phase 3 — Group Management
 
-| Day | Backend | Frontend | Deliverable |
-|-----|---------|----------|-------------|
-| **Mon** | Docker + Auth + Schema | — | Working environment |
-| **Tue** | Auth + Student APIs | — | Login working in Postman |
-| **Wed** | Group APIs (all endpoints) | — | Full group logic tested |
-| **Thu** | Hardening + Bug fixes | Start group pages | Bug-free APIs |
-| **Fri** | — | Complete group UI | Demo-ready group module |
+**Goal:** Group formation module live by **Friday, July 31st**
+
+| Task | Owner | Status |
+| --- | --- | --- |
+| Create group endpoint | Sara | In Progress |
+| Browse groups endpoint | Sara | In Progress |
+| Join request endpoint | Sara | In Progress |
+| Accept/reject join request | Sara | In Progress |
+| Leave group endpoint | Sara | In Progress |
+| Approve group endpoint | Ismail | Pending |
+| Group UI pages | Ramsha | Pending |
+| Postman tests | Ibrahim | Pending |
 
 ---
 
-## 👥 Team Members
+## 👥 Team
 
-| Role | Name | GitHub | Responsibilities |
-|------|------|--------|------------------|
-| **Project Lead / Backend Lead** | Ismail | [@ismailrzw](https://github.com/ismailrzw) | Architecture, Docker, Auth, PR reviews, Deployment, Project management |
-| **Assistant Lead / Frontend Lead** | Ramsha | [@ramsha-dev](https://github.com/ramsha-dev) | Frontend architecture, Components, Design system, Co-reviewer |
-| **Frontend Developer** | Sara | [@sara-dev](https://github.com/sara-dev) | Page components, API integration, Routing |
-| **Backend Developer** | Ibrahim | [@ibrahim-dev](https://github.com/ibrahim-dev) | API endpoints, Testing, Postman collection, QA |
+| Role | Name | Responsibilities |
+| --- | --- | --- |
+| **Project Lead / Backend Lead** | Ismail | Architecture, Docker, Auth, PR reviews, Deployment, Integration testing |
+| **Assistant Lead / Frontend Lead** | Ramsha | Frontend architecture, Components, Design system, Co-reviewer |
+| **Frontend Developer** | Sara | Page components, API integration, Routing, Group module |
+| **Backend Developer** | Ibrahim | API endpoints, Testing, Postman collection, Bug hunting |
 
 ---
 
 ## 📝 Contributing
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+Please read [CONTRIBUTING.md](https://www.google.com/search?q=CONTRIBUTING.md) for detailed guidelines.
 
 ### Git Workflow
 
-```
-main        → Production-ready (protected)
-develop     → Integration branch
-feature/*   → Feature branches (e.g., feature/backend-groups)
-fix/*       → Bug fixes
+```bash
+# 1. Always branch from develop
+git checkout develop
+git pull origin develop
+git checkout -b feature/your-feature-name
+
+# 2. Make your changes and commit
+git add .
+git commit -m "feat(module): description of changes"
+
+# 3. Push and create PR
+git push -u origin feature/your-feature-name
+# Create Pull Request on GitHub against develop
+
 ```
 
 ### Commit Convention
 
-```
-feat(module): add new feature
-fix(module): fix bug
-chore(module): maintenance task
-docs(module): documentation update
-```
-
-### PR Process
-
-1. Create branch from `develop`
-2. Implement feature with tests
-3. Open PR against `develop`
-4. At least 1 approval required
-5. Squash-merge into `develop`
-
----
-
-## 🧪 Testing
-
-### Backend Tests
-
-```bash
-cd backend
-pytest tests/
-```
-
-### API Testing
-
-Import the Postman collection from `backend/postman/PBL-System.postman_collection.json` to test all endpoints.
-
-### Test Credentials
-
-| Role | Email | Password |
-|------|-------|----------|
-| PBL Manager | `manager@superior.edu.pk` | `pbl123*` |
-| Student | `BCSM-F16-327@SUPERIOR.EDU.PK` | `pbl123*` |
-| Evaluator | `sarah.ahmed@superior.edu.pk` | `pbl123*` |
-| HOD | `hod@superior.edu.pk` | `pbl123*` |
-| Dean | `dean@superior.edu.pk` | `pbl123*` |
-
----
-
-## 📦 Deployment
-
-### Development Environment
-
-| Service | Platform |
-|---------|----------|
-| Frontend | Vercel (free tier) |
-| Backend | Render (free tier) |
-| Database | MongoDB Atlas (M0 free tier) |
-
-### Production Environment
-
-- **Server:** University Linux server
-- **Backend:** Gunicorn + systemd
-- **Reverse Proxy:** Nginx (HTTPS)
-- **Process Management:** systemd (auto-restart on crash/reboot)
-- **Storage:** Local server (full control)
+| Type | Purpose | Example |
+| --- | --- | --- |
+| `feat` | New feature | `feat(groups): add join-request endpoint` |
+| `fix` | Bug fix | `fix(auth): correct role check` |
+| `chore` | Maintenance | `chore(docker): add mongo service` |
+| `docs` | Documentation | `docs(readme): update setup instructions` |
+| `test` | Testing | `test(groups): add unit tests` |
+| `refactor` | Code improvement | `refactor(services): extract validation logic` |
 
 ---
 
 ## 🔧 Environment Variables
 
-### Backend `.env`
+### Backend `.env` (in `backend/` directory)
 
 ```env
+# Flask
 FLASK_APP=app
 FLASK_ENV=development
-SECRET_KEY=your-strong-secret-key
+SECRET_KEY=your-strong-secret-key-here-change-this
+
+# MongoDB
 MONGO_URI=mongodb://admin:secret@mongodb:27017/pbl_system?authSource=admin
+
+# JWT
 JWT_EXPIRATION_HOURS=24
+
+# Email (for production)
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=your-api-key
-CLOUDINARY_API_SECRET=your-api-secret
+
+# File Storage
+UPLOAD_FOLDER=uploads
+MAX_CONTENT_LENGTH=10485760  # 10MB
+
 ```
 
-### Frontend `.env`
+### Frontend `.env` (in `frontend/` directory)
 
 ```env
 VITE_API_URL=http://localhost:5000
-VITE_FIREBASE_API_KEY=your-api-key  # Only if using Firebase
+
 ```
 
 ---
 
-## 📊 Database Collections (MongoDB)
+## 🚢 Deployment
 
-| Collection | Purpose |
-|------------|---------|
-| `users` | Authentication & roles |
-| `students` | Student profiles |
-| `teachers` | Teacher/evaluator profiles |
-| `departments` | Department data |
-| `courses` | Course configurations |
-| `groups` | Project groups |
-| `join_requests` | Group join requests |
-| `iterations` | Project milestones |
-| `iteration_evaluations` | Rubric scores |
-| `exhibition_evaluations` | Final exhibition scores |
-| `surveys` | Feedback surveys |
-| `announcements` | System announcements |
-| `meetings` | Supervision meetings |
-| `email_logs` | Email audit trail |
+### Development Environment
 
----
+* **Frontend:** [Vercel](https://vercel.com) (free tier)
+* **Backend:** [Render](https://render.com) (free tier)
+* **Database:** [MongoDB Atlas](https://www.mongodb.com/atlas) (M0 free tier)
 
-## 🔒 Security Features
+### Production Environment
 
-- ✅ JWT-based authentication with expiration
-- ✅ Role-based access control (server-side)
-- ✅ Password hashing (bcrypt)
-- ✅ Soft delete (no data loss)
-- ✅ CORS configured for specific origins
-- ✅ Input validation on all endpoints
-- ✅ Rate limiting (to be added)
-- ✅ Audit trail (email logs)
+Deployed on **Beaconhouse National University** Linux server:
+
+```bash
+# Using Gunicorn + systemd
+sudo systemctl start pbl-backend
+sudo systemctl enable pbl-backend
+
+```
+
+#### Systemd Service File (`/etc/systemd/system/pbl-backend.service`)
+
+```ini
+[Unit]
+Description=PBL Management System Backend
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/pbl-system/backend
+Environment="PATH=/home/ubuntu/pbl-system/venv/bin"
+ExecStart=/home/ubuntu/pbl-system/venv/bin/gunicorn -c gunicorn_conf.py wsgi:app
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+```
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://www.google.com/search?q=LICENSE) file for details.
 
 ---
 
 ## 🙏 Acknowledgments
 
-- **Superior University** — Project oversight and guidance
-- **Professor** — For project direction and support
-- **Team Members** — For their dedication and hard work
+* **Beaconhouse National University** — Project oversight and support
+* **Superior University** — Original prototype and requirements
+* **Team Members** — For their dedication and hard work
 
 ---
 
 ## 📞 Contact
 
-| Purpose | Method |
-|---------|--------|
-| **Bugs/Issues** | [GitHub Issues](https://github.com/ismailrzw/pbl-management-system/issues) |
-| **Team Communication** | WhatsApp Group |
-| **Project Lead** | [@ismailrzw](https://github.com/ismailrzw) |
+| Role | Name | Email |
+| --- | --- | --- |
+| Project Lead | Ismail | ismail@bnu.edu.pk |
+| Team Member | Ramsha | ramsha@bnu.edu.pk |
+| Team Member | Sara | sara@bnu.edu.pk |
+| Team Member | Ibrahim | ibrahim@bnu.edu.pk |
+
+For questions or support, please [open an issue](https://github.com/ismailrzw/pbl-management-system/issues) on GitHub.
 
 ---
 
-## 📈 Project Status
+## 🏆 Key Metrics (Target)
 
-| Module | Status | Completion |
-|--------|--------|------------|
-| Docker Setup | ✅ Complete | 100% |
-| Backend Foundation | ✅ Complete | 100% |
-| Authentication | 🚧 In Progress | 30% |
-| Student CRUD | ⬜ Not Started | 0% |
-| Group Management | ⬜ Not Started | 0% |
-| Iterations | ⬜ Not Started | 0% |
-| Evaluations | ⬜ Not Started | 0% |
-| Frontend | ⬜ Not Started | 0% |
+| Metric | Target |
+| --- | --- |
+| Students Supported | 500+ |
+| Concurrent Users | 100+ |
+| Group Formation Time | < 5 minutes |
+| Evaluation Turnaround | < 72 hours |
+| System Uptime | 99.9% |
+| User Satisfaction | > 85% |
 
 ---
 
-**Built with ❤️ by Team PBL | Superior University**
+## 🔮 Future Roadmap
 
-```
-
----
-
-## 2. How to Push README.md to GitHub
-
-### Step 1: Create the README.md File
-
-```bash
-# Navigate to your project root
-cd ~/Desktop/pbl-management-system
-
-# Create the README file (copy the content above)
-# On Linux/Mac:
-touch README.md
-# On Windows:
-# Right-click → New → Text Document → rename to README.md
-
-# Open in your editor and paste the README content above
-# Using VS Code:
-code README.md
-```
-
-### Step 2: Check Your Current Branch
-
-```bash
-# Check which branch you're on
-git branch
-# Should show * main
-```
-
-### Step 3: Add and Commit the README
-
-```bash
-# Add README to staging
-git add README.md
-
-# Commit with a message
-git commit -m "docs: add comprehensive README with project overview"
-
-# Push to GitHub (main branch)
-git push origin main
-```
-
-### Step 4: Verify
-
-1. Go to https://github.com/ismailrzw/pbl-management-system
-2. Refresh the page
-3. Your README should appear beautifully formatted
+* [ ] Mobile application (React Native)
+* [ ] AI-powered plagiarism detection
+* [ ] Real-time notifications (WebSocket)
+* [ ] Integration with LMS (Moodle)
+* [ ] Automated email reminders
+* [ ] Advanced analytics dashboard
+* [ ] Export to PDF/Excel reports
 
 ---
 
-## 3. Quick Checklist Before Pushing
-
-- [x] README.md created in project root
-- [x] Content includes: overview, features, tech stack, quick start, structure, team, contributing
-- [x] All badges and links are correct
-- [x] No sensitive information (passwords, API keys) in README
-- [x] `git add README.md` executed
-- [x] `git commit -m "docs: add comprehensive README"` executed
-- [x] `git push origin main` executed
-
----
-
-## 4. Troubleshooting Push Issues
-
-### Error: "Permission denied"
-
-```bash
-# Check your remote URL
-git remote -v
-
-# If using SSH, ensure your SSH key is added
-ssh -T git@github.com
-
-# If using HTTPS, use a personal access token
-# Generate at: GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
-git remote set-url origin https://ismailrzw:YOUR_TOKEN@github.com/ismailrzw/pbl-management-system.git
-```
-
-### Error: "Please make sure you have the correct access rights"
-
-```bash
-# Set your user name and email
-git config --global user.name "Ismail"
-git config --global user.email "ismail@example.com"
-
-# Then try again
-git push origin main
-```
-
-### Error: "Updates were rejected"
-
-```bash
-# Pull latest changes first
-git pull origin main --rebase
-
-# Then push
-git push origin main
-```
-
----
-
-## 5. Bonus: Add License
-
-### Create LICENSE File
-
-```bash
-# From project root
-touch LICENSE
-
-# Add MIT License content
-cat > LICENSE << 'EOF'
-MIT License
-
-Copyright (c) 2026 Team PBL - Superior University
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-EOF
-
-# Add and push
-git add LICENSE
-git commit -m "docs: add MIT license"
-git push origin main
-```
-
----
-
-## 6. Final Repository Structure
-
-After pushing, your repository should look like:
+*Last Updated: July 2026*
 
 ```
-pbl-management-system/
-├── backend/
-│   ├── app/
-│   ├── tests/
-│   ├── uploads/
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── .env.example
-├── docker-compose.yml
-├── .gitignore
-├── CONTRIBUTING.md
-├── LICENSE
-└── README.md          ← This is what you just pushed
+
 ```
-
----
-
-## Summary
-
-You now have:
-- ✅ A comprehensive README.md with all project details
-- ✅ README pushed to GitHub `main` branch
-- ✅ MIT license added (optional)
-- ✅ Repository ready for team collaboration
-
-**Next Step:** Share the repository URL with your team and have them clone it!
