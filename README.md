@@ -5,7 +5,6 @@
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Status](https://img.shields.io/badge/status-development-yellow)
 ![BNU](https://img.shields.io/badge/BNU-Beaconhouse%20National%20University-purple)
-![License](https://img.shields.io/badge/license-MIT-green)
 ![Python](https://img.shields.io/badge/python-3.11-blue)
 ![Flask](https://img.shields.io/badge/flask-2.3.3-lightgrey)
 ![React](https://img.shields.io/badge/react-18-61DAFB)
@@ -26,7 +25,6 @@
 - [Contributing](#-contributing)
 - [Environment Variables](#-environment-variables)
 - [Deployment](#-deployment)
-- [License](#-license)
 
 ---
 
@@ -156,7 +154,6 @@ Reporting
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed
 - [Git](https://git-scm.com/downloads) installed
-- Basic knowledge of terminal/command line
 
 ## 1. Clone the Repository
 
@@ -357,7 +354,7 @@ pbl-management-system/
 
 ## Current Focus: Phase 3 — Group Management
 
-**Goal:** Group formation module live by **Friday, July 31st**
+**Goal:** Group formation module live by **Friday, July 31st** or might take a week or so 
 
 | Task | Owner | Status |
 |------|-------|--------|
@@ -517,13 +514,6 @@ WantedBy=multi-user.target
 
 ---
 
-# 📄 License
-
-This project is licensed under the **MIT License**.
-
-See the **LICENSE** file for details.
-
----
 
 # 🙏 Acknowledgments
 
@@ -537,38 +527,15 @@ See the **LICENSE** file for details.
 
 | Role | Name | Email |
 |------|------|-------|
-| Project Lead | Ismail | ismail@bnu.edu.pk |
-| Team Member | Ramsha | ramsha@bnu.edu.pk |
-| Team Member | Sara | sara@bnu.edu.pk |
-| Team Member | Ibrahim | ibrahim@bnu.edu.pk |
+| Project Lead | Muhammad Ismail Rana| f2023-551@bnu.edu.pk |
+| Team Member | Ramsha Naveed| f2023-026@bnu.edu.pk |
+| Team Member | Sara Haider| f2023-744@bnu.edu.pk |
+| Team Member | Sheikh Muhammad Ibrahim | f2023-630@bnu.edu.pk |
 
 For questions or support, please open an issue on GitHub.
 
 ---
 
-# 🏆 Key Metrics (Target)
 
-| Metric | Target |
-|--------|--------|
-| Students Supported | 500+ |
-| Concurrent Users | 100+ |
-| Group Formation Time | < 5 minutes |
-| Evaluation Turnaround | < 72 hours |
-| System Uptime | 99.9% |
-| User Satisfaction | > 85% |
-
----
-
-# 🔮 Future Roadmap
-
-- [ ] Mobile application (React Native)
-- [ ] AI-powered plagiarism detection
-- [ ] Real-time notifications (WebSocket)
-- [ ] Integration with LMS (Moodle)
-- [ ] Automated email reminders
-- [ ] Advanced analytics dashboard
-- [ ] Export to PDF/Excel reports
-
----
 
 *Last Updated: July 2026*
