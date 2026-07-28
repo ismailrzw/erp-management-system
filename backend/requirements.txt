@@ -6,3 +6,4 @@ python-dotenv==1.0.0
 bcrypt==4.0.1
 marshmallow==3.20.1
 pytest==7.4.0
+dnspython==2.4.2   # <-- ADD THIS for MongoDB Atlas SRV connections
