@@ -9,12 +9,37 @@ services:
     restart: always
     ports:
       - "5000:5000"
+    env_file:
+      - ./backend/.env
     environment:
       - FLASK_ENV=development
-      - MONGO_URI=${MONGO_URI} 
-      - SECRET_KEY=${SECRET_KEY}
-    env_file:
-      - ./backend/.env 
     volumes:
       - ./backend:/app
       - /app/__pycache__
+    depends_on:
+      - mongo
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pbl_frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host
+
+  mongo:
+    image: mongo:7
+    container_name: pbl_mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
