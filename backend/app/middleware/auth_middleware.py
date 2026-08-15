@@ -5,6 +5,7 @@ if it's missing. This ensures Swagger UI and other clients work seamlessly.
 """
 from flask import request
 
+
 def fix_authorization_header():
     """
     Before request handler: if Authorization header exists but doesn't

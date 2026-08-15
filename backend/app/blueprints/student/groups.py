@@ -1,5 +1,6 @@
-from flask import request, Blueprint
-from app.utils.responses import success_response, error_response
+from flask import Blueprint
+
+from app.utils.responses import success_response
 
 student_groups_bp = Blueprint('student_groups', __name__)
 

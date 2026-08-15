@@ -1,6 +1,7 @@
 # backend/app/utils/validators.py
 import re
 
+
 def validate_email(email):
     """Validate email format."""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'

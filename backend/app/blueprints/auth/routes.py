@@ -1,10 +1,10 @@
 # backend/app/blueprints/auth/routes.py
-from flask import request, current_app
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask import current_app, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource, fields
 
 from app.services.auth_service import AuthService
-from app.utils.responses import success_response, error_response
+from app.utils.responses import error_response, success_response
 
 auth_ns = Namespace('auth', description='Authentication operations')
 
@@ -17,6 +17,7 @@ change_password_model = auth_ns.model('ChangePassword', {
     'current_password': fields.String(required=True),
     'new_password': fields.String(required=True, min_length=8)
 })
+
 
 @auth_ns.route('/login')
 class LoginResource(Resource):
@@ -40,14 +41,17 @@ class LoginResource(Resource):
                 return error_response("Invalid credentials", 401)
             
             return success_response("Login successful", data=result)
-        except Exception as e:
-            current_app.logger.error(f"Login error: {str(e)}")
+        except (ValueError, KeyError, TypeError) as e:
+            current_app.logger.error(f"Login validation error: {e!s}")
+            return error_response("Invalid request data", 400)
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.error(f"Login error: {e!s}")
             return error_response("Internal server error.", 500)
 
 
 @auth_ns.route('/me')
 class MeResource(Resource):
-    @jwt_required()  # ✅ Add this!
+    @jwt_required()
     @auth_ns.doc(security='Bearer Auth')
     @auth_ns.response(200, 'Success')
     @auth_ns.response(401, 'Unauthorized')
@@ -59,14 +63,17 @@ class MeResource(Resource):
             if not user:
                 return error_response("User not found", 404)
             return success_response("User data retrieved", data=user)
-        except Exception as e:
-            current_app.logger.error(f"Get user error: {str(e)}")
+        except (ValueError, TypeError) as e:
+            current_app.logger.error(f"Invalid user ID: {e!s}")
+            return error_response("Invalid user ID", 400)
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.error(f"Get user error: {e!s}")
             return error_response("Failed to get user data", 500)
 
 
 @auth_ns.route('/change-password')
 class ChangePasswordResource(Resource):
-    @jwt_required()  # ✅ Add this!
+    @jwt_required()
     @auth_ns.doc(security='Bearer Auth')
     @auth_ns.expect(change_password_model)
     @auth_ns.response(200, 'Password changed successfully')
@@ -92,6 +99,9 @@ class ChangePasswordResource(Resource):
             if not success:
                 return error_response(message, 401)
             return success_response(message)
-        except Exception as e:
-            current_app.logger.error(f"Change password error: {str(e)}")
+        except (ValueError, TypeError) as e:
+            current_app.logger.error(f"Invalid password request: {e!s}")
+            return error_response("Invalid request data", 400)
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.error(f"Change password error: {e!s}")
             return error_response("Failed to change password", 500)

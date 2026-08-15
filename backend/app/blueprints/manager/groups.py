@@ -1,5 +1,6 @@
-from flask import request, Blueprint
-from app.utils.responses import success_response, error_response
+from flask import Blueprint
+
+from app.utils.responses import success_response
 
 manager_groups_bp = Blueprint('manager_groups', __name__)
 

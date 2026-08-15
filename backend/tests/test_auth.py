@@ -1,10 +1,12 @@
 # backend/tests/test_auth.py
-import sys
 import os
+import sys
+
+import bcrypt
 import pytest
+
 from app import create_app
 from app.extensions import mongo
-import bcrypt
 
 # Add the parent directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

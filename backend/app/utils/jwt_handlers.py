@@ -4,6 +4,7 @@ JWT error handlers for Flask-JWT-Extended.
 """
 from flask import jsonify
 
+
 def register_jwt_handlers(jwt_manager):
     """Register custom JWT error handlers."""
 

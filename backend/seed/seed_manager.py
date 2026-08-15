@@ -2,12 +2,13 @@
 import os
 import sys
 from datetime import datetime, timezone
+
+import bcrypt
 from dotenv import load_dotenv
 from pymongo import MongoClient
-import bcrypt
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from app.models.user import UserFields, Role
+from app.models.user import Role, UserFields
 
 load_dotenv()
 

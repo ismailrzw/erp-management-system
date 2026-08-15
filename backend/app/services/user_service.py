@@ -2,9 +2,11 @@
 """
 User Service - Business logic for user management
 """
+from bson.objectid import ObjectId
 from flask import current_app
+
 from app.extensions import mongo
-from app.models.user import UserFields, Role, hash_password
+from app.models.user import UserFields, hash_password
 
 
 class UserService:
@@ -16,19 +18,15 @@ class UserService:
         Create a new user.
         
         Returns:
-            dict: Created user data
-            None: If creation fails
+            tuple: (created_user_data, error_message)
         """
         try:
-            # Check if user exists
             existing = mongo.db.users.find_one({UserFields.EMAIL: email})
             if existing:
                 return None, "User with this email already exists"
             
-            # Hash password
             hashed = hash_password(password)
             
-            # Create user document
             user_data = {
                 UserFields.NAME: name,
                 UserFields.EMAIL: email,
@@ -47,8 +45,11 @@ class UserService:
                 "role": role
             }, None
             
-        except Exception as e:
-            current_app.logger.error(f"Create user error: {str(e)}")
+        except (ValueError, TypeError) as e:
+            current_app.logger.error(f"Invalid user data: {e!s}")
+            return None, f"Invalid user data: {e!s}"
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.error(f"Create user error: {e!s}")
             return None, str(e)
     
     @staticmethod
@@ -68,8 +69,11 @@ class UserService:
                 "email": user.get(UserFields.EMAIL),
                 "role": user.get(UserFields.ROLE)
             }
-        except Exception as e:
-            current_app.logger.error(f"Get user error: {str(e)}")
+        except (ValueError, TypeError) as e:
+            current_app.logger.error(f"Invalid email format: {e!s}")
+            return None
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.error(f"Get user error: {e!s}")
             return None
     
     @staticmethod
@@ -77,10 +81,13 @@ class UserService:
         """Soft delete a user."""
         try:
             result = mongo.db.users.update_one(
-                {"_id": user_id},
+                {"_id": ObjectId(user_id)},
                 {"$set": {UserFields.DELETED: True}}
             )
             return result.modified_count > 0
-        except Exception as e:
-            current_app.logger.error(f"Delete user error: {str(e)}")
+        except (ValueError, TypeError) as e:
+            current_app.logger.error(f"Invalid user ID: {e!s}")
+            return False
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.error(f"Delete user error: {e!s}")
             return False

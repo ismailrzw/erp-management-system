@@ -2,13 +2,15 @@
 """
 Auth Service - Business logic for authentication
 """
+from datetime import timedelta
+
+import bcrypt
+from bson.objectid import ObjectId
 from flask import current_app
 from flask_jwt_extended import create_access_token
-from datetime import timedelta
-from bson.objectid import ObjectId  # ← THIS WAS MISSING!
+
 from app.extensions import mongo
 from app.models.user import UserFields, verify_password
-import bcrypt
 
 
 class AuthService:
@@ -24,7 +26,6 @@ class AuthService:
             None: If authentication fails
         """
         try:
-            # Find user
             user = mongo.db.users.find_one({
                 UserFields.EMAIL: email,
                 UserFields.DELETED: False
@@ -33,12 +34,10 @@ class AuthService:
             if not user:
                 return None
             
-            # Verify password
             stored_hash = user.get(UserFields.PASSWORD_HASH)
             if not stored_hash or not verify_password(password, stored_hash):
                 return None
             
-            # Generate token
             token = create_access_token(
                 identity=str(user['_id']),
                 additional_claims={
@@ -59,15 +58,17 @@ class AuthService:
                 }
             }
             
-        except Exception as e:
-            current_app.logger.error(f"Authentication error: {str(e)}")
+        except (ValueError, TypeError, KeyError) as e:
+            current_app.logger.error(f"Authentication data error: {e!s}")
+            return None
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.error(f"Authentication error: {e!s}")
             return None
     
     @staticmethod
     def get_user_by_id(user_id: str):
         """Get user by ID. Returns dict or None."""
         try:
-            # Convert string to ObjectId
             user = mongo.db.users.find_one({"_id": ObjectId(user_id)})
             if not user:
                 return None
@@ -78,8 +79,11 @@ class AuthService:
                 "email": user.get(UserFields.EMAIL),
                 "role": user.get(UserFields.ROLE)
             }
-        except Exception as e:
-            current_app.logger.error(f"Get user error: {str(e)}")
+        except (ValueError, TypeError) as e:
+            current_app.logger.error(f"Invalid user ID format: {e!s}")
+            return None
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.error(f"Get user error: {e!s}")
             return None
     
     @staticmethod
@@ -99,8 +103,11 @@ class AuthService:
                 "email": user.get(UserFields.EMAIL),
                 "role": user.get(UserFields.ROLE)
             }
-        except Exception as e:
-            current_app.logger.error(f"Get user by email error: {str(e)}")
+        except (ValueError, TypeError) as e:
+            current_app.logger.error(f"Invalid email format: {e!s}")
+            return None
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.error(f"Get user by email error: {e!s}")
             return None
     
     @staticmethod
@@ -116,18 +123,15 @@ class AuthService:
             if not user:
                 return False, "User not found"
             
-            # Verify current password
             stored_hash = user.get(UserFields.PASSWORD_HASH)
             if not stored_hash or not verify_password(current_password, stored_hash):
                 return False, "Current password is incorrect"
             
-            # Hash new password
             new_hash = bcrypt.hashpw(
                 new_password.encode('utf-8'),
                 bcrypt.gensalt()
             ).decode('utf-8')
             
-            # Update password
             mongo.db.users.update_one(
                 {"_id": ObjectId(user_id)},
                 {"$set": {UserFields.PASSWORD_HASH: new_hash}}
@@ -135,6 +139,9 @@ class AuthService:
             
             return True, "Password changed successfully"
             
-        except Exception as e:
-            current_app.logger.error(f"Change password error: {str(e)}")
+        except (ValueError, TypeError) as e:
+            current_app.logger.error(f"Invalid password data: {e!s}")
+            return False, "Invalid user ID format"
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.error(f"Change password error: {e!s}")
             return False, "Failed to change password"

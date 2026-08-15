@@ -3,10 +3,11 @@
 User Model - Data layer for user operations
 """
 from datetime import datetime, timezone
-from typing import Optional
-from pydantic import BaseModel, EmailStr, Field as PydanticField, validator
-import bcrypt
+from typing import ClassVar
 
+import bcrypt
+from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import Field as PydanticField
 
 # ==================== CONSTANTS ====================
 
@@ -39,8 +40,9 @@ class Role:
     HODIC = "hodic"
     DEAN = "dean"
     
-    ALL = [MANAGER, STUDENT, EVALUATOR, HOD, HODIC, DEAN]
-    OVERSIGHT = [HOD, HODIC, DEAN]
+    # Use tuples instead of lists (immutable)
+    ALL: ClassVar[tuple] = (MANAGER, STUDENT, EVALUATOR, HOD, HODIC, DEAN)
+    OVERSIGHT: ClassVar[tuple] = (HOD, HODIC, DEAN)
 
 
 # ==================== HELPER FUNCTIONS ====================
@@ -64,24 +66,24 @@ class User(BaseModel):
     email: EmailStr = PydanticField(...)
     password_hash: str = PydanticField(..., min_length=60)
     role: str = PydanticField(...)
-    dept: Optional[str] = PydanticField(None, max_length=50)
-    section: Optional[str] = PydanticField(None, max_length=10)
-    course: Optional[str] = PydanticField(None, max_length=20)
-    roll: Optional[str] = PydanticField(None, max_length=20)
-    recovery_email: Optional[EmailStr] = None
-    type: Optional[str] = PydanticField(None, max_length=50)
+    dept: str | None = PydanticField(None, max_length=50)
+    section: str | None = PydanticField(None, max_length=10)
+    course: str | None = PydanticField(None, max_length=20)
+    roll: str | None = PydanticField(None, max_length=20)
+    recovery_email: EmailStr | None = None
+    type: str | None = PydanticField(None, max_length=50)
     deleted: bool = False
-    deleted_at: Optional[datetime] = None
+    deleted_at: datetime | None = None
     created_at: datetime = PydanticField(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = PydanticField(default_factory=lambda: datetime.now(timezone.utc))
     
-    @validator('role')
+    @field_validator('role')
     def validate_role(cls, v):
         if v not in Role.ALL:
             raise ValueError(f"Role must be one of: {', '.join(Role.ALL)}")
         return v
     
-    @validator('password_hash')
+    @field_validator('password_hash')
     def validate_password_hash(cls, v):
         if not v.startswith('$2b$') and not v.startswith('$2a$'):
             raise ValueError("Password hash must be a valid bcrypt hash")
