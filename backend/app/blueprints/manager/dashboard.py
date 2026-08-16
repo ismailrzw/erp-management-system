@@ -8,6 +8,7 @@ from flask_jwt_extended import get_jwt_identity
 from app.extensions import mongo
 from app.utils.decorators import role_required
 from app.models.user import Role
+from app.models.group import Field as GroupField, Status as GroupStatus
 
 # ── Blueprint ──────────────────────────────────────────────
 dashboard_bp = Blueprint("manager_dashboard", __name__)
@@ -38,7 +39,14 @@ class Dashboard(Resource):
             # Groups - handle if collection doesn't exist
             try:
                 total_groups = mongo.db.groups.count_documents({})
-                pending_groups = mongo.db.groups.count_documents({"status": "pending"})
+                pending_groups = mongo.db.groups.count_documents({GroupField.STATUS: GroupStatus.PENDING})
+                total_groups_evaluated = mongo.db.groups.count_documents({
+                    "$or": [
+                        {GroupField.EVALUATED: True},
+                        {GroupField.STATUS: GroupStatus.EVALUATED},
+                    ]
+                })
+                groups_remaining_evaluation = max(0, total_groups - total_groups_evaluated)
                 
                 students_in_groups = mongo.db.groups.distinct("member_ids")
                 students_without_group = mongo.db.users.count_documents({
@@ -49,6 +57,8 @@ class Dashboard(Resource):
             except Exception:
                 total_groups = 0
                 pending_groups = 0
+                total_groups_evaluated = 0
+                groups_remaining_evaluation = 0
                 students_without_group = total_students
 
             # ── Announcements ──────────────────────────────────
@@ -79,6 +89,8 @@ class Dashboard(Resource):
                     "total_evaluators": total_evaluators,
                     "total_groups": total_groups,
                     "pending_groups": pending_groups,
+                    "total_groups_evaluated": total_groups_evaluated,
+                    "groups_remaining_evaluation": groups_remaining_evaluation,
                     "students_without_group": students_without_group,
                     "announcements": announcements,
                     "attachments": attachments

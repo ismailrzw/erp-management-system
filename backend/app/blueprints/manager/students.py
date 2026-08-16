@@ -2,8 +2,9 @@
 """Manager Students API endpoints."""
 
 from flask import Blueprint, request
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, Resource, fields, reqparse
 from flask_jwt_extended import get_jwt_identity
+from werkzeug.datastructures import FileStorage
 
 from app.extensions import mongo
 from app.utils.decorators import role_required
@@ -19,6 +20,7 @@ from app.services.student_service import (
 )
 from app.schemas.student_schema import CreateStudentSchema, UpdateStudentSchema
 from app.utils.audit import log_audit
+from app.services.bulk_import_service import bulk_create_students, parse_excel
 
 # ── Blueprint ──────────────────────────────────────────────
 students_bp = Blueprint("manager_students", __name__)
@@ -45,6 +47,10 @@ student_update_model = students_ns.model("StudentUpdate", {
     "teacher": fields.String(description="Teacher name"),
     "recovery_email": fields.String(description="Recovery email"),
 })
+
+bulk_import_parser = reqparse.RequestParser()
+bulk_import_parser.add_argument("file", location="files", type=FileStorage, required=True,
+                                help="CSV or XLSX file containing student rows")
 
 
 # ── Routes ──────────────────────────────────────────────────
@@ -215,9 +221,27 @@ class StudentPermanentDelete(Resource):
 
 @students_ns.route("/bulk")
 class StudentBulkImport(Resource):
-    @students_ns.doc(security="Bearer Auth")
+    @students_ns.doc(security="Bearer Auth", consumes=["multipart/form-data"])
+    @students_ns.expect(bulk_import_parser)
     @role_required(Role.MANAGER)
     def post(self):
-        """Bulk import students from Excel/CSV."""
-        # TODO: Implement bulk import
-        return {"success": False, "message": "Bulk import coming soon."}, 501
+        """Bulk import students from CSV/XLSX after validating every row."""
+        try:
+            file = bulk_import_parser.parse_args()["file"]
+            rows, validation_errors = parse_excel(file)
+            result = bulk_create_students(rows)
+            result["errors"] = validation_errors + result["errors"]
+            result["skipped_count"] += len(validation_errors)
+            log_audit(mongo.db, get_jwt_identity(), Role.MANAGER, "users", "bulk_import",
+                      new_value={"imported": result["imported_count"], "skipped": result["skipped_count"]})
+            return {
+                "success": True,
+                "message": "Student import completed.",
+                "imported": result["imported_count"],
+                "skipped": result["skipped_count"],
+                "errors": result["errors"],
+            }, 200
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, 400
+        except Exception:
+            return {"success": False, "message": "Unable to import students."}, 500

@@ -55,6 +55,9 @@ def create_app(config_class=Config):
     from app.blueprints.manager.students import students_ns
     api.add_namespace(students_ns, path='/api/manager/students')
 
+    from app.blueprints.manager.attachments import attachments_ns
+    api.add_namespace(attachments_ns, path='/api/manager/attachments')
+
     # ── Register Blueprints ──────────────────────────────
     from app.blueprints.auth.routes import auth_bp
     app.register_blueprint(auth_bp, url_prefix="/api/auth")

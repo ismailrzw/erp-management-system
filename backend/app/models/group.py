@@ -4,6 +4,7 @@ COLLECTION = "groups"
 class Status:
     PENDING  = "pending"
     APPROVED = "approved"
+    EVALUATED = "evaluated"
     DELETED  = "deleted"
 
 class Field:

@@ -1,4 +1,3 @@
-# backend/app/utils/audit.py
 """Audit log helper."""
 
 from datetime import datetime, timezone
