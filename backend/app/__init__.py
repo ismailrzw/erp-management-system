@@ -20,13 +20,13 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     mongo.init_app(app)
 
-    # Register JWT error handlers (cleanly)
+    # Register JWT error handlers
     register_jwt_handlers(jwt)
 
     # Register middleware to fix Authorization header
     app.before_request(fix_authorization_header)
 
-    # Swagger / OpenAPI
+    # ── Swagger / OpenAPI ──────────────────────────────────
     api = Api(
         app,
         version='1.0',
@@ -44,8 +44,15 @@ def create_app(config_class=Config):
         security='Bearer Auth'
     )
 
-    # Namespaces (only, no blueprint registration)
+    # ── Register Namespaces ──────────────────────────────
     from app.blueprints.auth.routes import auth_ns
     api.add_namespace(auth_ns, path='/api/auth')
+
+    from app.blueprints.manager.dashboard import dashboard_ns
+    api.add_namespace(dashboard_ns, path='/api/manager/dashboard')
+
+    # ── Register Blueprints ──────────────────────────────
+    from app.blueprints.auth.routes import auth_bp
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
 
     return app

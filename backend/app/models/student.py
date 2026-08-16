@@ -1,0 +1,21 @@
+"""Field constants for the students collection."""
+
+COLLECTION = "users"
+
+class Field:
+    ID             = "_id"
+    NAME           = "name"
+    EMAIL          = "email"
+    PASSWORD_HASH  = "password_hash"
+    ROLE           = "role"
+    DEPT           = "dept"
+    SECTION        = "section"
+    COURSE         = "course"
+    SESSION        = "session"
+    ROLL           = "roll"
+    TEACHER        = "teacher"
+    RECOVERY_EMAIL = "recovery_email"
+    DELETED        = "deleted"
+    DELETED_AT     = "deleted_at"
+    CREATED_AT     = "created_at"
+    UPDATED_AT     = "updated_at"

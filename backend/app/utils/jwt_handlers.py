@@ -1,41 +1,28 @@
 # backend/app/utils/jwt_handlers.py
-"""
-JWT error handlers for Flask-JWT-Extended.
-"""
-from flask import jsonify
+"""JWT error handlers - return dictionaries for flask_restx compatibility."""
+
+from flask_jwt_extended import JWTManager
 
 
-def register_jwt_handlers(jwt_manager):
-    """Register custom JWT error handlers."""
-
-    @jwt_manager.unauthorized_loader
-    def missing_token_callback(error):
-        return jsonify({
-            "success": False,
-            "message": "Authorization header is missing or invalid",
-            "error": str(error)
-        }), 401
-
-    @jwt_manager.invalid_token_loader
-    def invalid_token_callback(error):
-        return jsonify({
-            "success": False,
-            "message": "Invalid token",
-            "error": str(error)
-        }), 401
-
-    @jwt_manager.expired_token_loader
-    def expired_token_callback(jwt_header, jwt_data):
-        return jsonify({
-            "success": False,
-            "message": "Token has expired",
-            "error": "expired_token"
-        }), 401
-
-    @jwt_manager.revoked_token_loader
-    def revoked_token_callback(jwt_header, jwt_data):
-        return jsonify({
-            "success": False,
-            "message": "Token has been revoked",
-            "error": "revoked_token"
-        }), 401
+def register_jwt_handlers(jwt):
+    """Register JWT error handlers that return dictionaries."""
+    
+    @jwt.unauthorized_loader
+    def unauthorized_loader(callback):
+        return {"success": False, "message": "Missing Authorization Header"}, 401
+    
+    @jwt.invalid_token_loader
+    def invalid_token_loader(callback):
+        return {"success": False, "message": "Invalid token"}, 401
+    
+    @jwt.expired_token_loader
+    def expired_token_loader(callback):
+        return {"success": False, "message": "Token has expired"}, 401
+    
+    @jwt.revoked_token_loader
+    def revoked_token_loader(callback):
+        return {"success": False, "message": "Token has been revoked"}, 401
+    
+    @jwt.needs_fresh_token_loader
+    def needs_fresh_token_loader(callback):
+        return {"success": False, "message": "Fresh token required"}, 401
