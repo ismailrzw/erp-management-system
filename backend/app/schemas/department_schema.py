@@ -1,3 +1,4 @@
+# backend/app/schemas/department_schema.py
 """Validation schemas for department data."""
 
 from marshmallow import Schema, fields, validate, validates, ValidationError
@@ -17,7 +18,6 @@ class CreateDepartmentSchema(Schema):
 
     @validates("code")
     def validate_code(self, value):
-        """Department code must be uppercase letters only."""
         if not value.isalpha():
             raise ValidationError("Department code must contain only letters.")
         if not value.isupper():

@@ -8,7 +8,6 @@ def role_required(*roles):
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
-            # Let JWT handle errors - no try/except
             verify_jwt_in_request()
             
             token_role = get_jwt().get("role")

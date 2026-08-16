@@ -1,3 +1,4 @@
+# backend/app/models/course.py
 """Field constants for the courses collection."""
 
 COLLECTION = "courses"

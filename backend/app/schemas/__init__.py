@@ -1,3 +1,4 @@
+# backend/app/schemas/__init__.py
 """Schemas package for request validation."""
 
 from .student_schema import CreateStudentSchema, UpdateStudentSchema

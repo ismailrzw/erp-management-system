@@ -1,3 +1,4 @@
+# backend/app/schemas/student_schema.py
 """Validation schemas for student data."""
 
 from marshmallow import Schema, fields, validate, validates, ValidationError
@@ -38,7 +39,6 @@ class CreateStudentSchema(Schema):
 
     @validates("roll")
     def validate_roll(self, value):
-        """Roll number should not contain spaces."""
         if " " in value:
             raise ValidationError("Roll number must not contain spaces.")
 
@@ -60,4 +60,4 @@ class UpdateStudentSchema(Schema):
         load_default=None,
         allow_none=True
     )
-    # Note: email, roll, dept, password_hash, role cannot be updated
+    # email, roll, dept, password_hash, role cannot be updated

@@ -1,3 +1,4 @@
+# backend/app/models/department.py
 """Field constants for the departments collection."""
 
 COLLECTION = "departments"

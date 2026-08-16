@@ -1,3 +1,4 @@
+# backend/app/schemas/course_schema.py
 """Validation schemas for course data."""
 
 from marshmallow import Schema, fields, validate, validates, ValidationError
@@ -25,11 +26,6 @@ class CreateCourseSchema(Schema):
     deadline = fields.Str(
         required=True
     )
-
-    @validates("max_group")
-    def validate_max_group(self, value):
-        """max_group must be >= min_group."""
-        # We'll check this in the service layer since we need both values
 
 
 class UpdateCourseSchema(Schema):

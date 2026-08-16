@@ -1,3 +1,4 @@
+# backend/app/models/student.py
 """Field constants for the students collection."""
 
 COLLECTION = "users"

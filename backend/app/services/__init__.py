@@ -8,6 +8,7 @@ from .student_service import (
     update_student,
     soft_delete_student,
     restore_student,
+    permanent_delete_student,
     generate_student_email,
     generate_initial_password,
 )
@@ -19,6 +20,7 @@ __all__ = [
     "update_student",
     "soft_delete_student",
     "restore_student",
+    "permanent_delete_student",
     "generate_student_email",
     "generate_initial_password",
 ]
