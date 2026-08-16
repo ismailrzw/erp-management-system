@@ -158,8 +158,8 @@ Reporting
 ## 1. Clone the Repository
 
 ```bash
-git clone https://github.com/ismailrzw/pbl-management-system.git
-cd pbl-management-system
+git clone https://github.com/ismailrzw/erp-management-system.git
+cd erp-management-system
 ```
 
 ## 2. Start the Application

@@ -9,11 +9,11 @@ import bcrypt
 from pydantic import BaseModel, EmailStr, field_validator
 from pydantic import Field as PydanticField
 
-# ==================== CONSTANTS ====================
+COLLECTION = "users"
 
-class UserFields:
+
+class Field:
     """Field name constants to prevent typos."""
-    COLLECTION = "users"
     ID = "_id"
     NAME = "name"
     EMAIL = "email"
@@ -29,6 +29,9 @@ class UserFields:
     DELETED_AT = "deleted_at"
     CREATED_AT = "created_at"
     UPDATED_AT = "updated_at"
+
+
+UserFields = Field
 
 
 class Role:

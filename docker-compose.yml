@@ -1,45 +1,45 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: pbl_backend
-    restart: always
-    ports:
-      - "5000:5000"
-    env_file:
-      - ./backend/.env
-    environment:
-      - FLASK_ENV=development
-    volumes:
-      - ./backend:/app
-      - /app/__pycache__
-    depends_on:
-      - mongo
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: pbl_frontend
-    restart: always
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    command: npm run dev -- --host
-
   mongo:
     image: mongo:7
-    container_name: pbl_mongo
+    container_name: pbl-mongo
     restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: adminpass
+      MONGO_INITDB_DATABASE: pbl_system
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+
+  backend:
+    build: ./backend
+    container_name: pbl-backend
+    restart: always
+    env_file: ./backend/.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongo
+    volumes:
+      - ./backend:/app
+      - /app/venv
+
+  frontend:
+    build: ./frontend
+    container_name: pbl-frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
 
 volumes:
   mongo_data:
