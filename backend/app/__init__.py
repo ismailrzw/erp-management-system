@@ -9,6 +9,7 @@ from app.extensions import mongo
 from app.middleware import fix_authorization_header
 from app.utils import register_jwt_handlers
 
+
 jwt = JWTManager()
 
 def create_app(config_class=Config):
@@ -57,6 +58,12 @@ def create_app(config_class=Config):
 
     from app.blueprints.manager.attachments import attachments_ns
     api.add_namespace(attachments_ns, path='/api/manager/attachments')
+
+    from app.blueprints.manager.announcements import announcements_ns
+    api.add_namespace(announcements_ns, path='/api/manager/announcements')
+
+    from app.blueprints.manager.departments import departments_ns
+    api.add_namespace(departments_ns, path="/api/manager/departments")
 
     # ── Register Blueprints ──────────────────────────────
     from app.blueprints.auth.routes import auth_bp

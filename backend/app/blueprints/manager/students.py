@@ -237,9 +237,11 @@ class StudentBulkImport(Resource):
             return {
                 "success": True,
                 "message": "Student import completed.",
-                "imported": result["imported_count"],
-                "skipped": result["skipped_count"],
-                "errors": result["errors"],
+                "data": {
+                    "imported": result["imported_count"],
+                    "skipped": result["skipped_count"],
+                    "errors": result["errors"],
+                },
             }, 200
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 400

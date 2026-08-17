@@ -23,6 +23,14 @@ def generate_initial_password(roll: str) -> str:
     return f"BNU@{roll.upper()[:8]}{suffix}"
 
 
+def _serialize_datetimes(document: dict) -> dict:
+    """Convert any datetime fields in a document to ISO strings for JSON responses."""
+    for key, value in document.items():
+        if isinstance(value, datetime):
+            document[key] = value.isoformat()
+    return document
+
+
 def create_student(data: dict) -> dict:
     """Create a new student account."""
     roll = data.get("roll", "").strip()
@@ -72,6 +80,7 @@ def get_student_by_id(student_id: str) -> dict:
         if student:
             student["id"] = str(student.pop("_id"))
             student.pop(UserFields.PASSWORD_HASH, None)
+            student = _serialize_datetimes(student)
         return student
     except Exception:
         return None
@@ -108,6 +117,7 @@ def list_students(filters: dict = None, page: int = 1, limit: int = 20) -> dict:
     
     for item in items:
         item["id"] = str(item.pop("_id"))
+        _serialize_datetimes(item)
     
     return {
         "items": items,

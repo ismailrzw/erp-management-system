@@ -1,37 +1,21 @@
-# backend/app/schemas/department_schema.py
 """Validation schemas for department data."""
 
-from marshmallow import Schema, fields, validate, validates, ValidationError
+from marshmallow import Schema, fields, validate
 
 
 class CreateDepartmentSchema(Schema):
-    """Schema for creating a new department."""
-    
-    name = fields.Str(
+    """Validates payload for creating a department."""
+    name = fields.String(required=True, validate=validate.Length(min=2, max=100))
+    code = fields.String(
         required=True,
-        validate=validate.Length(min=2, max=100)
+        validate=validate.Regexp(r"^[A-Z]{2,4}$", error="Code must be 2-4 uppercase letters."),
     )
-    code = fields.Str(
-        required=True,
-        validate=validate.Length(min=2, max=4)
-    )
-
-    @validates("code")
-    def validate_code(self, value):
-        if not value.isalpha():
-            raise ValidationError("Department code must contain only letters.")
-        if not value.isupper():
-            raise ValidationError("Department code must be uppercase.")
 
 
 class UpdateDepartmentSchema(Schema):
-    """Schema for updating an existing department."""
-    
-    name = fields.Str(
-        validate=validate.Length(min=2, max=100),
-        load_default=None
-    )
-    code = fields.Str(
-        validate=validate.Length(min=2, max=4),
-        load_default=None
+    """Validates payload for updating a department. All fields optional."""
+    name = fields.String(required=False, validate=validate.Length(min=2, max=100))
+    code = fields.String(
+        required=False,
+        validate=validate.Regexp(r"^[A-Z]{2,4}$", error="Code must be 2-4 uppercase letters."),
     )
