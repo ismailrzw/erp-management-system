@@ -12,8 +12,10 @@ from werkzeug.datastructures import FileStorage
 from app.extensions import mongo
 from app.models.user import Role, UserFields
 from app.schemas.student_schema import CreateStudentSchema
-from app.services.student_service import generate_initial_password, generate_student_email
-
+from app.services.student_service import (
+    generate_initial_password,
+    generate_student_email,
+)
 
 REQUIRED_COLUMNS = ("Name", "Roll", "Department", "Section", "Session", "Course", "Teacher", "Recovery Email")
 _COLUMN_MAP = {column.casefold(): column for column in REQUIRED_COLUMNS}
@@ -68,7 +70,7 @@ def parse_excel(file: FileStorage) -> tuple[list[dict], list[dict]]:
         data = _normalise_row(canonical)
         try:
             data = schema.load(data)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - must not let one bad row abort the whole import
             errors.append({"row": index, "error": str(exc)})
             continue
         roll_key = data["roll"].casefold()

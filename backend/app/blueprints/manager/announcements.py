@@ -4,8 +4,12 @@ from flask import request
 from flask_jwt_extended import get_jwt_identity
 from flask_restx import Namespace, Resource, fields
 
+from app.extensions import mongo
 from app.models.user import Role
-from app.schemas.announcement_schema import CreateAnnouncementSchema, UpdateAnnouncementSchema
+from app.schemas.announcement_schema import (
+    CreateAnnouncementSchema,
+    UpdateAnnouncementSchema,
+)
 from app.services.announcement_service import (
     create_announcement,
     delete_announcement,
@@ -15,8 +19,6 @@ from app.services.announcement_service import (
 )
 from app.utils.audit import log_audit
 from app.utils.decorators import role_required
-from app.extensions import mongo
-
 
 announcements_ns = Namespace("manager_announcements", description="Manager announcement operations")
 
@@ -62,7 +64,7 @@ class AnnouncementList(Resource):
             log_audit(mongo.db, get_jwt_identity(), Role.MANAGER, "announcements", "create",
                       target_id=announcement["id"], new_value=announcement)
             return {"success": True, "message": "Announcement posted.", "data": announcement}, 201
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 422
 
 
@@ -98,7 +100,7 @@ class AnnouncementDetail(Resource):
             return {"success": True, "message": "Announcement updated.", "data": announcement}, 200
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 400
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 422
 
     @announcements_ns.doc(security="Bearer Auth")

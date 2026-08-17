@@ -1,15 +1,16 @@
 # backend/app/services/student_service.py
 """Business logic for student operations."""
 
-import bcrypt
 import random
 import string
 from datetime import datetime, timezone
+
+import bcrypt
 from bson import ObjectId
+from bson.errors import InvalidId
 
 from app.extensions import mongo
-from app.models.student import Field as StudentField
-from app.models.user import UserFields, Role
+from app.models.user import Role, UserFields
 
 
 def generate_student_email(roll: str, domain: str = "bnu.edu.pk") -> str:
@@ -82,11 +83,11 @@ def get_student_by_id(student_id: str) -> dict:
             student.pop(UserFields.PASSWORD_HASH, None)
             student = _serialize_datetimes(student)
         return student
-    except Exception:
+    except InvalidId:
         return None
 
 
-def list_students(filters: dict = None, page: int = 1, limit: int = 20) -> dict:
+def list_students(filters: dict | None = None, page: int = 1, limit: int = 20) -> dict:
     """List students with pagination and filters."""
     if filters is None:
         filters = {}

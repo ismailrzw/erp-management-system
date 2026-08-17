@@ -5,11 +5,10 @@ from flask_jwt_extended import get_jwt_identity
 from flask_restx import Namespace, Resource, fields, reqparse
 from werkzeug.datastructures import FileStorage
 
+from app.extensions import mongo
 from app.models.user import Role
 from app.schemas.attachment_schema import CreateAttachmentSchema, UpdateAttachmentSchema
 from app.services.attachment_service import (
-    ALLOWED_EXTENSIONS,
-    MAX_FILE_SIZE,
     delete_attachment,
     download_attachment,
     get_attachment_by_id,
@@ -19,8 +18,6 @@ from app.services.attachment_service import (
 )
 from app.utils.audit import log_audit
 from app.utils.decorators import role_required
-from app.extensions import mongo
-
 
 attachments_bp = Blueprint("manager_attachments", __name__)
 attachments_ns = Namespace("manager_attachments", description="Manager attachment operations")
@@ -71,7 +68,7 @@ class AttachmentList(Resource):
             return {"success": True, "message": "Attachment uploaded.", "data": attachment}, 201
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 400
-        except Exception:
+        except Exception:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": "Unable to upload attachment."}, 500
 
 
@@ -105,7 +102,7 @@ class AttachmentDetail(Resource):
             return {"success": True, "message": "Attachment updated.", "data": attachment}, 200
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 400
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 422
 
     @attachments_ns.doc(security="Bearer Auth")

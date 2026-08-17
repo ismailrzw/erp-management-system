@@ -2,25 +2,25 @@
 """Manager Students API endpoints."""
 
 from flask import Blueprint, request
-from flask_restx import Namespace, Resource, fields, reqparse
 from flask_jwt_extended import get_jwt_identity
+from flask_restx import Namespace, Resource, fields, reqparse
 from werkzeug.datastructures import FileStorage
 
 from app.extensions import mongo
-from app.utils.decorators import role_required
 from app.models.user import Role
+from app.schemas.student_schema import CreateStudentSchema, UpdateStudentSchema
+from app.services.bulk_import_service import bulk_create_students, parse_excel
 from app.services.student_service import (
     create_student,
-    list_students,
     get_student_by_id,
-    update_student,
-    soft_delete_student,
-    restore_student,
+    list_students,
     permanent_delete_student,
+    restore_student,
+    soft_delete_student,
+    update_student,
 )
-from app.schemas.student_schema import CreateStudentSchema, UpdateStudentSchema
 from app.utils.audit import log_audit
-from app.services.bulk_import_service import bulk_create_students, parse_excel
+from app.utils.decorators import role_required
 
 # ── Blueprint ──────────────────────────────────────────────
 students_bp = Blueprint("manager_students", __name__)
@@ -79,8 +79,8 @@ class StudentList(Resource):
             result = list_students(filters, page, limit)
             return {"success": True, "message": "Students retrieved.", "data": result}, 200
             
-        except Exception as e:
-            return {"success": False, "message": str(e)}, 500
+        except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
+            return {"success": False, "message": str(exc)}, 500
 
     @students_ns.doc(security="Bearer Auth")
     @students_ns.expect(student_model)
@@ -93,8 +93,8 @@ class StudentList(Resource):
             schema = CreateStudentSchema()
             try:
                 validated = schema.load(data)
-            except Exception as e:
-                return {"success": False, "message": str(e)}, 422
+            except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
+                return {"success": False, "message": str(exc)}, 422
             
             result = create_student(validated)
             
@@ -110,8 +110,8 @@ class StudentList(Resource):
             
         except ValueError as e:
             return {"success": False, "message": str(e)}, 409
-        except Exception as e:
-            return {"success": False, "message": str(e)}, 500
+        except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
+            return {"success": False, "message": str(exc)}, 500
 
 
 @students_ns.route("/<student_id>")
@@ -125,8 +125,8 @@ class StudentDetail(Resource):
             if not student:
                 return {"success": False, "message": "Student not found."}, 404
             return {"success": True, "message": "Student retrieved.", "data": student}, 200
-        except Exception as e:
-            return {"success": False, "message": str(e)}, 500
+        except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
+            return {"success": False, "message": str(exc)}, 500
 
     @students_ns.doc(security="Bearer Auth")
     @students_ns.expect(student_update_model)
@@ -139,8 +139,8 @@ class StudentDetail(Resource):
             schema = UpdateStudentSchema()
             try:
                 validated = schema.load(data)
-            except Exception as e:
-                return {"success": False, "message": str(e)}, 422
+            except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
+                return {"success": False, "message": str(exc)}, 422
             
             if not validated:
                 return {"success": False, "message": "No fields to update."}, 400
@@ -155,8 +155,8 @@ class StudentDetail(Resource):
             
         except ValueError as e:
             return {"success": False, "message": str(e)}, 404
-        except Exception as e:
-            return {"success": False, "message": str(e)}, 500
+        except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
+            return {"success": False, "message": str(exc)}, 500
 
     @students_ns.doc(security="Bearer Auth")
     @role_required(Role.MANAGER)
@@ -173,8 +173,8 @@ class StudentDetail(Resource):
             
         except ValueError as e:
             return {"success": False, "message": str(e)}, 404
-        except Exception as e:
-            return {"success": False, "message": str(e)}, 500
+        except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
+            return {"success": False, "message": str(exc)}, 500
 
 
 @students_ns.route("/<student_id>/restore")
@@ -194,8 +194,8 @@ class StudentRestore(Resource):
             
         except ValueError as e:
             return {"success": False, "message": str(e)}, 404
-        except Exception as e:
-            return {"success": False, "message": str(e)}, 500
+        except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
+            return {"success": False, "message": str(exc)}, 500
 
 
 @students_ns.route("/<student_id>/permanent")
@@ -215,8 +215,8 @@ class StudentPermanentDelete(Resource):
             
         except ValueError as e:
             return {"success": False, "message": str(e)}, 404
-        except Exception as e:
-            return {"success": False, "message": str(e)}, 500
+        except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
+            return {"success": False, "message": str(exc)}, 500
 
 
 @students_ns.route("/bulk")
@@ -245,5 +245,5 @@ class StudentBulkImport(Resource):
             }, 200
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 400
-        except Exception:
+        except Exception:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": "Unable to import students."}, 500

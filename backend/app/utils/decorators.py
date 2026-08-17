@@ -1,5 +1,6 @@
 # backend/app/utils/decorators.py
 from functools import wraps
+
 from flask_jwt_extended import get_jwt, verify_jwt_in_request
 
 

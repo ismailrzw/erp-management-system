@@ -1,7 +1,7 @@
 # backend/app/schemas/student_schema.py
 """Validation schemas for student data."""
 
-from marshmallow import Schema, fields, validate, validates, ValidationError
+from marshmallow import Schema, ValidationError, fields, validate, validates
 
 
 class CreateStudentSchema(Schema):

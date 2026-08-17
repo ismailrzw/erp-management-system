@@ -1,7 +1,8 @@
 # backend/app/utils/jwt_handlers.py
 """JWT error handlers - return dictionaries for flask_restx compatibility."""
 
-from flask_jwt_extended import JWTManager
+
+from .audit import log_audit as log_audit
 
 
 def register_jwt_handlers(jwt):

@@ -1,20 +1,21 @@
 # backend/app/blueprints/auth/routes.py
 """Authentication routes."""
 
+from datetime import datetime, timezone
+
+import bcrypt
+from bson import ObjectId
 from flask import Blueprint, request
 from flask_jwt_extended import (
     create_access_token,
+    get_jwt,
     get_jwt_identity,
     verify_jwt_in_request,
-    get_jwt,
 )
 from flask_restx import Namespace, Resource, fields
-import bcrypt
-from datetime import datetime, timezone
-from bson import ObjectId
 
 from app.extensions import mongo
-from app.utils.responses import success_response, error_response
+from app.utils.responses import error_response, success_response
 
 # ── Blueprint (for actual routing) ──────────────────────
 auth_bp = Blueprint("auth", __name__)
@@ -58,7 +59,7 @@ class Login(Resource):
                 password.encode("utf-8"),
                 stored_hash.encode("utf-8")
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 - malformed stored hashes must be treated as failed authentication
             password_matches = False
 
         if not password_matches:

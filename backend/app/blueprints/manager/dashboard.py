@@ -3,12 +3,12 @@
 
 from flask import Blueprint
 from flask_restx import Namespace, Resource
-from flask_jwt_extended import get_jwt_identity
 
 from app.extensions import mongo
-from app.utils.decorators import role_required
+from app.models.group import Field as GroupField
+from app.models.group import Status as GroupStatus
 from app.models.user import Role
-from app.models.group import Field as GroupField, Status as GroupStatus
+from app.utils.decorators import role_required
 
 # ── Blueprint ──────────────────────────────────────────────
 dashboard_bp = Blueprint("manager_dashboard", __name__)
@@ -54,7 +54,7 @@ class Dashboard(Resource):
                     "deleted": False,
                     "_id": {"$nin": students_in_groups}
                 })
-            except Exception:
+            except Exception:  # noqa: BLE001 - deliberate catch-all, returns partial dashboard response to client
                 total_groups = 0
                 pending_groups = 0
                 total_groups_evaluated = 0
@@ -68,7 +68,7 @@ class Dashboard(Resource):
                 ).sort("date", -1).limit(5))
                 for a in announcements:
                     a["id"] = str(a.pop("_id"))
-            except Exception:
+            except Exception:  # noqa: BLE001 - deliberate catch-all, returns partial dashboard response to client
                 announcements = []
 
             # ── Attachments ─────────────────────────────────────
@@ -78,7 +78,7 @@ class Dashboard(Resource):
                 ).limit(5))
                 for a in attachments:
                     a["id"] = str(a.pop("_id"))
-            except Exception:
+            except Exception:  # noqa: BLE001 - deliberate catch-all, returns partial dashboard response to client
                 attachments = []
 
             return {
@@ -97,8 +97,8 @@ class Dashboard(Resource):
                 }
             }, 200
 
-        except Exception as e:
+        except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {
                 "success": False,
-                "message": str(e)
+                "message": str(exc)
             }, 500

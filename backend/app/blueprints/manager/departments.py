@@ -2,8 +2,9 @@
 
 from flask import request
 from flask_jwt_extended import get_jwt_identity
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, Resource, fields, inputs
 
+from app.extensions import mongo
 from app.models.user import Role
 from app.schemas.department_schema import CreateDepartmentSchema, UpdateDepartmentSchema
 from app.services.department_service import (
@@ -17,8 +18,6 @@ from app.services.department_service import (
 )
 from app.utils.audit import log_audit
 from app.utils.decorators import role_required
-from app.extensions import mongo
-
 
 departments_ns = Namespace("manager_departments", description="Manager department operations")
 
@@ -39,7 +38,7 @@ update_model = departments_ns.model("DepartmentUpdate", {
 })
 
 list_parser = departments_ns.parser()
-list_parser.add_argument("deleted", type=bool, default=False, location="args")
+list_parser.add_argument("deleted", type=inputs.boolean, default=False, location="args")
 list_parser.add_argument("search", type=str, required=False, location="args")
 
 
@@ -67,7 +66,7 @@ class DepartmentList(Resource):
             return {"success": True, "message": "Department added successfully.", "data": department}, 201
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 409
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 422
 
 
@@ -101,7 +100,7 @@ class DepartmentDetail(Resource):
             return {"success": True, "message": "Department updated.", "data": department}, 200
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 409
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 422
 
     @departments_ns.doc(security="Bearer Auth")

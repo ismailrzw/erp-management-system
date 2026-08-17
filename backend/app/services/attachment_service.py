@@ -9,8 +9,7 @@ from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
 from app.extensions import mongo
-from app.models.attachment import AttachmentFields, COLLECTION
-
+from app.models.attachment import COLLECTION, AttachmentFields
 
 MAX_FILE_SIZE = 10 * 1024 * 1024
 ALLOWED_EXTENSIONS = {"pdf", "docx", "xlsx", "zip"}
