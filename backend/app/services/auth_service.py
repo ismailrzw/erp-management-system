@@ -1,10 +1,17 @@
 # backend/app/services/auth_service.py
 """
-Auth Service - Business logic for authentication
+Auth Service — business logic for authentication.
+
+This is the *only* place in the codebase that:
+  1. Queries the database for user credentials
+  2. Verifies passwords using bcrypt
+  3. Creates JWT access tokens
+
+Both the auth blueprint and any future API consumers must delegate here
+rather than performing these operations inline.
 """
 from datetime import timedelta
 
-import bcrypt
 from bson.objectid import ObjectId
 from flask import current_app
 from flask_jwt_extended import create_access_token
@@ -12,136 +19,162 @@ from flask_jwt_extended import create_access_token
 from app.extensions import mongo
 from app.models.user import UserFields, verify_password
 
+# Access-token lifetime — all tokens issued by this service expire in 8 hours.
+_TOKEN_EXPIRES = timedelta(hours=8)
+
 
 class AuthService:
-    """Service for authentication operations."""
-    
+    """Service for authentication and credential-management operations."""
+
     @staticmethod
-    def authenticate_user(email: str, password: str):
+    def authenticate_user(email: str, password: str) -> dict | None:
         """
-        Authenticate a user with email and password.
-        
-        Returns:
-            dict: User data and token if successful
-            None: If authentication fails
+        Authenticate a user by email and password.
+
+        Parameters
+        ----------
+        email : str
+            Already normalised (lowercased, stripped) email address.
+        password : str
+            Plaintext password from the request payload.
+
+        Returns
+        -------
+        dict
+            ``{"token": str, "user": {id, name, email, role, dept}}``
+            on success.
+        None
+            On any authentication failure (user not found, wrong password,
+            deleted account, DB error).  The caller must return 401.
         """
         try:
             user = mongo.db.users.find_one({
                 UserFields.EMAIL: email,
-                UserFields.DELETED: False
+                UserFields.DELETED: {"$ne": True},
             })
-            
+
             if not user:
                 return None
-            
-            stored_hash = user.get(UserFields.PASSWORD_HASH)
+
+            stored_hash = user.get(UserFields.PASSWORD_HASH, "")
             if not stored_hash or not verify_password(password, stored_hash):
                 return None
-            
+
             token = create_access_token(
-                identity=str(user['_id']),
+                identity=str(user["_id"]),
                 additional_claims={
-                    "role": user.get(UserFields.ROLE),
-                    "email": user.get(UserFields.EMAIL),
-                    "name": user.get(UserFields.NAME)
+                    "role":    user.get(UserFields.ROLE),
+                    "dept":    user.get(UserFields.DEPT),
+                    "section": user.get(UserFields.SECTION),
+                    "course":  user.get(UserFields.COURSE),
+                    "name":    user.get(UserFields.NAME, "User"),
+                    "email":   user.get(UserFields.EMAIL),
                 },
-                expires_delta=timedelta(hours=8)
+                expires_delta=_TOKEN_EXPIRES,
             )
-            
+
             return {
                 "token": token,
                 "user": {
-                    "id": str(user['_id']),
-                    "name": user.get(UserFields.NAME),
+                    "id":    str(user["_id"]),
+                    "name":  user.get(UserFields.NAME),
                     "email": user.get(UserFields.EMAIL),
-                    "role": user.get(UserFields.ROLE)
-                }
+                    "role":  user.get(UserFields.ROLE),
+                    "dept":  user.get(UserFields.DEPT),
+                },
             }
-            
-        except (ValueError, TypeError, KeyError) as e:
-            current_app.logger.error(f"Authentication data error: {e!s}")
+
+        except (ValueError, TypeError, KeyError) as exc:
+            current_app.logger.error("Authentication data error: %s", exc)
             return None
-        except Exception as e:  # noqa: BLE001
-            current_app.logger.error(f"Authentication error: {e!s}")
+        except Exception as exc:  # noqa: BLE001
+            current_app.logger.error("Authentication error: %s", exc)
             return None
-    
+
     @staticmethod
-    def get_user_by_id(user_id: str):
-        """Get user by ID. Returns dict or None."""
+    def get_user_by_id(user_id: str) -> dict | None:
+        """Return a safe user dict (no password_hash) by MongoDB ObjectId, or None."""
         try:
             user = mongo.db.users.find_one({"_id": ObjectId(user_id)})
             if not user:
                 return None
-            
             return {
-                "id": str(user['_id']),
-                "name": user.get(UserFields.NAME),
+                "id":    str(user["_id"]),
+                "name":  user.get(UserFields.NAME),
                 "email": user.get(UserFields.EMAIL),
-                "role": user.get(UserFields.ROLE)
+                "role":  user.get(UserFields.ROLE),
             }
-        except (ValueError, TypeError) as e:
-            current_app.logger.error(f"Invalid user ID format: {e!s}")
+        except (ValueError, TypeError) as exc:
+            current_app.logger.error("Invalid user ID format: %s", exc)
             return None
-        except Exception as e:  # noqa: BLE001
-            current_app.logger.error(f"Get user error: {e!s}")
+        except Exception as exc:  # noqa: BLE001
+            current_app.logger.error("Get user error: %s", exc)
             return None
-    
+
     @staticmethod
-    def get_user_by_email(email: str):
-        """Get user by email. Returns dict or None."""
+    def get_user_by_email(email: str) -> dict | None:
+        """Return a safe user dict by email, or None."""
         try:
             user = mongo.db.users.find_one({
                 UserFields.EMAIL: email,
-                UserFields.DELETED: False
+                UserFields.DELETED: False,
             })
             if not user:
                 return None
-            
             return {
-                "id": str(user['_id']),
-                "name": user.get(UserFields.NAME),
+                "id":    str(user["_id"]),
+                "name":  user.get(UserFields.NAME),
                 "email": user.get(UserFields.EMAIL),
-                "role": user.get(UserFields.ROLE)
+                "role":  user.get(UserFields.ROLE),
             }
-        except (ValueError, TypeError) as e:
-            current_app.logger.error(f"Invalid email format: {e!s}")
+        except (ValueError, TypeError) as exc:
+            current_app.logger.error("Invalid email format: %s", exc)
             return None
-        except Exception as e:  # noqa: BLE001
-            current_app.logger.error(f"Get user by email error: {e!s}")
+        except Exception as exc:  # noqa: BLE001
+            current_app.logger.error("Get user by email error: %s", exc)
             return None
-    
+
     @staticmethod
-    def change_password(user_id: str, current_password: str, new_password: str):
+    def change_password(user_id: str, current_password: str, new_password: str) -> tuple[bool, str]:
         """
-        Change user password.
-        
-        Returns:
-            tuple: (success: bool, message: str)
+        Change a user's password after verifying the current one.
+
+        Returns
+        -------
+        tuple[bool, str]
+            ``(True, "Password changed successfully")`` on success.
+            ``(False, <reason>)`` on failure.
         """
+        from datetime import datetime, timezone
+
+        import bcrypt
+
         try:
             user = mongo.db.users.find_one({"_id": ObjectId(user_id)})
             if not user:
-                return False, "User not found"
-            
-            stored_hash = user.get(UserFields.PASSWORD_HASH)
+                return False, "User not found."
+
+            stored_hash = user.get(UserFields.PASSWORD_HASH, "")
             if not stored_hash or not verify_password(current_password, stored_hash):
-                return False, "Current password is incorrect"
-            
+                return False, "Current password is incorrect."
+
             new_hash = bcrypt.hashpw(
-                new_password.encode('utf-8'),
-                bcrypt.gensalt()
-            ).decode('utf-8')
-            
+                new_password.encode("utf-8"),
+                bcrypt.gensalt(),
+            ).decode("utf-8")
+
             mongo.db.users.update_one(
                 {"_id": ObjectId(user_id)},
-                {"$set": {UserFields.PASSWORD_HASH: new_hash}}
+                {"$set": {
+                    UserFields.PASSWORD_HASH: new_hash,
+                    UserFields.UPDATED_AT: datetime.now(timezone.utc),
+                }},
             )
-            
-            return True, "Password changed successfully"
-            
-        except (ValueError, TypeError) as e:
-            current_app.logger.error(f"Invalid password data: {e!s}")
-            return False, "Invalid user ID format"
-        except Exception as e:  # noqa: BLE001
-            current_app.logger.error(f"Change password error: {e!s}")
-            return False, "Failed to change password"
+            return True, "Password changed successfully."
+
+        except (ValueError, TypeError) as exc:
+            current_app.logger.error("Invalid password data: %s", exc)
+            return False, "Invalid user ID format."
+        except Exception as exc:  # noqa: BLE001
+            current_app.logger.error("Change password error: %s", exc)
+            return False, "Failed to change password."

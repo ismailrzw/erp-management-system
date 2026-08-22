@@ -1,6 +1,8 @@
 # backend/app/blueprints/manager/dashboard.py
 """Manager Dashboard API endpoints."""
 
+from datetime import datetime
+
 from flask import Blueprint
 from flask_restx import Namespace, Resource
 
@@ -15,6 +17,18 @@ dashboard_bp = Blueprint("manager_dashboard", __name__)
 
 # ── Namespace ──────────────────────────────────────────────
 dashboard_ns = Namespace("manager_dashboard", description="Manager Dashboard operations")
+
+
+def _serialize_doc(doc: dict) -> dict:
+    if not doc:
+        return doc
+    res = dict(doc)
+    if "_id" in res:
+        res["id"] = str(res.pop("_id"))
+    for k, v in list(res.items()):
+        if isinstance(v, datetime):
+            res[k] = v.isoformat()
+    return res
 
 
 # ── Dashboard Route ──────────────────────────────────────
@@ -63,21 +77,19 @@ class Dashboard(Resource):
 
             # ── Announcements ──────────────────────────────────
             try:
-                announcements = list(mongo.db.announcements.find(
+                raw_announcements = list(mongo.db.announcements.find(
                     {}, {"content": 0}
                 ).sort("date", -1).limit(5))
-                for a in announcements:
-                    a["id"] = str(a.pop("_id"))
+                announcements = [_serialize_doc(a) for a in raw_announcements]
             except Exception:  # noqa: BLE001 - deliberate catch-all, returns partial dashboard response to client
                 announcements = []
 
             # ── Attachments ─────────────────────────────────────
             try:
-                attachments = list(mongo.db.attachments.find({}).sort(
+                raw_attachments = list(mongo.db.attachments.find({}).sort(
                     "uploaded_at", -1
                 ).limit(5))
-                for a in attachments:
-                    a["id"] = str(a.pop("_id"))
+                attachments = [_serialize_doc(a) for a in raw_attachments]
             except Exception:  # noqa: BLE001 - deliberate catch-all, returns partial dashboard response to client
                 attachments = []
 
