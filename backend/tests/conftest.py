@@ -18,9 +18,9 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app import create_app  # noqa: E402
-from app.extensions import mongo  # noqa: E402
-from app.models.user import Role  # noqa: E402
+from app import create_app
+from app.extensions import mongo
+from app.models.user import Role
 
 TEST_DATABASE_NAME = "pbl_system_test"
 MANAGER_EMAIL = "zamanaziz@bnu.edu.pk"
@@ -75,7 +75,7 @@ def reset_test_database(app):
 @pytest.fixture(autouse=True)
 def isolate_attachment_uploads(monkeypatch, tmp_path):
     """Keep attachment test files out of the application's uploads directory."""
-    import app.services.attachment_service as attachment_service
+    from app.services import attachment_service
     monkeypatch.setattr(attachment_service, "UPLOAD_DIRECTORY", tmp_path / "uploads")
 
 

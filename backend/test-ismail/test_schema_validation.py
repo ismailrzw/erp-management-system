@@ -24,14 +24,17 @@ if BACKEND_ROOT not in sys.path:
 
 from marshmallow import ValidationError
 
+from app.schemas.announcement_schema import (
+    CreateAnnouncementSchema,
+)
+from app.schemas.attachment_schema import CreateAttachmentSchema
+
 # ── Import all schemas ──────────────────────────────────────
 from app.schemas.auth_schema import ChangePasswordSchema, LoginSchema
+from app.schemas.course_schema import CreateCourseSchema
+from app.schemas.department_schema import CreateDepartmentSchema
 from app.schemas.student_schema import CreateStudentSchema, UpdateStudentSchema
 from app.schemas.teacher_schema import CreateTeacherSchema, UpdateTeacherSchema
-from app.schemas.department_schema import CreateDepartmentSchema, UpdateDepartmentSchema
-from app.schemas.course_schema import CreateCourseSchema, UpdateCourseSchema
-from app.schemas.announcement_schema import CreateAnnouncementSchema, UpdateAnnouncementSchema
-from app.schemas.attachment_schema import CreateAttachmentSchema, UpdateAttachmentSchema
 
 # ── Test infrastructure ─────────────────────────────────────
 results = []
@@ -388,7 +391,7 @@ test_invalid(CreateAttachmentSchema,
 # ════════════════════════════════════════════════════════════
 
 print(f"\n{'='*70}")
-print(f"  RESULTS SUMMARY")
+print("  RESULTS SUMMARY")
 print(f"{'='*70}")
 print(f"{'Status':<10} {'ID':<12} {'Description':<45} Detail")
 print(f"{'-'*10} {'-'*12} {'-'*45} {'-'*40}")
@@ -401,7 +404,7 @@ for status, test_id, desc, detail in results:
 print(f"\n{'─'*70}")
 print(f"  Total: {total_pass + total_fail}  |  ✅ Passed: {total_pass}  |  ❌ Failed: {total_fail}")
 if total_fail == 0:
-    print(f"  🎉 ALL TESTS PASSED — Schema validation layer is working correctly!")
+    print("  🎉 ALL TESTS PASSED — Schema validation layer is working correctly!")
 else:
     print(f"  ⚠️  {total_fail} TEST(S) FAILED — Investigate the schema definitions above.")
 print(f"{'─'*70}\n")
