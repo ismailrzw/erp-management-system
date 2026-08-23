@@ -1,122 +1,91 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { ProtectedRoute } from './components/layout/ProtectedRoute';
+import { AppShell } from './components/layout/AppShell';
 
-function App() {
-  const [count, setCount] = useState(0)
+// Auth Pages
+import { SignInPage } from './pages/auth/SignInPage';
 
+// Manager Pages
+import { ManagerDashboard } from './pages/manager/ManagerDashboard';
+
+// Students Management
+import { StudentListPage } from './pages/manager/students/StudentListPage';
+import { AddStudentPage } from './pages/manager/students/AddStudentPage';
+import { StudentTrashPage } from './pages/manager/students/StudentTrashPage';
+
+// Departments Management
+import { DepartmentListPage } from './pages/manager/departments/DepartmentListPage';
+import { AddDepartmentPage } from './pages/manager/departments/AddDepartmentPage';
+import { DepartmentTrashPage } from './pages/manager/departments/DepartmentTrashPage';
+
+// Courses Management
+import { CourseListPage } from './pages/manager/courses/CourseListPage';
+import { AddCoursePage } from './pages/manager/courses/AddCoursePage';
+import { CourseTrashPage } from './pages/manager/courses/CourseTrashPage';
+
+// Teachers Management
+import { TeacherListPage } from './pages/manager/teachers/TeacherListPage';
+import { AddTeacherPage } from './pages/manager/teachers/AddTeacherPage';
+import { TeacherTrashPage } from './pages/manager/teachers/TeacherTrashPage';
+
+// Fallback
+import { NotFoundPage } from './pages/NotFoundPage';
+
+export default function App() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public Authentication Route */}
+          <Route path="/login" element={<SignInPage />} />
 
-      <div className="ticks"></div>
+          {/* Root Redirect */}
+          <Route path="/" element={<Navigate to="/manager/dashboard" replace />} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          {/* Protected Manager Routes */}
+          <Route
+            path="/manager"
+            element={
+              <ProtectedRoute allowedRoles={['pbl_manager']}>
+                <AppShell />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="dashboard" element={<ManagerDashboard />} />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+            {/* Students Management CRUD */}
+            <Route path="students" element={<StudentListPage />} />
+            <Route path="students/view" element={<StudentListPage />} />
+            <Route path="students/add" element={<AddStudentPage />} />
+            <Route path="students/trash" element={<StudentTrashPage />} />
+
+            {/* Departments Management CRUD */}
+            <Route path="departments" element={<DepartmentListPage />} />
+            <Route path="departments/view" element={<DepartmentListPage />} />
+            <Route path="departments/add" element={<AddDepartmentPage />} />
+            <Route path="departments/trash" element={<DepartmentTrashPage />} />
+
+            {/* Courses Management CRUD */}
+            <Route path="courses" element={<CourseListPage />} />
+            <Route path="courses/view" element={<CourseListPage />} />
+            <Route path="courses/add" element={<AddCoursePage />} />
+            <Route path="courses/trash" element={<CourseTrashPage />} />
+
+            {/* Teachers / Evaluators Management CRUD */}
+            <Route path="teachers" element={<TeacherListPage />} />
+            <Route path="teachers/view" element={<TeacherListPage />} />
+            <Route path="teachers/add" element={<AddTeacherPage />} />
+            <Route path="teachers/trash" element={<TeacherTrashPage />} />
+
+            {/* Fallback for other subpages */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+
+          {/* Global Fallback 404 Route */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }
-
-export default App
