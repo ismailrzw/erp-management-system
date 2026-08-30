@@ -1,13 +1,21 @@
-name: CI
+name: Continuous Integration (CI)
 
 on:
+  push:
+    branches: [ develop, main ]
   pull_request:
     branches: [ develop, main ]
-  push:
-    branches: [ develop ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  lint-and-test:
+  # ==========================================
+  # 1. BACKEND CI: Linting & Pytest Suite
+  # ==========================================
+  backend-ci:
+    name: Backend Tests & Quality
     runs-on: ubuntu-latest
 
     services:
@@ -22,42 +30,78 @@ jobs:
           --health-retries=5
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
           cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install flake8 black pytest-cov
 
-      - name: Lint with flake8
+      - name: Lint Code with Flake8
         run: |
           cd backend
           flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-      - name: Check formatting with black
+      - name: Check Formatting with Black
         run: |
           cd backend
           black --check app/ tests/ || true
 
-      - name: Run tests with pytest
+      - name: Run Test Suite (Pytest)
         env:
-          MONGO_URI: mongodb://localhost:27017/pbl_test
-          JWT_SECRET_KEY: test-secret-key-for-ci
+          MONGO_URI: mongodb://localhost:27017/pbl_system_test
+          JWT_SECRET_KEY: test-secret-key-for-ci-pipeline-execution-32
           FLASK_ENV: testing
         run: |
           cd backend
           python -m pytest tests/ -v --cov=app --cov-report=xml
 
-      - name: Upload coverage to Codecov (optional)
+      - name: Upload Coverage to Codecov (Optional)
         uses: codecov/codecov-action@v4
         with:
           file: ./backend/coverage.xml
           fail_ci_if_error: false
+
+  # ==========================================
+  # 2. FRONTEND CI: ESLint & Vite Production Build
+  # ==========================================
+  frontend-ci:
+    name: Frontend Quality & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Lint Frontend with ESLint
+        run: |
+          cd frontend
+          npx eslint src/
+
+      - name: Verify Production Build
+        run: |
+          cd frontend
+          npm run build

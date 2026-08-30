@@ -1,0 +1,72 @@
+name: Continuous Deployment (CD)
+
+on:
+  push:
+    branches:
+      - develop  # Staging Deployment
+      - main     # Production Deployment
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ==========================================
+  # 1. DEPLOY BACKEND TO RENDER
+  # ==========================================
+  deploy-backend:
+    name: Deploy Backend to Render
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deploy Hook
+        env:
+          RENDER_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -n "$RENDER_HOOK" ]; then
+            echo "Triggering automated deployment on Render..."
+            curl -f -X POST "$RENDER_HOOK"
+            echo "Render deployment triggered successfully."
+          else
+            echo "RENDER_DEPLOY_HOOK_URL secret is not configured. Skipping automated Render deploy."
+          fi
+
+  # ==========================================
+  # 2. DEPLOY FRONTEND TO VERCEL
+  # ==========================================
+  deploy-frontend:
+    name: Deploy Frontend to Vercel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Deploy to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
+            echo "Installing Vercel CLI..."
+            npm install --global vercel@latest
+            cd frontend
+            if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+              echo "Deploying to Vercel (Production)..."
+              vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+              vercel build --prod --token=$VERCEL_TOKEN
+              vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+            else
+              echo "Deploying to Vercel (Staging/Preview)..."
+              vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+              vercel build --token=$VERCEL_TOKEN
+              vercel deploy --prebuilt --token=$VERCEL_TOKEN
+            fi
+            echo "Vercel deployment completed successfully."
+          else
+            echo "Vercel secrets (VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID) not configured. Skipping Vercel deploy."
+          fi
