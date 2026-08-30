@@ -1,0 +1,2513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PBL Management System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mada:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --primary:#0073aa;
+  --primary-hover:#0095dd;
+  --success:#54d98c;
+  --warning:#f4d03f;
+  --danger:#ed7669;
+  --info:#5faee3;
+  --page-bg:#f3f3f3;
+  --card-bg:#ffffff;
+  --heading:#4a6076;
+  --body-text:#757575;
+  --muted:#9f9f9f;
+  --dark-text:#2c3e50;
+  --border:#dddddd;
+  --sidebar-w:235px;
+  --navbar-h:60px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Mada',sans-serif;
+  background:var(--page-bg);
+  color:var(--body-text);
+  font-size:14px;
+  font-weight:400;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,h5,h6{margin:0;}
+a{text-decoration:none;color:inherit;}
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;font-size:14px;}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:#ccc;border-radius:4px;}
+
+/* ---------- Preloader ---------- */
+#preloader{position:fixed;inset:0;background:#fff;z-index:9999;display:flex;align-items:center;justify-content:center;transition:opacity .4s ease;}
+#preloader.hide{opacity:0;pointer-events:none;}
+.ball-scale{display:flex;gap:8px;}
+.ball-scale div{width:14px;height:14px;border-radius:50%;background:var(--primary);animation:ballScale 1s ease-in-out infinite;}
+.ball-scale div:nth-child(2){animation-delay:.15s;background:var(--info);}
+.ball-scale div:nth-child(3){animation-delay:.3s;background:var(--success);}
+@keyframes ballScale{0%,100%{transform:scale(.3);opacity:.4;}50%{transform:scale(1);opacity:1;}}
+
+/* ---------- Login ---------- */
+.login-wrap{width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#eef4f8 0%,#f3f3f3 60%);padding:20px;}
+.login-card{background:var(--card-bg);width:380px;max-width:100%;border-radius:4px;border-top:4px solid var(--primary);box-shadow:0 4px 20px rgba(0,0,0,.08);padding:36px 32px 28px;}
+.login-card h4{font-size:22px;font-weight:600;color:var(--heading);text-align:center;margin-bottom:6px;}
+.login-sub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:24px;}
+.login-error{background:#fdecea;color:var(--danger);border:1px solid #f5c6c0;padding:8px 12px;border-radius:3px;font-size:13px;margin-bottom:14px;display:none;}
+.login-error.show{display:block;}
+.login-logo{width:46px;height:46px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;margin:0 auto 14px;}
+.login-foot-logo{text-align:center;margin-top:22px;color:var(--muted);font-size:12px;letter-spacing:.5px;}
+.demo-box{margin-top:18px;background:#f7fafc;border:1px dashed var(--border);border-radius:4px;padding:10px 12px;font-size:12px;color:var(--muted);}
+.demo-box b{color:var(--dark-text);}
+.demo-row{display:flex;justify-content:space-between;padding:2px 0;cursor:pointer;}
+.demo-row:hover{color:var(--primary);}
+
+/* ---------- Form elements ---------- */
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:13px;font-weight:500;color:var(--dark-text);margin-bottom:5px;}
+.form-control{width:100%;border:1px solid var(--border);border-radius:3px;padding:9px 12px;color:var(--dark-text);background:#fff;outline:none;transition:border-color .15s;}
+.form-control:focus{border-color:var(--primary);}
+.form-control:disabled{background:#f5f5f5;color:var(--muted);}
+.form-row{display:flex;gap:14px;flex-wrap:wrap;}
+.form-row>.form-group{flex:1;min-width:180px;}
+.form-hint{font-size:12px;color:var(--muted);margin-top:4px;}
+.form-error-text{font-size:12px;color:var(--danger);margin-top:4px;}
+.checkbox-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dark-text);}
+.checkbox-row input{width:15px;height:15px;}
+
+/* ---------- Buttons ---------- */
+.btn{border:none;border-radius:3px;padding:9px 18px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;position:relative;overflow:hidden;transition:background .15s,box-shadow .15s;}
+.btn:active{transform:translateY(1px);}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-primary:hover{background:var(--primary-hover);}
+.btn-success{background:var(--success);color:#fff;}
+.btn-success:hover{filter:brightness(0.95);}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-danger:hover{filter:brightness(0.95);}
+.btn-info{background:var(--info);color:#fff;border-radius:20px;}
+.btn-outline{background:#fff;border:1px solid var(--border);color:var(--dark-text);}
+.btn-outline:hover{border-color:var(--primary);color:var(--primary);}
+.btn-block{width:100%;justify-content:center;}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn[disabled]{opacity:.55;cursor:not-allowed;}
+.btn-link{background:none;color:var(--primary);padding:4px 6px;font-weight:600;}
+.icon-btn{background:none;border:none;color:var(--muted);padding:4px;border-radius:3px;display:inline-flex;}
+.icon-btn:hover{background:#f0f0f0;color:var(--dark-text);}
+
+/* ---------- App Layout ---------- */
+#app-shell{display:none;}
+.navbar{position:fixed;top:0;left:0;right:0;height:var(--navbar-h);background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:500;}
+.navbar-left{display:flex;align-items:center;gap:14px;}
+.navbar-logo{width:var(--sidebar-w);display:flex;align-items:center;gap:10px;margin-left:-18px;padding-left:18px;height:var(--navbar-h);background:#1f2d3a;color:#fff;transition:width .18s ease;overflow:hidden;}
+.navbar-logo .mark{width:30px;height:30px;border-radius:8px;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;}
+.navbar-logo .txt{font-weight:600;font-size:14px;letter-spacing:.3px;}
+.navbar-right{display:flex;align-items:center;gap:6px;}
+.role-chip{background:#eef6fb;color:var(--primary);font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.4px;margin-right:8px;}
+.user-menu{position:relative;}
+.user-btn{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:4px;border:none;background:none;}
+.user-btn:hover{background:#f5f5f5;}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;}
+.user-name{font-size:13px;color:var(--dark-text);font-weight:500;}
+.dropdown{position:absolute;right:0;top:46px;background:#fff;border:1px solid var(--border);border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.12);width:190px;display:none;overflow:hidden;z-index:600;}
+.dropdown.open{display:block;}
+.dropdown a,.dropdown button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:10px 14px;font-size:13px;background:none;border:none;color:var(--dark-text);}
+.dropdown a:hover,.dropdown button:hover{background:#f5f5f5;color:var(--primary);}
+
+.sidebar-toggle-btn{flex-shrink:0;}
+.sidebar{position:fixed;top:var(--navbar-h);left:0;bottom:0;width:var(--sidebar-w);background:#fff;border-right:1px solid var(--border);overflow-y:auto;overflow-x:hidden;z-index:400;transition:transform .2s ease,width .18s ease;padding-bottom:30px;}
+.nav-section{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;padding:16px 18px 6px;}
+.nav-item,.nav-menu-btn{display:flex;align-items:center;gap:10px;padding:10px 18px;font-size:13.5px;color:var(--dark-text);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-weight:500;}
+.nav-item:hover,.nav-menu-btn:hover{background:#f5f9fb;color:var(--primary);}
+.nav-item.active{background:#eaf5fb;color:var(--primary);border-right:3px solid var(--primary);font-weight:600;}
+.nav-menu-btn .chev{margin-left:auto;transition:transform .15s;}
+.nav-menu-btn.open .chev{transform:rotate(90deg);}
+.nav-sub{display:none;flex-direction:column;background:#fafbfc;}
+.nav-sub.open{display:flex;}
+.nav-sub-item{padding:9px 18px 9px 46px;font-size:13px;color:var(--body-text);cursor:pointer;border:none;background:none;text-align:left;width:100%;}
+.nav-sub-item:hover{color:var(--primary);}
+.nav-sub-item.active{color:var(--primary);font-weight:600;background:#eaf5fb;}
+.nav-icon{width:17px;height:17px;flex-shrink:0;}
+
+.content-wrap{margin-left:var(--sidebar-w);margin-top:var(--navbar-h);padding:1.8rem;min-height:calc(100vh - var(--navbar-h));transition:margin-left .18s ease;}
+.hamburger{display:none;}
+.sidebar-overlay{display:none;}
+
+/* ---- Desktop: user-toggleable collapsed (icon-only) sidebar ---- */
+@media(min-width:901px){
+  .sidebar-toggle-btn{display:inline-flex;}
+  #app-shell.collapsed .sidebar{width:64px;}
+  #app-shell.collapsed .content-wrap{margin-left:64px;}
+  #app-shell.collapsed .navbar-logo{width:64px;}
+  #app-shell.collapsed .navbar-logo .txt{display:none;}
+  #app-shell.collapsed .nav-section{display:none;}
+  #app-shell.collapsed .nav-sub{display:none !important;}
+  #app-shell.collapsed .nav-item,#app-shell.collapsed .nav-menu-btn{justify-content:center;padding:10px 0;gap:0;}
+  #app-shell.collapsed .nav-item span,#app-shell.collapsed .nav-menu-btn span,#app-shell.collapsed .nav-menu-btn svg:last-of-type{display:none;}
+  #app-shell.collapsed .nav-item.active{border-right:none;box-shadow:inset 3px 0 0 var(--primary);}
+}
+@media(max-width:900px){
+  .sidebar-toggle-btn{display:none;}
+}
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%);width:min(var(--sidebar-w),82vw);}
+  .sidebar.mobile-open{transform:translateX(0);box-shadow:0 0 24px rgba(0,0,0,.2);}
+  .sidebar-overlay.show{display:block;position:fixed;top:var(--navbar-h);left:0;right:0;bottom:0;background:rgba(20,28,36,.35);z-index:390;}
+  .content-wrap{margin-left:0;padding:1rem;}
+  .navbar-logo{width:auto;}
+  .hamburger{display:flex;}
+  .navbar-logo .txt{display:none;}
+  .navbar{padding:0 12px;}
+  .role-chip{display:none;}
+}
+@media(max-width:600px){
+  .content-wrap{padding:.85rem;}
+  .user-name{display:none;}
+  .user-btn{padding:6px;}
+  .navbar-right{gap:2px;}
+  .toolbar{gap:8px;}
+  .search-input{max-width:none;width:100%;flex:1 1 100%;}
+  .filters{width:100%;}
+  .filters select{flex:1;min-width:0;}
+  .page-header{align-items:flex-start;}
+  .modal-box{width:100%;}
+  .stat-card{padding:16px;}
+  .step-track{overflow-x:auto;padding-bottom:4px;}
+}
+@media(max-width:420px){
+  .login-card{padding:28px 20px 22px;}
+  .form-row{flex-direction:column;}
+  .toast{min-width:0;width:calc(100vw - 36px);}
+  #toast-wrap{left:18px;right:18px;}
+}
+
+/* ---------- Page header ---------- */
+.page-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.page-header h4{font-size:20px;font-weight:600;color:var(--heading);}
+.breadcrumb{font-size:13px;color:var(--muted);}
+.breadcrumb span{color:var(--heading);}
+.breadcrumb .sep{margin:0 6px;color:#c8c8c8;}
+
+/* ---------- Cards ---------- */
+.card{background:var(--card-bg);border-radius:2px;box-shadow:0 2px 1px rgba(0,0,0,.05);margin-bottom:24px;border-top:4px solid transparent;}
+.card.b-primary{border-top-color:rgba(0,115,170,.5);}
+.card.b-success{border-top-color:var(--success);}
+.card.b-warning{border-top-color:var(--warning);}
+.card.b-danger{border-top-color:var(--danger);}
+.card.b-info{border-top-color:var(--info);}
+.card-block{padding:1.25rem;}
+.card-title{font-size:15px;font-weight:600;color:var(--body-text);text-transform:uppercase;letter-spacing:.4px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:6px;}
+@media(max-width:1100px){.stat-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:560px){.stat-grid{grid-template-columns:1fr;}}
+.stat-card{background:#fff;border-radius:2px;border-top:4px solid var(--primary);box-shadow:0 2px 1px rgba(0,0,0,.05);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;}
+.stat-card.success{border-top-color:var(--success);}
+.stat-card.warning{border-top-color:var(--warning);}
+.stat-card.info{border-top-color:var(--info);}
+.stat-num{font-size:28px;font-weight:700;color:var(--dark-text);line-height:1;}
+.stat-label{font-size:12.5px;color:var(--muted);margin-top:6px;font-weight:500;}
+.stat-icon{width:42px;height:42px;border-radius:10px;background:#eaf5fb;color:var(--primary);display:flex;align-items:center;justify-content:center;}
+.stat-card.success .stat-icon{background:#e6fbf0;color:var(--success);}
+.stat-card.warning .stat-icon{background:#fef9e6;color:#b8960c;}
+.stat-card.info .stat-icon{background:#eaf5fb;color:var(--info);}
+
+/* ---------- Table ---------- */
+.table-wrap{overflow-x:auto;}
+table.dtable{width:100%;border-collapse:collapse;border:1px solid var(--border);font-size:13px;}
+table.dtable th{border-bottom:2px solid #ccc;font-weight:600;text-align:left;padding:.75rem;color:var(--dark-text);background:#fafbfc;white-space:nowrap;}
+table.dtable td{padding:.75rem;border:1px solid var(--border);color:var(--body-text);vertical-align:middle;}
+table.dtable tr:hover td{background:#f9fcfe;}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+.search-input{position:relative;flex:1;min-width:160px;max-width:220px;}
+.search-input input{padding-left:32px;width:100%;}
+.search-input svg{position:absolute;left:9px;top:9px;color:var(--muted);}
+.filters{display:flex;gap:8px;flex-wrap:wrap;}
+.filters select{padding:7px 10px;border:1px solid var(--border);border-radius:3px;background:#fff;font-size:13px;}
+.pagination{display:flex;gap:4px;justify-content:flex-end;margin-top:14px;}
+.pagination button{border:1px solid var(--border);background:#fff;padding:5px 11px;border-radius:3px;font-size:12px;color:var(--dark-text);}
+.pagination button.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+
+/* ---------- Badge / Alert ---------- */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.2px;}
+.badge-success{background:#e6fbf0;color:#1e9b5c;}
+.badge-warning{background:#fef9e6;color:#a37c00;}
+.badge-danger{background:#fdecea;color:var(--danger);}
+.badge-info{background:#eaf5fb;color:var(--primary);}
+.badge-muted{background:#f0f0f0;color:var(--muted);}
+.alert{padding:10px 14px;border-radius:3px;font-size:13px;margin-bottom:14px;display:flex;gap:8px;align-items:flex-start;}
+.alert-warning{background:#fff9e6;color:#8a6d00;border:1px solid #f4e6a8;}
+.alert-info{background:#eaf5fb;color:#1a6a90;border:1px solid #cfe8f5;}
+.alert-danger{background:#fdecea;color:#b23325;border:1px solid #f5c6c0;}
+
+/* ---------- Toast ---------- */
+#toast-wrap{position:fixed;top:74px;right:18px;z-index:9000;display:flex;flex-direction:column;gap:8px;}
+.toast{min-width:260px;background:#2c3e50;color:#fff;padding:12px 16px;border-radius:4px;font-size:13px;box-shadow:0 6px 18px rgba(0,0,0,.2);display:flex;align-items:center;gap:8px;animation:toastIn .25s ease;border-left:4px solid var(--success);}
+.toast.err{border-left-color:var(--danger);}
+.toast.info{border-left-color:var(--info);}
+@keyframes toastIn{from{transform:translateX(30px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+/* ---------- Modal ---------- */
+.modal-overlay{position:fixed;inset:0;background:rgba(30,40,50,.45);display:none;align-items:center;justify-content:center;z-index:2000;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border-radius:5px;width:560px;max-width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.25);}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border);}
+.modal-head h5{font-size:16px;font-weight:600;color:var(--heading);}
+.modal-body{padding:20px;}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;}
+.close-x{background:none;border:none;color:var(--muted);font-size:20px;line-height:1;padding:2px;}
+.close-x:hover{color:var(--danger);}
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:18px;gap:4px;}
+.tab-btn{padding:10px 16px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;position:relative;}
+.tab-btn.active{color:var(--primary);}
+.tab-btn.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--primary);border-radius:2px 2px 0 0;}
+.confirm-box{width:380px;max-width:100%;}
+.confirm-icon{width:44px;height:44px;border-radius:50%;background:#fdecea;color:var(--danger);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;}
+
+/* ---------- Misc ---------- */
+.empty-state{text-align:center;padding:50px 20px;color:var(--muted);}
+.empty-state svg{margin-bottom:10px;color:#cfcfcf;}
+.empty-state .t{font-weight:600;color:var(--dark-text);font-size:14px;margin-bottom:4px;}
+.skeleton{background:linear-gradient(90deg,#eee 25%,#f5f5f5 37%,#eee 63%);background-size:400% 100%;animation:sk 1.4s ease infinite;border-radius:4px;}
+@keyframes sk{0%{background-position:100% 50%;}100%{background-position:0 50%;}}
+.skeleton-row{height:38px;margin-bottom:8px;}
+.rich-toolbar{display:flex;gap:4px;border:1px solid var(--border);border-bottom:none;border-radius:3px 3px 0 0;padding:6px;background:#fafbfc;}
+.rich-toolbar button{border:none;background:#fff;border:1px solid var(--border);width:28px;height:28px;border-radius:3px;font-size:12px;color:var(--dark-text);font-weight:700;}
+.rich-editor{border:1px solid var(--border);border-radius:0 0 3px 3px;min-height:110px;padding:10px 12px;color:var(--dark-text);outline:none;}
+.dropzone{border:2px dashed var(--border);border-radius:6px;padding:34px 16px;text-align:center;color:var(--muted);cursor:pointer;transition:border-color .15s,background .15s;}
+.dropzone:hover,.dropzone.drag{border-color:var(--info);background:#f5fbff;}
+.dropzone svg{margin-bottom:8px;color:var(--info);}
+.file-chip{display:flex;align-items:center;justify-content:space-between;background:#f5f9fb;border:1px solid var(--border);border-radius:4px;padding:8px 12px;font-size:13px;margin-top:10px;}
+.progress-bar{height:6px;background:#eee;border-radius:6px;overflow:hidden;margin-top:8px;}
+.progress-fill{height:100%;background:var(--success);width:0%;transition:width .4s;}
+.rubric-block{border:1px solid var(--border);border-radius:4px;padding:14px 16px;margin-bottom:14px;background:#fcfdfe;}
+.rubric-block h6{font-size:13.5px;font-weight:600;color:var(--dark-text);margin-bottom:8px;}
+.level-grid{display:flex;flex-direction:column;gap:6px;}
+.level-opt{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--body-text);padding:5px 8px;border-radius:3px;}
+.level-opt input{margin-top:2px;}
+.level-opt.sel{background:#eaf5fb;color:var(--primary);font-weight:600;}
+.accordion-item{border:1px solid var(--border);border-radius:4px;margin-bottom:10px;overflow:hidden;}
+.accordion-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;background:#fafbfc;}
+.accordion-head:hover{background:#f2f7fa;}
+.accordion-body{padding:12px 14px;border-top:1px solid var(--border);display:none;}
+.accordion-body.open{display:block;}
+.accordion-item.expanded .accordion-body{display:block;}
+.bar-row{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--dark-text);margin-bottom:6px;}
+.bar-track{flex:1;height:14px;background:#eee;border-radius:8px;overflow:hidden;}
+.bar-fill{height:100%;background:var(--primary);border-radius:8px;}
+.step-track{display:flex;align-items:center;gap:0;margin-bottom:22px;}
+.step-dot{width:26px;height:26px;border-radius:50%;background:#eee;color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.step-dot.done{background:var(--success);color:#fff;}
+.step-dot.active{background:var(--primary);color:#fff;}
+.step-line{flex:1;height:2px;background:#eee;}
+.step-line.done{background:var(--success);}
+.member-row{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;font-size:13px;}
+.section-divider{border:none;border-top:1px solid var(--border);margin:18px 0;}
+.small-muted{font-size:12px;color:var(--muted);}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media(max-width:800px){.grid-2{grid-template-columns:1fr;}}
+.chip-select{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;}
+.chip-select input{width:16px;height:16px;}
+.locked-banner{background:#f0f0f0;color:var(--muted);padding:10px 14px;border-radius:4px;font-size:13px;text-align:center;}
+@media print{
+  .navbar,.sidebar,.sidebar-overlay,.no-print{display:none !important;}
+  .content-wrap{margin:0 !important;padding:0 !important;}
+  body{background:#fff;}
+  .card{box-shadow:none;border:1px solid #ddd;}
+}
+</style>
+</head>
+<body>
+
+<div id="preloader"><div class="ball-scale"><div></div><div></div><div></div></div></div>
+<div id="toast-wrap"></div>
+<div id="modal-root"></div>
+
+<div id="login-root"></div>
+
+<div id="app-shell">
+  <div class="navbar" id="navbar"></div>
+  <div class="sidebar" id="sidebar"></div>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="content-wrap" id="content-wrap"></div>
+</div>
+
+<script>
+/* =========================================================
+   PBL MANAGEMENT SYSTEM — Single-file High-Fidelity Prototype
+   All data is in-memory mock data. No backend calls are made.
+   ========================================================= */
+
+/* ---------------- Icon set (minimal inline SVG) ---------------- */
+const ICONS = {
+  home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/>',
+  users:'<circle cx="9" cy="8" r="3.2"/><path d="M2.5 19c0-3.3 2.9-6 6.5-6s6.5 2.7 6.5 6"/><circle cx="17" cy="9" r="2.6"/><path d="M15 13.2c2.6.4 4.5 2.6 4.5 5.3"/>',
+  building:'<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 7h1M8 11h1M8 15h1M15 7h1M15 11h1M15 15h1"/><path d="M10 21v-4h4v4"/>',
+  book:'<path d="M4 5.5C4 4.7 4.7 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5z"/>',
+  teacher:'<circle cx="12" cy="7" r="3.2"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/><path d="M4 9.5 2 8l2-1.5"/>',
+  survey:'<rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+  report:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  exhibit:'<path d="M3 21h18M6 21V9l6-5 6 5v12M9 21v-6h6v6"/>',
+  layers:'<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/>',
+  bell:'<path d="M6 10a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+  menu:'<path d="M3 6h18M3 12h18M3 18h18"/>',
+  panel:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
+  chevDown:'<path d="m6 9 6 6 6-6"/>',
+  chevRight:'<path d="m9 6 6 6-6 6"/>',
+  lock:'<rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+  fullscreen:'<path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  trash:'<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/>',
+  restore:'<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>',
+  download:'<path d="M12 3v12"/><path d="m6 11 6 6 6-6"/><path d="M5 21h14"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  file:'<path d="M14 3v5h5"/><path d="M6 3h8l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/>',
+  upload:'<path d="M12 21V9"/><path d="m6 15 6-6 6 6"/><path d="M5 21h14"/>',
+  megaphone:'<path d="M3 11v2a2 2 0 0 0 2 2h1l3 5V6l-3 3H5a2 2 0 0 0-2 2Z"/><path d="M13 8.5c1.7.6 3 1.9 3 3.5s-1.3 2.9-3 3.5"/><path d="M17 5c2.5 1 4 3.6 4 7s-1.5 6-4 7"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+  check:'<path d="m5 13 4 4L19 7"/>',
+  warning:'<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
+  group:'<circle cx="9" cy="7" r="3"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/><path d="m17 8 2 2 4-4"/>',
+  calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+  key:'<circle cx="8" cy="15" r="4"/><path d="M10.5 12.5 20 3M17 6l3 3M14 9l2.5 2.5"/>',
+  logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
+  dashboard:'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>'
+};
+function icon(name,size=17,stroke='currentColor'){
+  return `<svg class="nav-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;
+}
+
+/* ---------------- Utilities ---------------- */
+let _id = 1000;
+function uid(){ return _id++; }
+function fmtDate(d){ if(!d) return '-'; const dt = new Date(d); if(isNaN(dt)) return d; return dt.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}); }
+function daysLeft(d){ const diff = Math.ceil((new Date(d) - new Date())/86400000); return diff; }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function esc(s){ return (s===undefined||s===null)?'':String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function rand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+function showToast(msg,type='ok'){
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = 'toast'+(type==='err'?' err':type==='info'?' info':'');
+  el.innerHTML = `${icon(type==='err'?'x':type==='info'?'info':'check',16)}<span>${esc(msg)}</span>`;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateX(30px)'; el.style.transition='all .3s'; setTimeout(()=>el.remove(),300); }, 2600);
+}
+
+/* ---------------- Mock Database ---------------- */
+const DB = {
+  departments: [
+    {id:1,name:'Software Engineering',code:'SE',deleted:false},
+    {id:2,name:'Computer Science',code:'CS',deleted:false},
+    {id:3,name:'Information Technology',code:'IT',deleted:false},
+  ],
+  courses: [
+    {id:1,name:'Final Year Project - Fall 2025',dept:'SE',minGroup:2,maxGroup:5,deadline:'2026-08-15',deleted:false},
+    {id:2,name:'Final Year Project - Fall 2025',dept:'CS',minGroup:3,maxGroup:4,deadline:'2026-08-20',deleted:false},
+  ],
+  teachers: [
+    {id:1,name:'Dr. Sarah Ahmed',email:'sarah.ahmed@superior.edu.pk',dept:'SE',type:'Internal Faculty',deleted:false},
+    {id:2,name:'Dr. Ali Hassan',email:'ali.hassan@superior.edu.pk',dept:'CS',type:'Internal Faculty',deleted:false},
+    {id:3,name:'Ms. Hina Tariq',email:'hina.tariq@superior.edu.pk',dept:'IT',type:'Internal Faculty',deleted:false},
+    {id:4,name:'Mr. Kashif Mehmood',email:'kashif.mehmood@techvista.com',dept:'SE',type:'External Industry',deleted:false},
+  ],
+  students: [
+    {id:1,name:'Ahmed Khan',roll:'BCSM-F16-327',dept:'SE',section:'A',session:'Fall 2025',course:'Final Year Project - Fall 2025',teacher:'Dr. Sarah Ahmed',email:'BCSM-F16-327@SUPERIOR.EDU.PK',password:'pbl123*',recoveryEmail:'ahmed.khan327@gmail.com',deleted:false},
+    {id:2,name:'Fatima Ali',roll:'BCSM-F16-328',dept:'SE',section:'A',session:'Fall 2025',course:'Final Year Project - Fall 2025',teacher:'Dr. Sarah Ahmed',email:'BCSM-F16-328@SUPERIOR.EDU.PK',password:'pbl123*',recoveryEmail:'fatima.ali328@gmail.com',deleted:false},
+    {id:3,name:'Usman Raza',roll:'BCSM-F16-329',dept:'SE',section:'B',session:'Fall 2025',course:'Final Year Project - Fall 2025',teacher:'Dr. Sarah Ahmed',email:'BCSM-F16-329@SUPERIOR.EDU.PK',password:'pbl123*',recoveryEmail:'',deleted:false},
+    {id:4,name:'Sara Ahmed',roll:'BCSM-F16-330',dept:'SE',section:'A',session:'Fall 2025',course:'Final Year Project - Fall 2025',teacher:'Dr. Sarah Ahmed',email:'BCSM-F16-330@SUPERIOR.EDU.PK',password:'pbl123*',recoveryEmail:'sara.ahmed330@outlook.com',deleted:false},
+    {id:5,name:'Bilal Hussain',roll:'BCSM-F16-331',dept:'SE',section:'A',session:'Fall 2025',course:'Final Year Project - Fall 2025',teacher:'Dr. Sarah Ahmed',email:'BCSM-F16-331@SUPERIOR.EDU.PK',password:'pbl123*',recoveryEmail:'',deleted:false},
+    {id:6,name:'Hamza Sheikh',roll:'BCSM-F16-332',dept:'SE',section:'B',session:'Fall 2025',course:'Final Year Project - Fall 2025',teacher:'Dr. Sarah Ahmed',email:'BCSM-F16-332@SUPERIOR.EDU.PK',password:'pbl123*',recoveryEmail:'hamza.sheikh332@gmail.com',deleted:false},
+    {id:7,name:'Ayesha Noor',roll:'BCSM-F16-333',dept:'CS',section:'A',session:'Fall 2025',course:'Final Year Project - Fall 2025',teacher:'Dr. Ali Hassan',email:'BCSM-F16-333@SUPERIOR.EDU.PK',password:'pbl123*',recoveryEmail:'',deleted:false},
+    {id:8,name:'Zainab Malik',roll:'BCSM-F16-334',dept:'IT',section:'A',session:'Fall 2025',course:'Final Year Project - Fall 2025',teacher:'Ms. Hina Tariq',email:'BCSM-F16-334@SUPERIOR.EDU.PK',password:'pbl123*',recoveryEmail:'zainab.malik334@gmail.com',deleted:false},
+  ],
+  groups: [
+    {id:1,name:'AI Chatbot',course:'Final Year Project - Fall 2025',section:'A',leader:1,members:[1,2],min:2,max:5,status:'approved',projectTitle:'AI-Powered Chatbot for Education',evaluated:false},
+    {id:2,name:'E-Learning Platform',course:'Final Year Project - Fall 2025',section:'A',leader:5,members:[5,4],min:2,max:5,status:'pending',projectTitle:'Interactive E-Learning Platform for BNU',evaluated:false},
+    {id:3,name:'Mobile App',course:'Final Year Project - Fall 2025',section:'B',leader:6,members:[6,3],min:2,max:5,status:'approved',projectTitle:'Campus Ride-Sharing Mobile App',evaluated:false},
+  ],
+  joinRequests: [
+    {id:1,groupId:1,studentId:3,status:'pending'},
+    {id:2,groupId:1,studentId:4,status:'pending'},
+  ],
+  iterations: [
+    {id:1,title:'Project Proposal Submission',course:'Final Year Project - Fall 2025',
+      details:'Submit a comprehensive project proposal covering the problem statement, proposed methodology, expected outcomes, and a preliminary timeline for your Final Year Project.',
+      deadline:'2026-07-10',
+      rubrics:[
+        {id:1,question:'Problem Statement Clarity',weight:25,levels:{0:'No problem statement provided',1:'Vague, unclear problem definition',2:'Problem stated but lacks specificity',3:'Clear problem with some context',4:'Well-defined problem, good context',5:'Excellent definition, comprehensive'}},
+        {id:2,question:'Methodology Description',weight:25,levels:{0:'No methodology provided',1:'Incomplete methodology',2:'Basic methodology, missing details',3:'Adequate methodology description',4:'Detailed methodology, well-structured',5:'Excellent methodology with references'}},
+        {id:3,question:'Feasibility & Scope',weight:25,levels:{0:'Not feasible / no scope defined',1:'Poorly scoped',2:'Scope unclear in places',3:'Reasonably scoped',4:'Well-scoped and realistic',5:'Excellent, precisely scoped'}},
+        {id:4,question:'Presentation & Formatting',weight:25,levels:{0:'Not presentable',1:'Poor formatting',2:'Basic formatting issues',3:'Acceptable formatting',4:'Well formatted',5:'Professional, polished document'}},
+      ],
+      submissions:[{groupId:1,status:'submitted',file:'proposal_v2.pdf',submittedAt:'2026-06-25',late:false}]
+    },
+    {id:2,title:'Literature Review',course:'Final Year Project - Fall 2025',
+      details:'Conduct and submit a literature review summarizing at least 10 relevant research papers related to your FYP domain.',
+      deadline:'2026-07-20',
+      rubrics:[
+        {id:5,question:'Depth of Research',weight:50,levels:{0:'No research',1:'Minimal',2:'Basic',3:'Adequate',4:'Thorough',5:'Exceptional'}},
+        {id:6,question:'Critical Analysis',weight:50,levels:{0:'None',1:'Weak',2:'Basic',3:'Adequate',4:'Strong',5:'Excellent'}},
+      ],
+      submissions:[]
+    },
+    {id:3,title:'Implementation Milestone 1',course:'Final Year Project - Fall 2025',
+      details:'Not yet available. Will open after Literature Review closes.',
+      deadline:'2026-08-25',
+      rubrics:[],
+      submissions:[]
+    },
+  ],
+  evaluations: [],
+  assignments: [ {evaluatorEmail:'sarah.ahmed@superior.edu.pk', groupIds:[1,3]} ],
+  exhibitionCriteria: [
+    {id:1,question:'Presentation Quality',levels:{0:'No presentation',1:'Poor delivery',2:'Basic delivery',3:'Adequate, clear delivery',4:'Clear and structured',5:'Outstanding presentation'}},
+    {id:2,question:'Technical Implementation',levels:{0:'Not working',1:'Barely functional',2:'Partially functional',3:'Functional with minor issues',4:'Solid implementation',5:'Excellent, production-quality'}},
+    {id:3,question:'Innovation & Creativity',levels:{0:'None',1:'Minimal',2:'Some originality',3:'Good originality',4:'Innovative approach',5:'Highly original & creative'}},
+    {id:4,question:'Q&A Handling',levels:{0:'Could not answer',1:'Struggled with most',2:'Answered some',3:'Answered most questions',4:'Handled confidently',5:'Expert command of subject'}},
+  ],
+  exhibitionEvaluations: [],
+  surveys: [
+    {id:1,title:'FYP Experience Feedback',course:'Final Year Project - Fall 2025',
+      questions:[
+        {id:1,question:'How satisfied are you with project guidance?',levels:{1:'Very Dissatisfied',2:'Dissatisfied',3:'Neutral',4:'Satisfied',5:'Very Satisfied'}},
+        {id:2,question:'Rate the iteration feedback quality',levels:{1:'Very Dissatisfied',2:'Dissatisfied',3:'Neutral',4:'Satisfied',5:'Very Satisfied'}},
+        {id:3,question:'Overall FYP experience',levels:{1:'Very Poor',2:'Poor',3:'Average',4:'Good',5:'Excellent'}},
+      ],
+      responses:[
+        {studentId:2,answers:{1:4,2:3,3:5}},
+        {studentId:6,answers:{1:3,2:2,3:4}},
+        {studentId:7,answers:{1:5,2:4,3:5}},
+      ]
+    }
+  ],
+  announcements: [
+    {id:1,title:'Submission Deadline Extended',content:'The deadline for iteration 2 (Literature Review) has been extended by one week due to multiple requests from groups.',date:'2026-06-28'},
+    {id:2,title:'Project Exhibition Schedule',content:'All groups must present their final projects on August 28th, 2026 in the main auditorium. Attendance is mandatory.',date:'2026-06-20'},
+  ],
+  attachments: [
+    {id:1,name:'Project_Guidelines.pdf',size:'2.4 MB'},
+    {id:2,name:'Rubric_Template.docx',size:'856 KB'},
+    {id:3,name:'Evaluation_Form.xlsx',size:'1.1 MB'},
+  ],
+  meetings: [
+    {id:1,group:'AI Chatbot',iteration:'Project Proposal Submission',title:'Kickoff & Scope Discussion',date:'2026-06-18',agenda:'Discuss project scope and initial task allocation',start:'14:00',end:'15:00',nextMeeting:'2026-06-25',minutes:'Group agreed on chatbot framework (Rasa) and finalized dataset sources.',evaluatorEmail:'sarah.ahmed@superior.edu.pk'},
+  ],
+  emailLog: [],
+};
+
+const USERS = [
+  {email:'manager@superior.edu.pk',password:'pbl123*',role:'pbl_manager',name:'Prof. Ali Raza'},
+  {email:'BCSM-F16-327@SUPERIOR.EDU.PK',password:'pbl123*',role:'student',name:'Ahmed Khan',refId:1},
+  {email:'sarah.ahmed@superior.edu.pk',password:'pbl123*',role:'evaluator',name:'Dr. Sarah Ahmed'},
+  {email:'kashif.mehmood@techvista.com',password:'pbl123*',role:'evaluator',name:'Mr. Kashif Mehmood'},
+  {email:'hod@superior.edu.pk',password:'pbl123*',role:'hod',name:'Dr. Farhan Iqbal',dept:'SE'},
+  {email:'hodic@superior.edu.pk',password:'pbl123*',role:'hodic',name:'Dr. Nadia Sheikh',dept:'CS'},
+  {email:'dean@superior.edu.pk',password:'pbl123*',role:'dean',name:'Prof. Dr. Kamran Sheikh'},
+];
+
+/* ---------------- App State ---------------- */
+const state = {
+  user: null,
+  route: '#/login',
+  openMenus: {},
+  mobileSidebar: false,
+  sidebarCollapsed: false,
+  loading:false,
+};
+
+function navigate(hash){
+  location.hash = hash;
+}
+window.addEventListener('hashchange', ()=>{ state.route = location.hash || '#/login'; render(); });
+
+/* ---------------- Auth ---------------- */
+function attemptLogin(email,password){
+  const u = USERS.find(u=>u.email.toLowerCase()===String(email).toLowerCase() && u.password===password);
+  return u;
+}
+function roleHome(role){
+  return {pbl_manager:'#/manager/dashboard',student:'#/student/dashboard',evaluator:'#/evaluator/dashboard',
+    hod:'#/hod/dashboard',hodic:'#/hodic/dashboard',dean:'#/dean/dashboard'}[role];
+}
+function roleLabel(role){
+  return {pbl_manager:'PBL Manager',student:'Student',evaluator:'Evaluator',hod:'HOD',hodic:'HOD I&C',dean:'DEAN'}[role]||role;
+}
+
+/* ---------------- Render: Login ---------------- */
+function renderLogin(){
+  document.getElementById('app-shell').style.display='none';
+  const root = document.getElementById('login-root');
+  root.style.display='flex';
+  root.innerHTML = `
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-logo">PBL</div>
+      <h4>Sign In</h4>
+      <div class="login-sub">Project-Based Learning Management System</div>
+      <div class="login-error" id="login-err">Invalid email or password. Please try again.</div>
+      <form id="login-form">
+        <div class="form-group">
+          <label>Email</label>
+          <input class="form-control" type="text" id="login-email" placeholder="e.g. BCSM-F16-327@SUPERIOR.EDU.PK" autocomplete="username" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input class="form-control" type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password" required>
+        </div>
+        <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;">
+          <label class="checkbox-row" style="margin:0;"><input type="checkbox" id="remember-me"> Remember Me</label>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="login-btn">Sign In</button>
+      </form>
+      <div class="demo-box">
+        <b>Demo accounts</b> (click to autofill)
+        <div class="demo-row" data-demo="manager@superior.edu.pk"><span>PBL Manager</span><span>manager@superior.edu.pk</span></div>
+        <div class="demo-row" data-demo="BCSM-F16-327@SUPERIOR.EDU.PK"><span>Student — Ahmed Khan</span><span>BCSM-F16-327@...</span></div>
+        <div class="demo-row" data-demo="sarah.ahmed@superior.edu.pk"><span>Evaluator (Internal Faculty)</span><span>sarah.ahmed@...</span></div>
+        <div class="demo-row" data-demo="kashif.mehmood@techvista.com"><span>Evaluator (External Industry)</span><span>kashif.mehmood@...</span></div>
+        <div class="demo-row" data-demo="hod@superior.edu.pk"><span>HOD</span><span>hod@superior.edu.pk</span></div>
+        <div class="demo-row" data-demo="hodic@superior.edu.pk"><span>HOD I&amp;C</span><span>hodic@superior.edu.pk</span></div>
+        <div class="demo-row" data-demo="dean@superior.edu.pk"><span>DEAN</span><span>dean@superior.edu.pk</span></div>
+        <div class="small-muted" style="margin-top:6px;">Password for all: pbl123*</div>
+      </div>
+      <div class="login-foot-logo">SUPERIOR UNIVERSITY &middot; PBL PORTAL</div>
+    </div>
+  </div>`;
+
+  root.querySelectorAll('.demo-row').forEach(row=>{
+    row.addEventListener('click',()=>{
+      document.getElementById('login-email').value = row.dataset.demo;
+      document.getElementById('login-password').value = 'pbl123*';
+    });
+  });
+
+  document.getElementById('login-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    const email = document.getElementById('login-email').value.trim();
+    const pass = document.getElementById('login-password').value;
+    document.getElementById('login-err').classList.remove('show');
+    btn.disabled = true; btn.textContent = 'Signing in...';
+    await delay(650);
+    const u = attemptLogin(email,pass);
+    btn.disabled = false; btn.textContent = 'Sign In';
+    if(!u){
+      document.getElementById('login-err').classList.add('show');
+      return;
+    }
+    state.user = u;
+    navigate(roleHome(u.role));
+    showToast(`Welcome back, ${u.name.split(' ')[0]}!`);
+  });
+}
+
+/* ---------------- Sidebar config per role ---------------- */
+function sidebarConfig(role){
+  if(role==='pbl_manager') return [
+    {section:'Navigation'},
+    {type:'item',icon:'dashboard',text:'Dashboard',to:'#/manager/dashboard'},
+    {section:'Students'},
+    {type:'menu',icon:'users',text:'Manage Students',key:'students',items:[
+      {text:'Add New Student',to:'#/manager/students/add'},
+      {text:'View All Students',to:'#/manager/students/view'},
+      {text:'View Recycle Bin',to:'#/manager/students/trash'},
+    ]},
+    {section:'Departments'},
+    {type:'menu',icon:'building',text:'Manage Department',key:'depts',items:[
+      {text:'Add New Department',to:'#/manager/departments/add'},
+      {text:'View All Departments',to:'#/manager/departments/view'},
+      {text:'View Recycle Bin',to:'#/manager/departments/trash'},
+    ]},
+    {section:'Courses'},
+    {type:'menu',icon:'book',text:'Manage Courses',key:'courses',items:[
+      {text:'Add New Course',to:'#/manager/courses/add'},
+      {text:'View All Courses',to:'#/manager/courses/view'},
+      {text:'View Recycle Bin',to:'#/manager/courses/trash'},
+    ]},
+    {section:'Teachers'},
+    {type:'menu',icon:'teacher',text:'Manage Teachers',key:'teachers',items:[
+      {text:'Add New Teacher',to:'#/manager/teachers/add'},
+      {text:'View All Teachers',to:'#/manager/teachers/view'},
+      {text:'View Recycle Bin',to:'#/manager/teachers/trash'},
+    ]},
+    {section:'Groups'},
+    {type:'menu',icon:'group',text:'Manage Groups',key:'groups',items:[
+      {text:'All Project Groups',to:'#/manager/groups/manage'},
+    ]},
+    {section:'Survey'},
+    {type:'menu',icon:'survey',text:'Manage Survey',key:'survey',items:[
+      {text:'Add New Survey',to:'#/manager/survey/add'},
+      {text:'View Surveys',to:'#/manager/survey/view'},
+    ]},
+    {type:'menu',icon:'report',text:'Survey Reports',key:'sreports',items:[
+      {text:'Filled Report',to:'#/manager/survey/report'},
+    ]},
+    {section:'Reports'},
+    {type:'menu',icon:'report',text:'Manage Reports',key:'reports',items:[
+      {text:'Group Reports',to:'#/manager/reports/groups'},
+      {text:'Iteration Reports',to:'#/manager/reports/iterations'},
+    ]},
+    {section:'Exhibition'},
+    {type:'item',icon:'exhibit',text:'Assign Projects',to:'#/manager/groups/assign'},
+    {section:'Iterations'},
+    {type:'menu',icon:'layers',text:'Rubrics and Iterations',key:'iters',items:[
+      {text:'Manage Iterations',to:'#/manager/iterations/manage'},
+      {text:'Add New Iteration',to:'#/manager/iterations/add'},
+    ]},
+  ];
+  if(role==='student') return [
+    {section:'Navigation'},
+    {type:'item',icon:'dashboard',text:'Dashboard',to:'#/student/dashboard'},
+    {section:'My Group'},
+    {type:'item',icon:'group',text:'My Group',to:'#/student/group/my'},
+    {type:'item',icon:'users',text:'Browse / Join Groups',to:'#/student/group/browse'},
+    {type:'item',icon:'plus',text:'Create Group',to:'#/student/group/create'},
+    {section:'Coursework'},
+    {type:'item',icon:'layers',text:'Iterations',to:'#/student/iterations'},
+    {section:'Feedback'},
+    {type:'item',icon:'survey',text:'Surveys',to:'#/student/survey'},
+  ];
+  if(role==='evaluator') return [
+    {section:'Navigation'},
+    {type:'item',icon:'dashboard',text:'Dashboard',to:'#/evaluator/dashboard'},
+    {section:'Evaluation'},
+    {type:'item',icon:'group',text:'Assigned Groups',to:'#/evaluator/groups'},
+    {type:'item',icon:'exhibit',text:'Exhibition Evaluation',to:'#/evaluator/exhibition'},
+    {section:'Meetings'},
+    {type:'menu',icon:'calendar',text:'Meetings',key:'meet',items:[
+      {text:'Record Meeting',to:'#/evaluator/meetings/add'},
+      {text:'View Meetings',to:'#/evaluator/meetings'},
+    ]},
+  ];
+  // HOD / HODI&C / DEAN — read-only report viewers
+  const base = role==='dean' ? '#/dean' : role==='hodic' ? '#/hodic' : '#/hod';
+  return [
+    {section:'Navigation'},
+    {type:'item',icon:'dashboard',text:'Dashboard',to:base+'/dashboard'},
+    {section:'Oversight'},
+    {type:'item',icon:'group',text:'All Project Groups',to:base+'/groups'},
+    {type:'item',icon:'report',text:'Group Reports',to:base+'/reports/groups'},
+    {type:'item',icon:'report',text:'Iteration Reports',to:base+'/reports/iterations'},
+  ];
+}
+
+function activeRoute(){ return state.route.split('?')[0]; }
+
+function applySidebarCollapse(){
+  document.getElementById('app-shell').classList.toggle('collapsed', state.sidebarCollapsed);
+  const btn = document.getElementById('btn-sidebar-toggle');
+  if(btn) btn.title = state.sidebarCollapsed ? 'Expand menu' : 'Collapse menu';
+}
+
+function renderSidebar(){
+  const cfg = sidebarConfig(state.user.role);
+  const cur = activeRoute();
+  let html = '';
+  cfg.forEach(entry=>{
+    if(entry.section){ html += `<div class="nav-section">${esc(entry.section)}</div>`; return; }
+    if(entry.type==='item'){
+      html += `<button class="nav-item ${cur===entry.to?'active':''}" data-to="${entry.to}" title="${esc(entry.text)}">${icon(entry.icon)}<span>${entry.text}</span></button>`;
+    } else if(entry.type==='menu'){
+      const isOpen = state.openMenus[entry.key] ?? entry.items.some(i=>i.to===cur);
+      html += `<button class="nav-menu-btn ${isOpen?'open':''}" data-menu="${entry.key}" title="${esc(entry.text)}">${icon(entry.icon)}<span>${entry.text}</span>${icon('chevRight',15)}<span class="chev" style="display:none"></span></button>`;
+      html += `<div class="nav-sub ${isOpen?'open':''}" data-submenu="${entry.key}">`;
+      entry.items.forEach(it=>{
+        html += `<button class="nav-sub-item ${cur===it.to?'active':''}" data-to="${it.to}">${it.text}</button>`;
+      });
+      html += `</div>`;
+    }
+  });
+  document.getElementById('sidebar').innerHTML = html;
+  document.getElementById('sidebar').classList.toggle('mobile-open', state.mobileSidebar);
+  const ov = document.getElementById('sidebar-overlay');
+  ov.classList.toggle('show', state.mobileSidebar);
+  ov.onclick = ()=>{ state.mobileSidebar=false; renderSidebar(); };
+
+  document.querySelectorAll('[data-to]').forEach(b=>b.addEventListener('click',()=>{
+    state.mobileSidebar=false;
+    navigate(b.dataset.to);
+  }));
+  document.querySelectorAll('[data-menu]').forEach(b=>b.addEventListener('click',()=>{
+    const k = b.dataset.menu;
+    if(state.sidebarCollapsed){ state.sidebarCollapsed=false; applySidebarCollapse(); }
+    state.openMenus[k] = !(state.openMenus[k] ?? true);
+    renderSidebar();
+  }));
+}
+
+/* ---------------- Navbar ---------------- */
+function renderNavbar(){
+  const u = state.user;
+  const initials = u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  document.getElementById('navbar').innerHTML = `
+    <div class="navbar-left">
+      <div class="navbar-logo"><div class="mark">PBL</div><div class="txt">PBL Portal</div></div>
+      <button class="icon-btn sidebar-toggle-btn" id="btn-sidebar-toggle" title="${state.sidebarCollapsed?'Expand menu':'Collapse menu'}">${icon('panel',20)}</button>
+      <button class="icon-btn hamburger" id="btn-hamburger">${icon('menu',20)}</button>
+    </div>
+    <div class="navbar-right">
+      <span class="role-chip">${roleLabel(u.role)}</span>
+      <button class="icon-btn" id="btn-fullscreen" title="Toggle fullscreen">${icon('fullscreen',18)}</button>
+      <button class="icon-btn" id="btn-bell" title="Announcements">${icon('bell',18)}</button>
+      <div class="user-menu">
+        <button class="user-btn" id="btn-user"><div class="avatar">${initials}</div><span class="user-name">${esc(u.name)}</span>${icon('chevDown',15)}</button>
+        <div class="dropdown" id="user-dropdown">
+          <a href="javascript:void(0)" id="btn-change-pass">${icon('key',15)} Change Password</a>
+          <button id="btn-logout">${icon('logout',15)} Logout</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('btn-hamburger').onclick = ()=>{ state.mobileSidebar=!state.mobileSidebar; renderSidebar(); };
+  document.getElementById('btn-sidebar-toggle').onclick = ()=>{
+    state.sidebarCollapsed = !state.sidebarCollapsed;
+    applySidebarCollapse();
+  };
+  document.getElementById('btn-fullscreen').onclick = ()=>{
+    if(!document.fullscreenElement){ document.documentElement.requestFullscreen?.(); } else { document.exitFullscreen?.(); }
+  };
+  document.getElementById('btn-bell').onclick = ()=> navigate(state.user.role==='pbl_manager' ? '#/manager/dashboard' : location.hash);
+  const dd = document.getElementById('user-dropdown');
+  document.getElementById('btn-user').onclick = (e)=>{ e.stopPropagation(); dd.classList.toggle('open'); };
+  document.addEventListener('click', ()=>dd.classList.remove('open'), {once:true});
+  document.getElementById('btn-change-pass').onclick = ()=> openChangePasswordModal();
+  document.getElementById('btn-logout').onclick = ()=>{
+    openConfirm('Log out', 'Are you sure you want to log out of the PBL Portal?', 'Logout', ()=>{
+      state.user=null; navigate('#/login'); showToast('You have been logged out.','info');
+    });
+  };
+}
+
+/* ---------------- Modal system ---------------- */
+function openModal(html, opts={}){
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-overlay open" id="modal-overlay">
+      <div class="modal-box" style="${opts.width?`width:${opts.width}`:''}">${html}</div>
+    </div>`;
+  document.getElementById('modal-overlay').addEventListener('click',(e)=>{
+    if(e.target.id==='modal-overlay') closeModal();
+  });
+}
+function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
+
+function openConfirm(title,msg,actionLabel,onConfirm,danger=true){
+  openModal(`
+    <div class="modal-box confirm-box" style="padding:26px 22px;text-align:center;">
+      <div class="confirm-icon">${icon(danger?'warning':'info',22)}</div>
+      <h5 style="margin-bottom:8px;">${esc(title)}</h5>
+      <div class="small-muted" style="margin-bottom:20px;font-size:13px;">${esc(msg)}</div>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button class="btn btn-outline" id="cf-cancel">Cancel</button>
+        <button class="btn ${danger?'btn-danger':'btn-primary'}" id="cf-ok">${esc(actionLabel)}</button>
+      </div>
+    </div>`,{width:'380px'});
+  document.getElementById('cf-cancel').onclick = closeModal;
+  document.getElementById('cf-ok').onclick = ()=>{ closeModal(); onConfirm(); };
+}
+
+function openChangePasswordModal(){
+  openModal(`
+    <div class="modal-head"><h5>Change Password</h5><button class="close-x" id="cp-close">${icon('x',18)}</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Current Password</label><input class="form-control" type="password" id="cp-cur"></div>
+      <div class="form-group"><label>New Password</label><input class="form-control" type="password" id="cp-new"></div>
+      <div class="form-group"><label>Confirm New Password</label><input class="form-control" type="password" id="cp-conf"></div>
+      <div id="cp-err" class="form-error-text" style="display:none;"></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" id="cp-cancel">Cancel</button><button class="btn btn-primary" id="cp-save">Update Password</button></div>`);
+  document.getElementById('cp-close').onclick = closeModal;
+  document.getElementById('cp-cancel').onclick = closeModal;
+  document.getElementById('cp-save').onclick = async ()=>{
+    const cur = document.getElementById('cp-cur').value;
+    const nw = document.getElementById('cp-new').value;
+    const cf = document.getElementById('cp-conf').value;
+    const err = document.getElementById('cp-err');
+    err.style.display='none';
+    if(cur !== state.user.password){ err.textContent='Current password is incorrect.'; err.style.display='block'; return; }
+    if(nw.length < 6){ err.textContent='New password must be at least 6 characters.'; err.style.display='block'; return; }
+    if(nw !== cf){ err.textContent='New password and confirmation do not match.'; err.style.display='block'; return; }
+    const btn = document.getElementById('cp-save'); btn.disabled=true; btn.textContent='Updating...';
+    await delay(600);
+    state.user.password = nw;
+    closeModal();
+    showToast('Password updated successfully.');
+  };
+}
+
+/* ---------------- Reusable: PageHeader ---------------- */
+function pageHeader(title, crumbs){
+  return `<div class="page-header">
+    <h4>${esc(title)}</h4>
+    <div class="breadcrumb">${crumbs.map((c,i)=>`${i>0?'<span class="sep">/</span>':''}<span>${esc(c)}</span>`).join('')}</div>
+  </div>`;
+}
+function statCard(num,label,icn,variant=''){
+  return `<div class="stat-card ${variant}"><div><div class="stat-num">${num}</div><div class="stat-label">${esc(label)}</div></div><div class="stat-icon">${icon(icn,22)}</div></div>`;
+}
+function emptyState(title,sub,icn='file'){
+  return `<div class="empty-state">${icon(icn,42)}<div class="t">${esc(title)}</div><div>${esc(sub)}</div></div>`;
+}
+function skeletonRows(n=4){
+  return `<div class="card"><div class="card-block">${Array.from({length:n}).map(()=>`<div class="skeleton skeleton-row"></div>`).join('')}</div></div>`;
+}
+
+/* ---------------- Generic search/filter table helper ---------------- */
+function filterRows(rows, searchTerm, searchFields){
+  if(!searchTerm) return rows;
+  const t = searchTerm.toLowerCase();
+  return rows.filter(r=> searchFields.some(f=> String(r[f]||'').toLowerCase().includes(t)));
+}
+
+/* =====================================================================
+   PAGE CONTENT RENDER — dispatches on route
+   ===================================================================== */
+let PAGE_STATE = {}; // ephemeral per-page UI state (search terms, tabs etc.)
+
+async function renderPageContent(){
+  const el = document.getElementById('content-wrap');
+  el.innerHTML = skeletonRows(5);
+  await delay(450 + Math.random()*250);
+  const r = activeRoute();
+  const role = state.user.role;
+
+  // ---- MANAGER ROUTES ----
+  if(role==='pbl_manager'){
+    if(r==='#/manager/dashboard') return el.innerHTML = pageManagerDashboard();
+    if(r==='#/manager/students/add') return el.innerHTML = pageAddStudent();
+    if(r==='#/manager/students/view') return el.innerHTML = pageStudentsCrud(false);
+    if(r==='#/manager/students/trash') return el.innerHTML = pageStudentsCrud(true);
+    if(r==='#/manager/departments/add') return el.innerHTML = pageAddSimple('departments','Department',[{key:'name',label:'Department Name'},{key:'code',label:'Department Code'}]);
+    if(r==='#/manager/departments/view') return el.innerHTML = pageCrudView('departments','Departments',[{k:'name',l:'Name'},{k:'code',l:'Code'}],false);
+    if(r==='#/manager/departments/trash') return el.innerHTML = pageCrudView('departments','Departments',[{k:'name',l:'Name'},{k:'code',l:'Code'}],true);
+    if(r==='#/manager/courses/add') return el.innerHTML = pageAddCourse();
+    if(r==='#/manager/courses/view') return el.innerHTML = pageCrudView('courses','Courses',[{k:'name',l:'Course'},{k:'dept',l:'Dept'},{k:'minGroup',l:'Min Group'},{k:'maxGroup',l:'Max Group'},{k:'deadline',l:'Deadline',fmt:fmtDate}],false);
+    if(r==='#/manager/courses/trash') return el.innerHTML = pageCrudView('courses','Courses',[{k:'name',l:'Course'},{k:'dept',l:'Dept'},{k:'deadline',l:'Deadline',fmt:fmtDate}],true);
+    if(r==='#/manager/teachers/add') return el.innerHTML = pageAddSimple('teachers','Teacher',[{key:'name',label:'Full Name'},{key:'email',label:'Email'},{key:'dept',label:'Department',type:'select',options:DB.departments.map(d=>d.code)},{key:'type',label:'Evaluator Type',type:'select',options:['Internal Faculty','External Industry']}]);
+    if(r==='#/manager/teachers/view') return el.innerHTML = pageCrudView('teachers','Teachers',[{k:'name',l:'Name'},{k:'email',l:'Email'},{k:'dept',l:'Dept'},{k:'type',l:'Type'}],false);
+    if(r==='#/manager/teachers/trash') return el.innerHTML = pageCrudView('teachers','Teachers',[{k:'name',l:'Name'},{k:'email',l:'Email'},{k:'type',l:'Type'}],true);
+    if(r==='#/manager/groups/manage') return el.innerHTML = pageManageGroups();
+    if(r==='#/manager/groups/assign') return el.innerHTML = pageAssignProjects();
+    if(r==='#/manager/survey/add') return el.innerHTML = pageAddSurvey();
+    if(r==='#/manager/survey/view') return el.innerHTML = pageViewSurveys();
+    if(r.startsWith('#/manager/survey/questions/')) return el.innerHTML = pageSurveyQuestions(parseInt(r.split('/').pop()));
+    if(r==='#/manager/survey/report' || r.startsWith('#/manager/survey/report/')) return el.innerHTML = pageSurveyReport(r.split('/')[4]);
+    if(r==='#/manager/reports/groups') return el.innerHTML = pageGroupReports();
+    if(r==='#/manager/reports/iterations') return el.innerHTML = pageIterationReports();
+    if(r==='#/manager/iterations/manage') return el.innerHTML = pageManageIterations();
+    if(r==='#/manager/iterations/add') return el.innerHTML = pageAddIteration();
+    if(r.startsWith('#/manager/iterations/rubrics/')) return el.innerHTML = pageManageRubrics(parseInt(r.split('/').pop()));
+    navigate('#/manager/dashboard'); return;
+  }
+
+  // ---- STUDENT ROUTES ----
+  if(role==='student'){
+    if(r==='#/student/dashboard') return el.innerHTML = pageStudentDashboard();
+    if(r==='#/student/group/create') return el.innerHTML = pageCreateGroup();
+    if(r==='#/student/group/my') return el.innerHTML = pageMyGroup();
+    if(r==='#/student/group/browse') return el.innerHTML = pageBrowseGroups();
+    if(r==='#/student/iterations') return el.innerHTML = pageStudentIterations();
+    if(r.startsWith('#/student/iterations/') && r.endsWith('/submit')) return el.innerHTML = pageSubmitWork(parseInt(r.split('/')[3]));
+    if(r.startsWith('#/student/iterations/')) return el.innerHTML = pageIterationDetail(parseInt(r.split('/').pop()));
+    if(r==='#/student/survey') return el.innerHTML = pageStudentSurveyList();
+    if(r.startsWith('#/student/survey/')) return el.innerHTML = pageFillSurvey(parseInt(r.split('/').pop()));
+    navigate('#/student/dashboard'); return;
+  }
+
+  // ---- EVALUATOR ROUTES ----
+  if(role==='evaluator'){
+    if(r==='#/evaluator/dashboard') return el.innerHTML = pageEvaluatorDashboard();
+    if(r==='#/evaluator/groups') return el.innerHTML = pageAssignedGroups();
+    if(r.startsWith('#/evaluator/evaluate/')) { const parts=r.split('/'); return el.innerHTML = pageEvaluationSheet(parseInt(parts[3]),parseInt(parts[4])); }
+    if(r==='#/evaluator/exhibition') return el.innerHTML = pageExhibitionList();
+    if(r.startsWith('#/evaluator/exhibition/')) return el.innerHTML = pageExhibitionEval(parseInt(r.split('/').pop()));
+    if(r==='#/evaluator/meetings') return el.innerHTML = pageViewMeetings();
+    if(r==='#/evaluator/meetings/add') return el.innerHTML = pageAddMeeting();
+    navigate('#/evaluator/dashboard'); return;
+  }
+
+  // ---- HOD / HODI&C / DEAN (read-only) ----
+  if(['hod','hodic','dean'].includes(role)){
+    const base = '#/'+role;
+    if(r===base+'/dashboard') return el.innerHTML = pageOversightDashboard(role);
+    if(r===base+'/groups') return el.innerHTML = pageCrudViewReadonly(role);
+    if(r===base+'/reports/groups') return el.innerHTML = pageGroupReports();
+    if(r===base+'/reports/iterations') return el.innerHTML = pageIterationReports();
+    navigate(base+'/dashboard'); return;
+  }
+}
+
+/* =====================================================================
+   MANAGER PAGES
+   ===================================================================== */
+function pageManagerDashboard(){
+  const totalGroups = DB.groups.length;
+  const totalEvaluators = new Set([...DB.assignments.map(a=>a.evaluatorEmail), ...USERS.filter(u=>u.role==='evaluator').map(u=>u.email)]).size;
+  const remaining = DB.groups.filter(g=>!g.evaluated).length;
+  const totalStudents = DB.students.filter(s=>!s.deleted).length;
+
+  return `
+  ${pageHeader('Dashboard',['Home','Dashboard'])}
+  <div class="stat-grid">
+    ${statCard(totalGroups,'Total Created Groups (All Levels)','layers')}
+    ${statCard(totalEvaluators,'Total Evaluators','teacher','success')}
+    ${statCard(remaining,'Remaining to Evaluate','clock','warning')}
+    ${statCard(totalStudents,'Total Students','users','info')}
+    ${statCard(studentsWithoutGroup().length,'Students Without a Group','bell','warning')}
+  </div>
+  <div class="grid-2">
+    <div class="card b-primary">
+      <div class="card-block">
+        <div class="card-title">Announcements <button class="btn btn-primary btn-sm" id="btn-new-announcement">${icon('plus',14)} New</button></div>
+        <div id="announcement-list">${renderAnnouncementAccordion()}</div>
+      </div>
+    </div>
+    <div class="card b-info">
+      <div class="card-block">
+        <div class="card-title">Attachments</div>
+        <div id="attachment-list">${renderAttachmentList()}</div>
+      </div>
+    </div>
+  </div>
+  ${wireManagerDashboardScript()}
+  `;
+}
+function renderAnnouncementAccordion(){
+  if(DB.announcements.length===0) return emptyState('No announcements yet','Publish an announcement to keep everyone informed.','megaphone');
+  return DB.announcements.map(a=>`
+    <div class="accordion-item" data-acc="${a.id}">
+      <div class="accordion-head" data-acc-toggle="${a.id}">
+        <div><b>${esc(a.title)}</b><div class="small-muted">${fmtDate(a.date)}</div></div>
+        ${icon('chevDown',16)}
+      </div>
+      <div class="accordion-body" id="acc-body-${a.id}">
+        <div style="margin-bottom:10px;">${esc(a.content)}</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline btn-sm" data-edit-ann="${a.id}">${icon('edit',13)} Edit</button>
+          <button class="btn btn-danger btn-sm" data-del-ann="${a.id}">${icon('trash',13)} Remove</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+function renderAttachmentList(){
+  if(DB.attachments.length===0) return emptyState('No attachments','Upload a file to share with students and evaluators.','file');
+  return DB.attachments.map(a=>`
+    <div class="file-chip">
+      <div style="display:flex;align-items:center;gap:8px;">${icon('file',18)}<div><b>${esc(a.name)}</b><div class="small-muted">${a.size}</div></div></div>
+      <div style="display:flex;gap:4px;">
+        <button class="icon-btn" data-dl-att="${a.id}">${icon('download',16)}</button>
+        <button class="icon-btn" data-del-att="${a.id}">${icon('x',16)}</button>
+      </div>
+    </div>`).join('');
+}
+function wireManagerDashboardScript(){
+  setTimeout(()=>{
+    document.querySelectorAll('[data-acc-toggle]').forEach(h=>{
+      h.addEventListener('click',()=>{
+        const id = h.dataset.accToggle;
+        document.getElementById('acc-body-'+id).classList.toggle('open');
+      });
+    });
+    document.querySelectorAll('[data-del-ann]').forEach(b=>b.addEventListener('click',()=>{
+      const id = parseInt(b.dataset.delAnn);
+      openConfirm('Remove announcement','This announcement will be permanently removed.','Remove',()=>{
+        DB.announcements = DB.announcements.filter(a=>a.id!==id);
+        document.getElementById('announcement-list').innerHTML = renderAnnouncementAccordion();
+        wireManagerDashboardScript();
+        showToast('Announcement removed.');
+      });
+    }));
+    document.querySelectorAll('[data-edit-ann]').forEach(b=>b.addEventListener('click',()=>{
+      openAnnouncementModal(parseInt(b.dataset.editAnn));
+    }));
+    document.querySelectorAll('[data-del-att]').forEach(b=>b.addEventListener('click',()=>{
+      const id = parseInt(b.dataset.delAtt);
+      openConfirm('Delete attachment','This file will be permanently deleted.','Delete',()=>{
+        DB.attachments = DB.attachments.filter(a=>a.id!==id);
+        document.getElementById('attachment-list').innerHTML = renderAttachmentList();
+        wireManagerDashboardScript();
+        showToast('Attachment deleted.');
+      });
+    }));
+    document.querySelectorAll('[data-dl-att]').forEach(b=>b.addEventListener('click',()=>showToast('Downloading file... (mock)','info')));
+    const nb = document.getElementById('btn-new-announcement');
+    if(nb) nb.onclick = ()=>openAnnouncementModal(null);
+  },0);
+  return '';
+}
+function openAnnouncementModal(editId){
+  const editing = editId ? DB.announcements.find(a=>a.id===editId) : null;
+  openModal(`
+    <div class="modal-head"><h5>${editing?'Update Announcement':'Announcements'}</h5><button class="close-x" id="am-close">${icon('x',18)}</button></div>
+    <div class="modal-body">
+      ${editing?'':`<div class="tabs" id="am-tabs">
+        <button class="tab-btn active" data-tab="publish">Publish New</button>
+        <button class="tab-btn" data-tab="update">Update</button>
+        <button class="tab-btn" data-tab="upload">Upload Attachment</button>
+        <button class="tab-btn" data-tab="files">View Files</button>
+      </div>`}
+      <div id="am-tab-publish" class="am-pane">
+        <div class="form-group"><label>Title</label><input class="form-control" id="am-title" value="${editing?esc(editing.title):''}"></div>
+        <div class="form-group"><label>Content</label>
+          <div class="rich-toolbar"><button type="button"><b>B</b></button><button type="button"><i>I</i></button><button type="button">&#8226;</button></div>
+          <div class="rich-editor" contenteditable="true" id="am-content">${editing?esc(editing.content):''}</div>
+        </div>
+        <div class="form-group"><label>Date</label><input class="form-control" type="date" id="am-date" value="${editing?editing.date:todayISO()}"></div>
+        <button class="btn btn-primary btn-block" id="am-submit">${editing?'Update Announcement':'Publish'}</button>
+      </div>
+      <div id="am-tab-update" class="am-pane" style="display:none;">
+        ${DB.announcements.map(a=>`<div class="accordion-item"><div class="accordion-head" data-am-edit="${a.id}"><div><b>${esc(a.title)}</b><div class="small-muted">${fmtDate(a.date)}</div></div>${icon('edit',15)}</div></div>`).join('') || emptyState('No announcements','Nothing to update yet.')}
+      </div>
+      <div id="am-tab-upload" class="am-pane" style="display:none;">
+        <div class="form-group"><label>Title</label><input class="form-control" id="am-file-title" placeholder="e.g. Rubric Guidelines"></div>
+        <div class="dropzone" id="am-dropzone">${icon('upload',30)}<div>Click to choose a file to upload</div><div class="small-muted">PDF, DOCX, XLSX up to 10MB</div></div>
+        <input type="file" id="am-file-input" style="display:none;">
+        <div id="am-file-chosen"></div>
+        <button class="btn btn-info btn-block" style="margin-top:14px;" id="am-upload-btn">Upload</button>
+      </div>
+      <div id="am-tab-files" class="am-pane" style="display:none;">${renderAttachmentList()}</div>
+    </div>`,{width:'560px'});
+  document.getElementById('am-close').onclick = closeModal;
+  if(!editing){
+    document.querySelectorAll('#am-tabs .tab-btn').forEach(t=>t.addEventListener('click',()=>{
+      document.querySelectorAll('#am-tabs .tab-btn').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      document.querySelectorAll('.am-pane').forEach(p=>p.style.display='none');
+      document.getElementById('am-tab-'+t.dataset.tab).style.display='block';
+    }));
+    document.querySelectorAll('[data-am-edit]').forEach(b=>b.addEventListener('click',()=>openAnnouncementModal(parseInt(b.dataset.amEdit))));
+    document.getElementById('am-dropzone').onclick = ()=>document.getElementById('am-file-input').click();
+    document.getElementById('am-file-input').onchange = (e)=>{
+      const f = e.target.files[0];
+      if(f) document.getElementById('am-file-chosen').innerHTML = `<div class="file-chip">${icon('file',16)} ${esc(f.name)}</div>`;
+    };
+    document.getElementById('am-upload-btn').onclick = async ()=>{
+      const title = document.getElementById('am-file-title').value.trim();
+      if(!title){ showToast('Please enter a title for the attachment.','err'); return; }
+      const btn=document.getElementById('am-upload-btn'); btn.disabled=true; btn.textContent='Uploading...';
+      await delay(700);
+      DB.attachments.push({id:uid(),name:title.replace(/\\s+/g,'_')+'.pdf',size:(rand(200,3000)/1000).toFixed(1)+' MB'});
+      closeModal(); renderPageContent(); showToast('Attachment uploaded.');
+    };
+  }
+  const submitBtn = document.getElementById('am-submit');
+  if(submitBtn) submitBtn.onclick = async ()=>{
+    const title = document.getElementById('am-title').value.trim();
+    const content = document.getElementById('am-content').innerText.trim();
+    const date = document.getElementById('am-date').value;
+    if(!title || !content){ showToast('Please fill in title and content.','err'); return; }
+    submitBtn.disabled=true; submitBtn.textContent='Saving...';
+    await delay(600);
+    if(editing){ editing.title=title; editing.content=content; editing.date=date; showToast('Announcement updated.'); }
+    else { DB.announcements.unshift({id:uid(),title,content,date}); showToast('Announcement published.'); }
+    closeModal(); renderPageContent();
+  };
+}
+
+/* ---- Generic simple Add page (Departments/Teachers) ---- */
+function pageAddSimple(dbKey, label, fields){
+  return `
+  ${pageHeader('Add New '+label,['Manager',label+'s','Add New'])}
+  <div class="card b-primary"><div class="card-block" style="max-width:520px;">
+    <form id="simple-add-form">
+      ${fields.map(f=>`
+        <div class="form-group"><label>${esc(f.label)}</label>
+        ${f.type==='select'?`<select class="form-control" name="${f.key}" required><option value="">Select ${esc(f.label)}</option>${f.options.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('')}</select>`
+          :`<input class="form-control" name="${f.key}" required placeholder="Enter ${esc(f.label).toLowerCase()}">`}
+        </div>`).join('')}
+      <button class="btn btn-primary" type="submit">${icon('plus',14)} Add ${label}</button>
+    </form>
+  </div></div>
+  ${wireSimpleAddForm(dbKey,label,fields)}`;
+}
+function wireSimpleAddForm(dbKey,label,fields){
+  setTimeout(()=>{
+    const form = document.getElementById('simple-add-form');
+    if(!form) return;
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const fd = new FormData(form);
+      const rec = {id:uid(),deleted:false};
+      fields.forEach(f=> rec[f.key]=fd.get(f.key));
+      const btn = form.querySelector('button[type=submit]'); btn.disabled=true; btn.textContent='Saving...';
+      await delay(600);
+      DB[dbKey].push(rec);
+      btn.disabled=false; btn.innerHTML = `${icon('plus',14)} Add ${label}`;
+      form.reset();
+      showToast(label+' added successfully.');
+    });
+  },0);
+  return '';
+}
+
+function pageAddCourse(){
+  return `
+  ${pageHeader('Add New Course',['Manager','Courses','Add New'])}
+  <div class="card b-primary"><div class="card-block" style="max-width:600px;">
+    <form id="course-add-form">
+      <div class="form-group"><label>Course Name</label><input class="form-control" name="name" required placeholder="e.g. Final Year Project - Fall 2025"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Department</label><select class="form-control" name="dept" required><option value="">Select Department</option>${DB.departments.filter(d=>!d.deleted).map(d=>`<option value="${d.code}">${esc(d.name)}</option>`).join('')}</select></div>
+        <div class="form-group"><label>Deadline</label><input class="form-control" type="date" name="deadline" required></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Min Group Size</label><input class="form-control" type="number" min="1" name="minGroup" required value="2"></div>
+        <div class="form-group"><label>Max Group Size</label><input class="form-control" type="number" min="1" name="maxGroup" required value="5"></div>
+      </div>
+      <button class="btn btn-primary" type="submit">${icon('plus',14)} Add Course</button>
+    </form>
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    const form = document.getElementById('course-add-form');
+    form.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const fd = new FormData(form);
+      const minG = parseInt(fd.get('minGroup')), maxG = parseInt(fd.get('maxGroup'));
+      if(minG > maxG){ showToast('Min group size cannot exceed max group size.','err'); return; }
+      const btn = form.querySelector('button[type=submit]'); btn.disabled=true; btn.textContent='Saving...';
+      await delay(600);
+      DB.courses.push({id:uid(),name:fd.get('name'),dept:fd.get('dept'),minGroup:minG,maxGroup:maxG,deadline:fd.get('deadline'),deleted:false});
+      btn.disabled=false; btn.innerHTML=`${icon('plus',14)} Add Course`;
+      form.reset();
+      showToast('Course added successfully.');
+    });
+  },0); return '';})()}`;
+}
+
+function studentColumns(){
+  return [{k:'name',l:'Name'},{k:'roll',l:'Roll No'},{k:'dept',l:'Dept'},{k:'section',l:'Section'},{k:'session',l:'Session'},{k:'course',l:'Course'},{k:'recoveryEmail',l:'Recovery Email',fmt:v=>v||'—'}];
+}
+
+function pageAddStudent(){
+  PAGE_STATE.addStudentTab = PAGE_STATE.addStudentTab || 'individual';
+  const tab = PAGE_STATE.addStudentTab;
+  return `
+  ${pageHeader('Add New Student',['Manager','Students','Add New'])}
+  <div class="card b-primary"><div class="card-block">
+    <div class="tabs" id="as-tabs">
+      <button class="tab-btn ${tab==='individual'?'active':''}" data-tab="individual">Individual Entry</button>
+      <button class="tab-btn ${tab==='bulk'?'active':''}" data-tab="bulk">Bulk Import</button>
+    </div>
+    <div id="as-individual" style="display:${tab==='individual'?'block':'none'};max-width:600px;">
+      <form id="student-add-form">
+        <div class="form-row">
+          <div class="form-group"><label>Name</label><input class="form-control" name="name" required placeholder="Full name"></div>
+          <div class="form-group"><label>Roll Number</label><input class="form-control" name="roll" required placeholder="e.g. BCSM-F16-334" id="sa-roll"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Department</label><select class="form-control" name="dept" required id="sa-dept">${DB.departments.filter(d=>!d.deleted).map(d=>`<option value="${d.code}">${esc(d.name)}</option>`).join('')}</select></div>
+          <div class="form-group"><label>Section</label><input class="form-control" name="section" required placeholder="A"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Session</label><select class="form-control" name="session" required><option>Fall 2025</option><option>Spring 2026</option></select></div>
+          <div class="form-group"><label>Course</label><select class="form-control" name="course" required id="sa-course">${DB.courses.filter(c=>!c.deleted).map(c=>`<option>${esc(c.name)}</option>`).join('')}</select></div>
+        </div>
+        <div class="form-group"><label>Teacher</label><select class="form-control" name="teacher" required>${DB.teachers.filter(t=>!t.deleted).map(t=>`<option>${esc(t.name)}</option>`).join('')}</select></div>
+        <div class="form-row">
+          <div class="form-group"><label>Email (auto-generated)</label><input class="form-control" id="sa-email" disabled></div>
+          <div class="form-group"><label>Password (auto-generated)</label><input class="form-control" value="pbl123*" disabled></div>
+        </div>
+        <div class="form-group"><label>Personal Recovery Email <span class="small-muted">(optional)</span></label><input class="form-control" type="email" name="recoveryEmail" placeholder="e.g. student.personal@gmail.com"></div>
+        <div class="form-hint">${icon('info',13)} The student's login credentials will be emailed to their university email once added.</div>
+        <button class="btn btn-primary" type="submit" style="margin-top:12px;">${icon('plus',14)} Submit</button>
+      </form>
+    </div>
+    <div id="as-bulk" style="display:${tab==='bulk'?'block':'none'};max-width:600px;">
+      <div class="form-group"><label>Upload Excel File</label>
+        <div class="dropzone" id="bulk-dropzone">${icon('upload',30)}<div>Click to choose an Excel file (.xlsx)</div></div>
+        <input type="file" id="bulk-file-input" style="display:none;" accept=".xlsx,.xls,.csv">
+      </div>
+      <div class="form-hint">Template columns: Name, Roll No, Department, Section, Session, Course, Teacher, Personal Recovery Email (optional).</div>
+      <button class="btn btn-link" id="bulk-template" type="button">${icon('download',14)} Download Template</button>
+      <button class="btn btn-info btn-block" style="margin-top:14px;" id="bulk-upload-btn">Upload</button>
+      <div id="bulk-summary" style="margin-top:16px;"></div>
+    </div>
+  </div></div>
+  ${wireAddStudentPage()}`;
+}
+function wireAddStudentPage(){
+  setTimeout(()=>{
+    document.querySelectorAll('#as-tabs .tab-btn').forEach(t=>t.addEventListener('click',()=>{
+      PAGE_STATE.addStudentTab = t.dataset.tab;
+      renderPageContent();
+    }));
+    const rollInput = document.getElementById('sa-roll');
+    const deptSel = document.getElementById('sa-dept');
+    const emailField = document.getElementById('sa-email');
+    function updateEmail(){ emailField.value = rollInput.value ? rollInput.value.toUpperCase()+'@SUPERIOR.EDU.PK' : ''; }
+    if(rollInput){ rollInput.addEventListener('input', updateEmail); }
+    const form = document.getElementById('student-add-form');
+    if(form){
+      form.addEventListener('submit', async e=>{
+        e.preventDefault();
+        const fd = new FormData(form);
+        const roll = fd.get('roll').toUpperCase();
+        if(DB.students.some(s=>s.roll===roll)){ showToast('A student with this roll number already exists.','err'); return; }
+        const btn = form.querySelector('button[type=submit]'); btn.disabled=true; btn.textContent='Saving...';
+        await delay(650);
+        const email = roll+'@SUPERIOR.EDU.PK';
+        DB.students.push({id:uid(),name:fd.get('name'),roll,dept:fd.get('dept'),section:fd.get('section'),session:fd.get('session'),course:fd.get('course'),teacher:fd.get('teacher'),email,password:'pbl123*',recoveryEmail:fd.get('recoveryEmail')||'',deleted:false});
+        DB.emailLog.push({to:email,subject:'Your PBL Portal Login Credentials',sentAt:todayISO()});
+        btn.disabled=false; btn.innerHTML=`${icon('plus',14)} Submit`;
+        form.reset(); emailField.value='';
+        showToast(`Student added — login credentials emailed to ${email}.`);
+      });
+    }
+    const dz = document.getElementById('bulk-dropzone');
+    const fi = document.getElementById('bulk-file-input');
+    if(dz){
+      dz.onclick = ()=>fi.click();
+      ['dragover','dragleave','drop'].forEach(evt=>dz.addEventListener(evt,(e)=>{
+        e.preventDefault();
+        dz.classList.toggle('drag', evt==='dragover');
+      }));
+      dz.addEventListener('drop', e=>{
+        const f = e.dataTransfer.files[0];
+        if(f) dz.innerHTML = `${icon('file',26)}<div><b>${esc(f.name)}</b></div><div class="small-muted">Ready to upload</div>`;
+      });
+      fi.onchange = ()=>{
+        const f = fi.files[0];
+        if(f) dz.innerHTML = `${icon('file',26)}<div><b>${esc(f.name)}</b></div><div class="small-muted">Ready to upload</div>`;
+      };
+    }
+    const tmplBtn = document.getElementById('bulk-template');
+    if(tmplBtn) tmplBtn.onclick = ()=>showToast('Template download started... (mock)','info');
+    const upBtn = document.getElementById('bulk-upload-btn');
+    if(upBtn) upBtn.onclick = async ()=>{
+      upBtn.disabled=true; upBtn.textContent='Uploading...';
+      await delay(1000);
+      const imported = rand(15,60), dup = rand(0,4);
+      for(let i=0;i<imported;i++){
+        const rollNo = 'BCSM-F16-'+(400+i+rand(0,900));
+        const email = rollNo+'@SUPERIOR.EDU.PK';
+        DB.students.push({id:uid(),name:'Imported Student '+(i+1),roll:rollNo,dept:'SE',section:'A',session:'Fall 2025',course:DB.courses[0]?.name||'FYP',teacher:DB.teachers[0]?.name||'-',email,password:'pbl123*',recoveryEmail:'',deleted:false});
+        DB.emailLog.push({to:email,subject:'Your PBL Portal Login Credentials',sentAt:todayISO()});
+      }
+      upBtn.disabled=false; upBtn.textContent='Upload';
+      document.getElementById('bulk-summary').innerHTML = `
+        <div class="alert alert-info">${icon('check',16)} ${imported} students imported successfully. A login-credentials email (with their auto-generated password) has been sent to each student's university email.</div>
+        ${dup>0?`<div class="alert alert-warning">${icon('warning',16)} ${dup} duplicates skipped.</div>`:''}`;
+      showToast('Bulk import complete — passwords emailed to all imported students.');
+    };
+  },0);
+  return '';
+}
+
+/* ---- Generic CRUD List / Trash view (used by Students, Departments, Courses, Teachers) ---- */
+function pageCrudView(dbKey, label, cols, trashMode){
+  PAGE_STATE[dbKey+'_search'] = PAGE_STATE[dbKey+'_search'] || '';
+  const search = PAGE_STATE[dbKey+'_search'];
+  let rows = DB[dbKey].filter(r=> !!r.deleted === trashMode);
+  const searchFields = cols.map(c=>c.k);
+  rows = filterRows(rows, search, searchFields);
+
+  const rowsHtml = rows.length ? rows.map(r=>`
+    <tr>
+      ${cols.map(c=>`<td>${esc(c.fmt?c.fmt(r[c.k]):r[c.k])}</td>`).join('')}
+      <td>
+        ${trashMode
+          ? `<button class="btn btn-success btn-sm" data-recover="${r.id}">${icon('restore',13)} Recover</button>`
+          : `<button class="btn btn-outline btn-sm" data-edit="${r.id}">${icon('edit',13)} Edit</button>
+             <button class="btn btn-danger btn-sm" data-delete="${r.id}">${icon('trash',13)} Delete</button>`}
+      </td>
+    </tr>`).join('') : `<tr><td colspan="${cols.length+1}">${emptyState('No records found', trashMode?'Recycle bin is empty.':'No '+label.toLowerCase()+' match your search.', trashMode?'trash':'file')}</td></tr>`;
+
+  return `
+  ${pageHeader(label + (trashMode?' — Recycle Bin':''),['Manager',label,trashMode?'Recycle Bin':'View All'])}
+  <div class="card b-primary"><div class="card-block">
+    <div class="toolbar">
+      <div class="search-input">${icon('search',15)}<input class="form-control" id="crud-search" placeholder="Search ${label.toLowerCase()}..." value="${esc(search)}"></div>
+      <div class="small-muted">${rows.length} record${rows.length!==1?'s':''}</div>
+    </div>
+    <div class="table-wrap"><table class="dtable">
+      <thead><tr>${cols.map(c=>`<th>${esc(c.l)}</th>`).join('')}<th>Actions</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table></div>
+  </div></div>
+  ${wireCrudView(dbKey,label,cols,trashMode)}`;
+}
+function wireCrudView(dbKey,label,cols,trashMode){
+  setTimeout(()=>{
+    const search = document.getElementById('crud-search');
+    if(search){
+      search.addEventListener('input', ()=>{ PAGE_STATE[dbKey+'_search']=search.value; renderCrudTableOnly(dbKey,label,cols,trashMode); });
+    }
+    document.querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click',()=>{
+      const id = parseInt(b.dataset.delete);
+      openConfirm('Move to Recycle Bin',`This ${label.toLowerCase().slice(0,-1)} will be moved to the recycle bin. You can recover it later.`,'Delete',()=>{
+        const rec = DB[dbKey].find(r=>r.id===id); rec.deleted=true;
+        renderPageContent();
+        showToast(label.slice(0,-1)+' moved to recycle bin.');
+      });
+    }));
+    document.querySelectorAll('[data-recover]').forEach(b=>b.addEventListener('click',()=>{
+      const id = parseInt(b.dataset.recover);
+      openConfirm('Recover Record','This item will be restored from the recycle bin.','Recover',()=>{
+        const rec = DB[dbKey].find(r=>r.id===id); rec.deleted=false;
+        renderPageContent();
+        showToast(label.slice(0,-1)+' recovered.');
+      },false);
+    }));
+    document.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>{
+      openEditRecordModal(dbKey,label,cols,parseInt(b.dataset.edit));
+    }));
+  },0);
+  return '';
+}
+function renderCrudTableOnly(dbKey,label,cols,trashMode){
+  document.getElementById('content-wrap').innerHTML = pageCrudView(dbKey,label,cols,trashMode);
+}
+
+/* ---- Students CRUD view with Section / Degree Program / Session filters + no-group reminder ---- */
+function pageStudentsCrud(trashMode){
+  PAGE_STATE.stu_search = PAGE_STATE.stu_search || '';
+  PAGE_STATE.stu_dept = PAGE_STATE.stu_dept || '';
+  PAGE_STATE.stu_section = PAGE_STATE.stu_section || '';
+  PAGE_STATE.stu_session = PAGE_STATE.stu_session || '';
+  const cols = studentColumns();
+  let rows = DB.students.filter(r=> !!r.deleted === trashMode);
+  if(PAGE_STATE.stu_dept) rows = rows.filter(r=>r.dept===PAGE_STATE.stu_dept);
+  if(PAGE_STATE.stu_section) rows = rows.filter(r=>r.section===PAGE_STATE.stu_section);
+  if(PAGE_STATE.stu_session) rows = rows.filter(r=>r.session===PAGE_STATE.stu_session);
+  rows = filterRows(rows, PAGE_STATE.stu_search, cols.map(c=>c.k));
+
+  const depts = [...new Set(DB.students.map(s=>s.dept))];
+  const sections = [...new Set(DB.students.map(s=>s.section))];
+  const sessions = [...new Set(DB.students.map(s=>s.session))];
+  const noGroupCount = studentsWithoutGroup().length;
+
+  const rowsHtml = rows.length ? rows.map(r=>`
+    <tr>
+      ${cols.map(c=>`<td>${esc(c.fmt?c.fmt(r[c.k]):r[c.k])}</td>`).join('')}
+      <td>
+        ${trashMode
+          ? `<button class="btn btn-success btn-sm" data-recover="${r.id}">${icon('restore',13)} Recover</button>`
+          : `<button class="btn btn-outline btn-sm" data-edit="${r.id}">${icon('edit',13)} Edit</button>
+             <button class="btn btn-danger btn-sm" data-delete="${r.id}">${icon('trash',13)} Delete</button>`}
+      </td>
+    </tr>`).join('') : `<tr><td colspan="${cols.length+1}">${emptyState('No records found', trashMode?'Recycle bin is empty.':'No students match your filters.', trashMode?'trash':'file')}</td></tr>`;
+
+  return `
+  ${pageHeader('Students'+(trashMode?' — Recycle Bin':''),['Manager','Students',trashMode?'Recycle Bin':'View All'])}
+  ${!trashMode?`<div class="alert alert-warning">${icon('warning',16)} <b>${noGroupCount}</b> student(s) have not created or joined any group yet. <button class="btn btn-link" id="stu-remind-btn" style="padding:0;">Send them a reminder email</button></div>`:''}
+  <div class="card b-primary"><div class="card-block">
+    <div class="toolbar">
+      <div class="search-input">${icon('search',15)}<input class="form-control" id="crud-search" placeholder="Search students..." value="${esc(PAGE_STATE.stu_search)}"></div>
+      <div class="filters">
+        <select id="stu-filter-dept"><option value="">All Degree Programs</option>${depts.map(d=>`<option value="${esc(d)}" ${PAGE_STATE.stu_dept===d?'selected':''}>${esc(d)}</option>`).join('')}</select>
+        <select id="stu-filter-section"><option value="">All Sections</option>${sections.map(s=>`<option value="${esc(s)}" ${PAGE_STATE.stu_section===s?'selected':''}>Section ${esc(s)}</option>`).join('')}</select>
+        <select id="stu-filter-session"><option value="">All Sessions</option>${sessions.map(s=>`<option value="${esc(s)}" ${PAGE_STATE.stu_session===s?'selected':''}>${esc(s)}</option>`).join('')}</select>
+      </div>
+      <div class="small-muted">${rows.length} record${rows.length!==1?'s':''}</div>
+    </div>
+    <div class="table-wrap"><table class="dtable">
+      <thead><tr>${cols.map(c=>`<th>${esc(c.l)}</th>`).join('')}<th>Actions</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table></div>
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    const search = document.getElementById('crud-search');
+    search.addEventListener('input', ()=>{ PAGE_STATE.stu_search=search.value; document.getElementById('content-wrap').innerHTML = pageStudentsCrud(trashMode); });
+    const fd = document.getElementById('stu-filter-dept'); if(fd) fd.onchange = ()=>{ PAGE_STATE.stu_dept=fd.value; renderPageContent(); };
+    const fs = document.getElementById('stu-filter-section'); if(fs) fs.onchange = ()=>{ PAGE_STATE.stu_section=fs.value; renderPageContent(); };
+    const fsess = document.getElementById('stu-filter-session'); if(fsess) fsess.onchange = ()=>{ PAGE_STATE.stu_session=fsess.value; renderPageContent(); };
+    document.querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click',()=>{
+      const id = parseInt(b.dataset.delete);
+      openConfirm('Move to Recycle Bin','This student will be moved to the recycle bin. You can recover it later.','Delete',()=>{
+        DB.students.find(r=>r.id===id).deleted=true;
+        renderPageContent(); showToast('Student moved to recycle bin.');
+      });
+    }));
+    document.querySelectorAll('[data-recover]').forEach(b=>b.addEventListener('click',()=>{
+      const id = parseInt(b.dataset.recover);
+      openConfirm('Recover Record','This student will be restored from the recycle bin.','Recover',()=>{
+        DB.students.find(r=>r.id===id).deleted=false;
+        renderPageContent(); showToast('Student recovered.');
+      },false);
+    }));
+    document.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>{
+      openEditRecordModal('students','Students',cols,parseInt(b.dataset.edit));
+    }));
+    const remindBtn = document.getElementById('stu-remind-btn');
+    if(remindBtn) remindBtn.onclick = ()=>sendNoGroupReminders();
+  },0);return '';})()}`;
+}
+function sendNoGroupReminders(){
+  const targets = studentsWithoutGroup();
+  if(!targets.length){ showToast('All students are already part of a group.','info'); return; }
+  openConfirm('Send Reminder Emails', `An email reminder to create or join a project group will be sent to ${targets.length} student(s) who have no group yet. Continue?`,'Send Emails', async ()=>{
+    await delay(700);
+    targets.forEach(s=> DB.emailLog.push({to:s.email,subject:'Reminder: Create or Join a Project Group',sentAt:todayISO()}));
+    renderPageContent();
+    showToast(`Reminder emails sent to ${targets.length} student(s).`);
+  },false);
+}
+function openEditRecordModal(dbKey,label,cols,id){
+  const rec = DB[dbKey].find(r=>r.id===id);
+  openModal(`
+    <div class="modal-head"><h5>Edit ${label.slice(0,-1)}</h5><button class="close-x" id="em-close">${icon('x',18)}</button></div>
+    <div class="modal-body">
+      ${cols.map(c=>`<div class="form-group"><label>${esc(c.l)}</label><input class="form-control" id="em-${c.k}" value="${esc(rec[c.k])}"></div>`).join('')}
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" id="em-cancel">Cancel</button><button class="btn btn-primary" id="em-save">Save Changes</button></div>`);
+  document.getElementById('em-close').onclick = closeModal;
+  document.getElementById('em-cancel').onclick = closeModal;
+  document.getElementById('em-save').onclick = async ()=>{
+    const btn=document.getElementById('em-save'); btn.disabled=true; btn.textContent='Saving...';
+    await delay(500);
+    cols.forEach(c=> rec[c.k] = document.getElementById('em-'+c.k).value);
+    closeModal(); renderPageContent();
+    showToast(label.slice(0,-1)+' updated.');
+  };
+}
+function pageCrudViewReadonly(role){
+  const dept = (role==='hod'||role==='hodic') ? state.user.dept : null;
+  const rows = dept ? DB.groups.filter(g=>groupDept(g)===dept) : DB.groups;
+  return `${pageHeader('All Project Groups'+(dept?' — '+esc(dept)+' Department':''),['Oversight','Groups'])}
+  <div class="card b-primary"><div class="card-block"><div class="table-wrap"><table class="dtable">
+  <thead><tr><th>Group</th><th>Dept</th><th>Course</th><th>Members</th><th>Status</th></tr></thead>
+  <tbody>${rows.length?rows.map(g=>`<tr><td>${esc(g.name)}</td><td>${esc(groupDept(g)||'—')}</td><td>${esc(g.course)}</td><td>${g.members.length}/${g.max}</td><td>${statusBadge(g.status)}</td></tr>`).join(''):`<tr><td colspan="5">${emptyState('No groups found','No project groups in this department yet.','group')}</td></tr>`}</tbody>
+  </table></div></div></div>`;
+}
+
+/* ---- Groups ---- */
+function studentById(id){ return DB.students.find(s=>s.id===id); }
+function deptOfCourse(courseName){ const c = DB.courses.find(c=>c.name===courseName); return c ? c.dept : null; }
+function groupDept(g){ return g.dept || deptOfCourse(g.course); }
+function studentsWithoutGroup(deptFilter){
+  const grouped = new Set(DB.groups.flatMap(g=>g.members));
+  return DB.students.filter(s=>!s.deleted && !grouped.has(s.id) && (!deptFilter || s.dept===deptFilter));
+}
+function statusBadge(s){
+  const map={approved:'success',pending:'warning',submitted:'success',late:'danger','not submitted':'muted',locked:'muted'};
+  return `<span class="badge badge-${map[s]||'info'}">${esc(s)}</span>`;
+}
+function pageManageGroups(){
+  PAGE_STATE.groupFilter = PAGE_STATE.groupFilter || 'all';
+  const filt = PAGE_STATE.groupFilter;
+  let rows = DB.groups.filter(g=> filt==='all' || g.status===filt);
+  return `
+  ${pageHeader('All Project Groups',['Manager','Groups','Manage'])}
+  <div class="card b-primary"><div class="card-block">
+    <div class="toolbar">
+      <div class="filters"><select id="gm-filter">
+        <option value="all" ${filt==='all'?'selected':''}>All Statuses</option>
+        <option value="approved" ${filt==='approved'?'selected':''}>Approved</option>
+        <option value="pending" ${filt==='pending'?'selected':''}>Pending</option>
+      </select></div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <button class="btn btn-outline btn-sm" id="gm-remind-btn">${icon('bell',13)} Email Students Without a Group (${studentsWithoutGroup().length})</button>
+        <div class="small-muted">${rows.length} group(s)</div>
+      </div>
+    </div>
+    <div class="table-wrap"><table class="dtable">
+      <thead><tr><th>Group Name</th><th>Course</th><th>Members</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${rows.length? rows.map(g=>`
+        <tr><td><b>${esc(g.name)}</b><div class="small-muted">${esc(g.projectTitle)}</div></td>
+        <td>${esc(g.course)} - Sec ${g.section}</td>
+        <td>${g.members.length}/${g.max}</td>
+        <td>${statusBadge(g.status)}</td>
+        <td>
+          <button class="btn btn-outline btn-sm" data-view-group="${g.id}">View</button>
+          ${g.status==='pending'?`<button class="btn btn-success btn-sm" data-approve-group="${g.id}">Approve</button>`:''}
+          <button class="btn btn-danger btn-sm" data-drop-group="${g.id}">Drop</button>
+        </td></tr>`).join('') : `<tr><td colspan="5">${emptyState('No groups found','Try a different filter.','group')}</td></tr>`}
+      </tbody>
+    </table></div>
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    document.getElementById('gm-filter').addEventListener('change', e=>{ PAGE_STATE.groupFilter=e.target.value; renderPageContent(); });
+    document.getElementById('gm-remind-btn').onclick = ()=>sendNoGroupReminders();
+    document.querySelectorAll('[data-view-group]').forEach(b=>b.addEventListener('click',()=>openGroupViewModal(parseInt(b.dataset.viewGroup))));
+    document.querySelectorAll('[data-approve-group]').forEach(b=>b.addEventListener('click',()=>{
+      const id = parseInt(b.dataset.approveGroup);
+      openConfirm('Approve Group','Approving allows this group to begin submitting iterations.','Approve',async()=>{
+        const g = DB.groups.find(x=>x.id===id); g.status='approved';
+        renderPageContent(); showToast('Group approved.');
+      },false);
+    }));
+    document.querySelectorAll('[data-drop-group]').forEach(b=>b.addEventListener('click',()=>{
+      const id = parseInt(b.dataset.dropGroup);
+      openConfirm('Drop Group','This will permanently remove the group, its members, and pending join requests.','Drop Group',()=>{
+        DB.groups = DB.groups.filter(g=>g.id!==id);
+        DB.joinRequests = DB.joinRequests.filter(r=>r.groupId!==id);
+        renderPageContent(); showToast('Group dropped.');
+      });
+    }));
+  },0);return '';})()}`;
+}
+function openGroupViewModal(id){
+  const g = DB.groups.find(x=>x.id===id);
+  openModal(`
+    <div class="modal-head"><h5>${esc(g.name)}</h5><button class="close-x" id="gv-close">${icon('x',18)}</button></div>
+    <div class="modal-body">
+      <div class="small-muted">Project Title</div><div style="margin-bottom:10px;font-weight:600;color:var(--dark-text)">${esc(g.projectTitle)}</div>
+      <div class="small-muted">Status</div><div style="margin-bottom:10px;">${statusBadge(g.status)}</div>
+      <div class="small-muted">Members (${g.members.length}/${g.max})</div>
+      ${g.members.map(mid=>{const s=studentById(mid); return `<div class="member-row"><span>${esc(s?.name)} ${mid===g.leader?'<span class="badge badge-info">Leader</span>':''}</span><span class="small-muted">${esc(s?.roll)}</span></div>`;}).join('')}
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" id="gv-ok">Close</button></div>`);
+  document.getElementById('gv-close').onclick = closeModal;
+  document.getElementById('gv-ok').onclick = closeModal;
+}
+
+function pageAssignProjects(){
+  PAGE_STATE.assignEvaluator = PAGE_STATE.assignEvaluator || '';
+  const evaluators = USERS.filter(u=>u.role==='evaluator');
+  const sel = PAGE_STATE.assignEvaluator;
+  return `
+  ${pageHeader('Assign Projects to Evaluators',['Manager','Exhibition','Assign Projects'])}
+  <div class="grid-2">
+    <div class="card b-primary"><div class="card-block">
+      <div class="card-title">Assign Groups</div>
+      <div class="form-group"><label>Select Evaluator</label>
+        <select class="form-control" id="ap-evaluator">
+          <option value="">Select Evaluator</option>
+          ${evaluators.map(e=>{const t=DB.teachers.find(x=>x.email===e.email)?.type; return `<option value="${e.email}" ${sel===e.email?'selected':''}>${esc(e.name)}${t?' — '+esc(t):''}</option>`;}).join('')}
+        </select>
+      </div>
+      <label class="small-muted">Available Groups</label>
+      <div id="ap-group-list" style="margin:8px 0 16px;">
+        ${DB.groups.map(g=>{
+          const assigned = DB.assignments.find(a=>a.evaluatorEmail===sel)?.groupIds.includes(g.id);
+          return `<div class="chip-select"><input type="checkbox" value="${g.id}" ${assigned?'checked':''} ${sel?'':'disabled'}><span>${esc(g.name)} (${g.members.length} members) — ${esc(g.course)} Sec ${g.section}</span></div>`;
+        }).join('')}
+      </div>
+      <button class="btn btn-primary" id="ap-assign-btn" ${sel?'':'disabled'}>Assign Selected</button>
+    </div></div>
+    <div class="card b-info"><div class="card-block">
+      <div class="card-title">Current Assignments</div>
+      ${DB.assignments.filter(a=>a.groupIds.length).length ? DB.assignments.filter(a=>a.groupIds.length).map(a=>{
+        const ev = USERS.find(u=>u.email===a.evaluatorEmail);
+        return `<div style="margin-bottom:14px;"><b>${esc(ev?.name||a.evaluatorEmail)}</b>
+          ${a.groupIds.map(gid=>{const g=DB.groups.find(x=>x.id===gid); if(!g) return ''; return `<div class="member-row"><span>${esc(g.name)}</span><button class="btn btn-link" data-unassign="${a.evaluatorEmail}|${gid}">Remove</button></div>`;}).join('')}
+        </div>`;
+      }).join('') : emptyState('No assignments yet','Assign groups to evaluators to get started.','exhibit')}
+    </div></div>
+  </div>
+  ${(function(){setTimeout(()=>{
+    document.getElementById('ap-evaluator').addEventListener('change', e=>{ PAGE_STATE.assignEvaluator = e.target.value; renderPageContent(); });
+    const btn = document.getElementById('ap-assign-btn');
+    if(btn) btn.addEventListener('click', async ()=>{
+      const checked = Array.from(document.querySelectorAll('#ap-group-list input:checked')).map(c=>parseInt(c.value));
+      btn.disabled=true; btn.textContent='Assigning...';
+      await delay(600);
+      let a = DB.assignments.find(x=>x.evaluatorEmail===sel);
+      if(!a){ a = {evaluatorEmail:sel,groupIds:[]}; DB.assignments.push(a); }
+      a.groupIds = checked;
+      renderPageContent(); showToast('Groups assigned successfully.');
+    });
+    document.querySelectorAll('[data-unassign]').forEach(b=>b.addEventListener('click',()=>{
+      const [email,gid] = b.dataset.unassign.split('|');
+      const a = DB.assignments.find(x=>x.evaluatorEmail===email);
+      a.groupIds = a.groupIds.filter(id=>id!==parseInt(gid));
+      renderPageContent(); showToast('Assignment removed.');
+    }));
+  },0);return '';})()}`;
+}
+
+/* ---- Survey (manager) ---- */
+function pageAddSurvey(){
+  return `${pageHeader('Create New Survey',['Manager','Survey','Add New'])}
+  <div class="card b-primary"><div class="card-block" style="max-width:520px;">
+    <form id="survey-add-form">
+      <div class="form-group"><label>Survey Title</label><input class="form-control" name="title" required placeholder="e.g. FYP Experience Feedback"></div>
+      <div class="form-group"><label>Course</label><select class="form-control" name="course" required>${DB.courses.filter(c=>!c.deleted).map(c=>`<option>${esc(c.name)}</option>`).join('')}</select></div>
+      <button class="btn btn-primary" type="submit">Create Survey</button>
+    </form>
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    document.getElementById('survey-add-form').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const btn=e.target.querySelector('button'); btn.disabled=true; btn.textContent='Creating...';
+      await delay(600);
+      const s = {id:uid(),title:fd.get('title'),course:fd.get('course'),questions:[],responses:[]};
+      DB.surveys.push(s);
+      showToast('Survey created. Now add your questions.');
+      navigate('#/manager/survey/questions/'+s.id);
+    });
+  },0);return '';})()}`;
+}
+function pageSurveyQuestions(surveyId){
+  const s = DB.surveys.find(x=>x.id===surveyId);
+  if(!s) return emptyState('Survey not found','It may have been removed.');
+  return `${pageHeader('Add Questions',['Manager','Survey',esc(s.title)])}
+  <div class="card b-primary"><div class="card-block">
+    <div id="sq-list">${renderSurveyQuestionBlocks(s)}</div>
+    <button class="btn btn-outline" id="sq-add">${icon('plus',14)} Add Another Question</button>
+    <div class="section-divider"></div>
+    <button class="btn btn-primary" id="sq-save">Save Questions</button>
+  </div></div>
+  ${wireSurveyQuestions(s)}`;
+}
+function renderSurveyQuestionBlocks(s){
+  if(s.questions.length===0) return `<div class="small-muted" style="margin-bottom:14px;">No questions yet. Click "Add Another Question" to begin.</div>`;
+  return s.questions.map((q,i)=>`
+    <div class="rubric-block" data-qblock="${q.id}">
+      <div class="form-group"><label>Question ${i+1}</label><input class="form-control" data-qtext="${q.id}" value="${esc(q.question)}"></div>
+      <label class="small-muted">Rubric Levels</label>
+      ${[1,2,3,4,5].map(lv=>`<div class="form-row" style="margin-top:6px;"><div class="form-group" style="flex:0 0 30px;"><label>&nbsp;</label><div style="padding-top:8px;">${lv}</div></div><div class="form-group"><input class="form-control" data-qlevel="${q.id}|${lv}" value="${esc(q.levels[lv]||'')}"></div></div>`).join('')}
+      <button class="btn btn-link" data-remove-q="${q.id}">${icon('trash',13)} Remove Question</button>
+    </div>`).join('');
+}
+function wireSurveyQuestions(s){
+  setTimeout(()=>{
+    document.getElementById('sq-add').onclick = ()=>{
+      s.questions.push({id:uid(),question:'',levels:{1:'',2:'',3:'',4:'',5:''}});
+      document.getElementById('sq-list').innerHTML = renderSurveyQuestionBlocks(s);
+      wireSurveyQuestions(s);
+    };
+    document.querySelectorAll('[data-remove-q]').forEach(b=>b.addEventListener('click',()=>{
+      s.questions = s.questions.filter(q=>q.id!==parseInt(b.dataset.removeQ));
+      document.getElementById('sq-list').innerHTML = renderSurveyQuestionBlocks(s);
+      wireSurveyQuestions(s);
+    }));
+    document.getElementById('sq-save').onclick = async ()=>{
+      document.querySelectorAll('[data-qtext]').forEach(inp=>{
+        const q = s.questions.find(x=>x.id===parseInt(inp.dataset.qtext)); if(q) q.question = inp.value;
+      });
+      document.querySelectorAll('[data-qlevel]').forEach(inp=>{
+        const [qid,lv] = inp.dataset.qlevel.split('|');
+        const q = s.questions.find(x=>x.id===parseInt(qid)); if(q) q.levels[lv]=inp.value;
+      });
+      const btn=document.getElementById('sq-save'); btn.disabled=true; btn.textContent='Saving...';
+      await delay(600);
+      btn.disabled=false; btn.textContent='Save Questions';
+      showToast('Survey questions saved.');
+      navigate('#/manager/survey/view');
+    };
+  },0);
+}
+function pageViewSurveys(){
+  return `${pageHeader('Surveys',['Manager','Survey','View Surveys'])}
+  <div class="card b-primary"><div class="card-block">
+    <div class="table-wrap"><table class="dtable">
+    <thead><tr><th>Title</th><th>Course</th><th>Questions</th><th>Responses</th><th>Actions</th></tr></thead>
+    <tbody>${DB.surveys.length?DB.surveys.map(s=>`<tr><td><b>${esc(s.title)}</b></td><td>${esc(s.course)}</td><td>${s.questions.length}</td><td>${s.responses.length}</td>
+      <td><button class="btn btn-outline btn-sm" data-manage-q="${s.id}">Manage Questions</button>
+      <button class="btn btn-info btn-sm" data-view-report="${s.id}">View Report</button></td></tr>`).join(''):`<tr><td colspan="5">${emptyState('No surveys yet','Create a survey to collect feedback.','survey')}</td></tr>`}</tbody>
+    </table></div>
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    document.querySelectorAll('[data-manage-q]').forEach(b=>b.addEventListener('click',()=>navigate('#/manager/survey/questions/'+b.dataset.manageQ)));
+    document.querySelectorAll('[data-view-report]').forEach(b=>b.addEventListener('click',()=>navigate('#/manager/survey/report/'+b.dataset.viewReport)));
+  },0);return '';})()}`;
+}
+function pageSurveyReport(surveyId){
+  const s = surveyId ? DB.surveys.find(x=>x.id==surveyId) : DB.surveys[0];
+  if(!s) return emptyState('No survey data','Create a survey first.','survey');
+  const totalStudents = DB.students.filter(x=>!x.deleted).length;
+  return `${pageHeader('Survey Report',['Manager','Survey Reports','Filled Report'])}
+  <div class="card b-primary"><div class="card-block">
+    <div class="card-title">${esc(s.title)}</div>
+    <div class="small-muted" style="margin-bottom:16px;">Total Responses: ${s.responses.length} / ${totalStudents} students</div>
+    ${s.questions.map(q=>{
+      const answers = s.responses.map(r=>r.answers[q.id]).filter(Boolean);
+      const avg = answers.length ? (answers.reduce((a,b)=>a+b,0)/answers.length).toFixed(1) : '0.0';
+      const dist = [1,2,3,4,5].map(lv=> answers.filter(a=>a===lv).length);
+      const max = Math.max(1,...dist);
+      return `<div style="margin-bottom:22px;">
+        <b>${esc(q.question)}</b>
+        <div class="small-muted" style="margin-bottom:8px;">Average Score: ${avg} / 5</div>
+        ${dist.map((c,i)=>`<div class="bar-row"><span style="width:14px;">${i+1}</span><div class="bar-track"><div class="bar-fill" style="width:${(c/max*100)||0}%"></div></div><span style="width:60px;">${answers.length?Math.round(c/answers.length*100):0}%</span></div>`).join('')}
+      </div>`;
+    }).join('')}
+    <button class="btn btn-outline btn-sm" id="view-detail-report">View Detailed Report</button>
+    <div id="detail-report-area"></div>
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    const btn = document.getElementById('view-detail-report');
+    if(btn) btn.onclick = ()=>{
+      document.getElementById('detail-report-area').innerHTML = `
+        <div class="section-divider"></div>
+        <div class="table-wrap"><table class="dtable"><thead><tr><th>Student</th>${s.questions.map(q=>`<th>${esc(q.question.slice(0,20))}...</th>`).join('')}</tr></thead>
+        <tbody>${s.responses.map(r=>{const st=studentById(r.studentId);return `<tr><td>${esc(st?.name||'Student #'+r.studentId)}</td>${s.questions.map(q=>`<td>${r.answers[q.id]||'-'}</td>`).join('')}</tr>`;}).join('')}</tbody></table></div>`;
+      btn.style.display='none';
+    };
+  },0);return '';})()}`;
+}
+
+/* ---- Reports ---- */
+function pageGroupReports(){
+  return `${pageHeader('Group Reports',['Reports','Group Reports'])}
+  <div class="card b-primary"><div class="card-block"><div class="table-wrap"><table class="dtable">
+    <thead><tr><th>Group</th><th>Course</th><th>Members</th><th>Status</th><th>Avg Score</th></tr></thead>
+    <tbody>${DB.groups.map(g=>{
+      const evs = DB.evaluations.filter(e=>e.groupId===g.id);
+      const avg = evs.length ? Math.round(evs.reduce((a,e)=>a+e.total,0)/evs.length) : '—';
+      return `<tr><td><b>${esc(g.name)}</b></td><td>${esc(g.course)}</td><td>${g.members.length}/${g.max}</td><td>${statusBadge(g.status)}</td><td>${avg}${avg!=='—'?'%':''}</td></tr>`;
+    }).join('')}</tbody></table></div></div></div>`;
+}
+function pageIterationReports(){
+  return `${pageHeader('Iteration Reports',['Reports','Iteration Reports'])}
+  <div class="card b-primary"><div class="card-block"><div class="table-wrap"><table class="dtable">
+    <thead><tr><th>Iteration</th><th>Deadline</th><th>Submissions</th><th>Groups Total</th><th>Completion</th></tr></thead>
+    <tbody>${DB.iterations.map(it=>{
+      const pct = DB.groups.length ? Math.round(it.submissions.length/DB.groups.length*100) : 0;
+      return `<tr><td><b>${esc(it.title)}</b></td><td>${fmtDate(it.deadline)}</td><td>${it.submissions.length}</td><td>${DB.groups.length}</td>
+      <td><div class="bar-row" style="margin:0;"><div class="bar-track" style="width:100px;"><div class="bar-fill" style="width:${pct}%"></div></div><span>${pct}%</span></div></td></tr>`;
+    }).join('')}</tbody></table></div></div></div>`;
+}
+
+/* ---- Iterations (manager) ---- */
+function pageManageIterations(){
+  return `${pageHeader('Manage Iterations',['Manager','Iterations','Manage'])}
+  <div class="toolbar"><div></div><button class="btn btn-primary btn-sm" id="mi-add">${icon('plus',14)} Add New Iteration</button></div>
+  <div class="card b-primary"><div class="card-block"><div class="table-wrap"><table class="dtable">
+    <thead><tr><th>Title</th><th>Course</th><th>Deadline</th><th>Rubrics</th><th>Submissions</th><th>Actions</th></tr></thead>
+    <tbody>${DB.iterations.length?DB.iterations.map(it=>`<tr><td><b>${esc(it.title)}</b></td><td>${esc(it.course)}</td><td>${fmtDate(it.deadline)}</td><td>${it.rubrics.length}</td><td>${it.submissions.length}</td>
+      <td><button class="btn btn-outline btn-sm" data-manage-rubrics="${it.id}">${icon('edit',13)} Rubrics</button>
+      <button class="btn btn-danger btn-sm" data-del-iter="${it.id}">${icon('trash',13)} Delete</button></td></tr>`).join(''):`<tr><td colspan="6">${emptyState('No iterations','Add your first iteration to get started.','layers')}</td></tr>`}</tbody>
+  </table></div></div></div>
+  ${(function(){setTimeout(()=>{
+    document.getElementById('mi-add').onclick = ()=>navigate('#/manager/iterations/add');
+    document.querySelectorAll('[data-manage-rubrics]').forEach(b=>b.addEventListener('click',()=>navigate('#/manager/iterations/rubrics/'+b.dataset.manageRubrics)));
+    document.querySelectorAll('[data-del-iter]').forEach(b=>b.addEventListener('click',()=>{
+      const id = parseInt(b.dataset.delIter);
+      openConfirm('Delete Iteration','This will permanently remove the iteration and its rubrics.','Delete',()=>{
+        DB.iterations = DB.iterations.filter(i=>i.id!==id);
+        renderPageContent(); showToast('Iteration deleted.');
+      });
+    }));
+  },0);return '';})()}`;
+}
+function pageAddIteration(){
+  return `${pageHeader('Add New Iteration',['Manager','Iterations','Add New'])}
+  <div class="card b-primary"><div class="card-block" style="max-width:620px;">
+    <form id="iter-add-form">
+      <div class="form-group"><label>Course</label><select class="form-control" name="course" required>${DB.courses.filter(c=>!c.deleted).map(c=>`<option>${esc(c.name)}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Title</label><input class="form-control" name="title" required placeholder="e.g. Design Document Submission"></div>
+      <div class="form-group"><label>Details</label>
+        <div class="rich-toolbar"><button type="button"><b>B</b></button><button type="button"><i>I</i></button><button type="button">&#8226;</button></div>
+        <div class="rich-editor" contenteditable="true" id="iter-details" data-placeholder="Describe the iteration requirements..."></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Deadline</label><input class="form-control" type="datetime-local" name="deadline" required></div>
+        <div class="form-group"><label>Semester</label><input class="form-control" value="Fall-2025" disabled></div>
+      </div>
+      <div class="form-group"><label>Supporting File (optional)</label>
+        <div class="dropzone" id="iter-dropzone">${icon('upload',26)}<div>Click to attach a supporting file</div></div>
+        <input type="file" id="iter-file" style="display:none;">
+        <div id="iter-file-chosen"></div>
+      </div>
+      <button class="btn btn-primary" type="submit">Save Iteration</button>
+    </form>
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    document.getElementById('iter-dropzone').onclick = ()=>document.getElementById('iter-file').click();
+    document.getElementById('iter-file').onchange = (e)=>{
+      const f = e.target.files[0];
+      if(f) document.getElementById('iter-file-chosen').innerHTML = `<div class="file-chip">${icon('file',16)} ${esc(f.name)}</div>`;
+    };
+    document.getElementById('iter-add-form').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const details = document.getElementById('iter-details').innerText.trim();
+      const btn = e.target.querySelector('button[type=submit]'); btn.disabled=true; btn.textContent='Saving...';
+      await delay(650);
+      const it = {id:uid(),title:fd.get('title'),course:fd.get('course'),details:details||'No details provided.',deadline:fd.get('deadline').slice(0,10),rubrics:[],submissions:[]};
+      DB.iterations.push(it);
+      showToast('Iteration saved. Now add rubrics.');
+      navigate('#/manager/iterations/rubrics/'+it.id);
+    });
+  },0);return '';})()}`;
+}
+function pageManageRubrics(iterId){
+  const it = DB.iterations.find(i=>i.id===iterId);
+  if(!it) return emptyState('Iteration not found','It may have been removed.');
+  const totalWeight = it.rubrics.reduce((a,r)=>a+Number(r.weight||0),0);
+  return `${pageHeader('Rubrics for: '+it.title,['Manager','Iterations','Rubrics'])}
+  <div class="card b-primary"><div class="card-block">
+    <div id="rubric-list">${renderRubricBlocks(it)}</div>
+    <button class="btn btn-outline" id="rb-add">${icon('plus',14)} Add New Criterion</button>
+    <div class="section-divider"></div>
+    <div class="small-muted" id="rb-total" style="margin-bottom:12px;font-weight:600;color:${totalWeight===100?'var(--success)':'var(--danger)'}">Total Weight: ${totalWeight}% ${totalWeight===100?'✓':'(must equal 100%)'}</div>
+    <button class="btn btn-primary" id="rb-save">Save Rubrics</button>
+  </div></div>
+  ${wireRubricPage(it)}`;
+}
+function renderRubricBlocks(it){
+  if(it.rubrics.length===0) return `<div class="small-muted" style="margin-bottom:14px;">No criteria yet. Add your first criterion below.</div>`;
+  return it.rubrics.map((r,i)=>`
+    <div class="rubric-block">
+      <div class="form-row">
+        <div class="form-group" style="flex:3;"><label>Criterion ${i+1}: Name</label><input class="form-control" data-rname="${r.id}" value="${esc(r.question)}"></div>
+        <div class="form-group" style="flex:1;"><label>Weight %</label><input class="form-control" type="number" data-rweight="${r.id}" value="${r.weight}"></div>
+      </div>
+      ${[0,1,2,3,4,5].map(lv=>`<div class="form-group" style="margin-bottom:6px;"><label style="display:inline;">Level ${lv}:</label> <input class="form-control" style="display:inline-block;width:calc(100% - 70px);margin-left:6px;" data-rlevel="${r.id}|${lv}" value="${esc(r.levels[lv]||'')}"></div>`).join('')}
+      <button class="btn btn-link" data-remove-r="${r.id}">${icon('trash',13)} Remove Criterion</button>
+    </div>`).join('');
+}
+function wireRubricPage(it){
+  setTimeout(()=>{
+    document.getElementById('rb-add').onclick = ()=>{
+      it.rubrics.push({id:uid(),question:'',weight:0,levels:{0:'',1:'',2:'',3:'',4:'',5:''}});
+      document.getElementById('rubric-list').innerHTML = renderRubricBlocks(it);
+      wireRubricPage(it);
+    };
+    document.querySelectorAll('[data-remove-r]').forEach(b=>b.addEventListener('click',()=>{
+      it.rubrics = it.rubrics.filter(r=>r.id!==parseInt(b.dataset.removeR));
+      document.getElementById('rubric-list').innerHTML = renderRubricBlocks(it);
+      wireRubricPage(it);
+    }));
+    document.getElementById('rb-save').onclick = async ()=>{
+      document.querySelectorAll('[data-rname]').forEach(inp=>{const r=it.rubrics.find(x=>x.id===parseInt(inp.dataset.rname)); if(r) r.question=inp.value;});
+      document.querySelectorAll('[data-rweight]').forEach(inp=>{const r=it.rubrics.find(x=>x.id===parseInt(inp.dataset.rweight)); if(r) r.weight=Number(inp.value||0);});
+      document.querySelectorAll('[data-rlevel]').forEach(inp=>{const [rid,lv]=inp.dataset.rlevel.split('|'); const r=it.rubrics.find(x=>x.id===parseInt(rid)); if(r) r.levels[lv]=inp.value;});
+      const totalWeight = it.rubrics.reduce((a,r)=>a+Number(r.weight||0),0);
+      if(it.rubrics.length && totalWeight!==100){ showToast('Total weight must equal 100% before saving.','err'); renderPageContent(); return; }
+      const btn=document.getElementById('rb-save'); btn.disabled=true; btn.textContent='Saving...';
+      await delay(600);
+      showToast('Rubrics saved successfully.');
+      navigate('#/manager/iterations/manage');
+    };
+  },0);
+}
+
+/* =====================================================================
+   STUDENT PAGES
+   ===================================================================== */
+function currentStudent(){ return studentById(state.user.refId); }
+function myGroup(){ const me = currentStudent(); return DB.groups.find(g=>g.members.includes(me.id)); }
+
+function pageStudentDashboard(){
+  const g = myGroup();
+  const pendingSurveys = DB.surveys.filter(s=> !s.responses.some(r=>r.studentId===currentStudent().id)).length;
+  const nextIter = DB.iterations.find(it=>it.rubrics.length && daysLeft(it.deadline)>=0 && !(g&&it.submissions.some(s=>s.groupId===g.id)));
+  return `
+  ${pageHeader('Dashboard',['Home','Dashboard'])}
+  <div class="stat-grid">
+    ${statCard(g?'Yes':'No','In a Project Group','group', g?'success':'warning')}
+    ${statCard(g?g.members.length+'/'+g.max:'—','Group Members','users','info')}
+    ${statCard(DB.iterations.filter(i=>i.rubrics.length).length,'Active Iterations','layers')}
+    ${statCard(pendingSurveys,'Pending Surveys','survey','warning')}
+  </div>
+  <div class="grid-2">
+    <div class="card b-primary"><div class="card-block">
+      <div class="card-title">My Group</div>
+      ${g ? `<b>${esc(g.name)}</b><div class="small-muted" style="margin-bottom:10px;">${esc(g.projectTitle)}</div>${statusBadge(g.status)}
+        <div style="margin-top:14px;"><button class="btn btn-outline btn-sm" id="go-my-group">View Group</button></div>`
+        : `${emptyState('No group yet','Create a new group or join an existing one to get started.','group')}
+        <div style="display:flex;gap:8px;justify-content:center;"><button class="btn btn-primary btn-sm" id="go-create-group">Create Group</button><button class="btn btn-outline btn-sm" id="go-browse-group">Browse Groups</button></div>`}
+    </div></div>
+    <div class="card b-info"><div class="card-block">
+      <div class="card-title">Announcements</div>
+      ${renderAnnouncementAccordion()}
+    </div></div>
+  </div>
+  ${nextIter?`<div class="alert alert-info">${icon('clock',16)} <b>${esc(nextIter.title)}</b> is due ${fmtDate(nextIter.deadline)} — ${daysLeft(nextIter.deadline)} day(s) remaining.</div>`:''}
+  ${(function(){setTimeout(()=>{
+    document.querySelectorAll('[data-acc-toggle]').forEach(h=>h.addEventListener('click',()=>document.getElementById('acc-body-'+h.dataset.accToggle).classList.toggle('open')));
+    const gg=document.getElementById('go-my-group'); if(gg) gg.onclick=()=>navigate('#/student/group/my');
+    const cg=document.getElementById('go-create-group'); if(cg) cg.onclick=()=>navigate('#/student/group/create');
+    const bg=document.getElementById('go-browse-group'); if(bg) bg.onclick=()=>navigate('#/student/group/browse');
+  },0);return '';})()}`;
+}
+
+function pageCreateGroup(){
+  const me = currentStudent();
+  if(myGroup()) return `${pageHeader('Create Group',['Student','Group','Create'])}<div class="alert alert-warning">${icon('warning',16)} You are already part of a group (<b>${esc(myGroup().name)}</b>). Leave your current group before creating a new one.</div>`;
+  const course = DB.courses.find(c=>c.name===me.course);
+  return `${pageHeader('Create New Project Group',['Student','Group','Create'])}
+  <div class="card b-primary"><div class="card-block" style="max-width:520px;">
+    <div class="alert alert-info">${icon('warning',16)} Group Size: Min ${course?.minGroup||2} members, Max ${course?.maxGroup||5} members</div>
+    <form id="cg-form">
+      <div class="form-group"><label>Course</label><input class="form-control" value="${esc(me.course)}" disabled></div>
+      <div class="form-group"><label>Section</label><input class="form-control" value="${esc(me.section)}" disabled></div>
+      <div class="form-group"><label>Project Title</label><input class="form-control" name="title" required placeholder="e.g. AI-Powered Chatbot for Education"></div>
+      <div class="form-group"><label>Group Name</label><input class="form-control" name="name" required placeholder="e.g. AI Chatbot"></div>
+      <div class="form-group"><label>Semester</label><input class="form-control" value="Fall-2025" disabled></div>
+      <button class="btn btn-primary" type="submit">Create Group</button>
+    </form>
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    document.getElementById('cg-form').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const btn = e.target.querySelector('button'); btn.disabled=true; btn.textContent='Creating...';
+      await delay(650);
+      DB.groups.push({id:uid(),name:fd.get('name'),course:me.course,section:me.section,leader:me.id,members:[me.id],min:course?.minGroup||2,max:course?.maxGroup||5,status:'pending',projectTitle:fd.get('title'),evaluated:false});
+      showToast('Group created! You are now the group leader.');
+      navigate('#/student/group/my');
+    });
+  },0);return '';})()}`;
+}
+
+function pageMyGroup(){
+  const g = myGroup();
+  const me = currentStudent();
+  if(!g) return `${pageHeader('My Group',['Student','Group','My Group'])}${emptyState('You are not in a group yet','Create a new group or join an existing one.','group')}
+  <div style="text-align:center;"><button class="btn btn-primary btn-sm" id="mg-create">Create Group</button> <button class="btn btn-outline btn-sm" id="mg-browse">Browse Groups</button></div>
+  ${(function(){setTimeout(()=>{document.getElementById('mg-create').onclick=()=>navigate('#/student/group/create');document.getElementById('mg-browse').onclick=()=>navigate('#/student/group/browse');},0);return '';})()}`;
+
+  const isLeader = g.leader === me.id;
+  const requests = DB.joinRequests.filter(r=>r.groupId===g.id && r.status==='pending');
+  return `${pageHeader('My Group',['Student','Group','My Group'])}
+  <div class="card b-primary"><div class="card-block">
+    <h4 style="color:var(--dark-text);margin-bottom:4px;">${esc(g.projectTitle)}</h4>
+    <div class="small-muted" style="margin-bottom:10px;">Group: ${esc(g.name)}</div>
+    <div style="margin-bottom:14px;">Status: ${statusBadge(g.status)}</div>
+    <div class="small-muted">Group Leader</div>
+    <div style="margin-bottom:14px;font-weight:600;color:var(--dark-text);">${esc(studentById(g.leader)?.name)} (${esc(studentById(g.leader)?.roll)})</div>
+    <div class="small-muted">Members (${g.members.length}/${g.max})</div>
+    ${g.members.map(mid=>{const s=studentById(mid); return `<div class="member-row"><span>${esc(s.name)} ${mid===g.leader?'<span class="badge badge-info">Leader</span>':''}</span><span class="small-muted">${esc(s.roll)}</span></div>`;}).join('')}
+    ${isLeader?`
+    <div class="section-divider"></div>
+    <div class="small-muted">Pending Join Requests</div>
+    <div id="jr-list">${requests.length? requests.map(r=>{const s=studentById(r.studentId); return `<div class="member-row"><span>${esc(s.name)} - ${esc(s.roll)}</span><span><button class="btn btn-success btn-sm" data-accept-req="${r.id}">Accept</button> <button class="btn btn-danger btn-sm" data-reject-req="${r.id}">Reject</button></span></div>`;}).join('') : `<div class="small-muted">No pending requests.</div>`}</div>
+    `:''}
+    <div class="section-divider"></div>
+    <button class="btn btn-danger btn-sm" id="mg-leave">${icon('logout',13)} Leave Group</button>
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    document.querySelectorAll('[data-accept-req]').forEach(b=>b.addEventListener('click',()=>{
+      const id = parseInt(b.dataset.acceptReq);
+      const req = DB.joinRequests.find(r=>r.id===id);
+      if(g.members.length >= g.max){ showToast('Group is already at maximum capacity.','err'); return; }
+      if(DB.groups.some(gr=>gr.members.includes(req.studentId))){
+        req.status='cancelled';
+        renderPageContent();
+        showToast('This student has already joined another group and cannot be added here.','err');
+        return;
+      }
+      g.members.push(req.studentId);
+      req.status='accepted';
+      renderPageContent(); showToast('Join request accepted.');
+    }));
+    document.querySelectorAll('[data-reject-req]').forEach(b=>b.addEventListener('click',()=>{
+      const id = parseInt(b.dataset.rejectReq);
+      DB.joinRequests.find(r=>r.id===id).status='rejected';
+      renderPageContent(); showToast('Join request rejected.','info');
+    }));
+    document.getElementById('mg-leave').onclick = ()=>{
+      openConfirm('Leave Group', isLeader && g.members.length>1 ? 'You are the group leader. Leaving will transfer leadership to the next member.' : 'Are you sure you want to leave this group?', 'Leave Group', ()=>{
+        g.members = g.members.filter(id=>id!==me.id);
+        if(g.members.length===0){ DB.groups = DB.groups.filter(x=>x.id!==g.id); }
+        else if(isLeader){ g.leader = g.members[0]; }
+        renderPageContent(); showToast('You have left the group.','info');
+      });
+    };
+  },0);return '';})()}`;
+}
+
+function pageBrowseGroups(){
+  const me = currentStudent();
+  if(myGroup()) return `${pageHeader('Browse Groups',['Student','Group','Browse'])}<div class="alert alert-info">${icon('info',16)} You're already in a group. Leave your current group to browse and join another.</div>`;
+  const groups = DB.groups.filter(g=>g.course===me.course && g.section===me.section);
+  return `${pageHeader('Available Groups in '+esc(me.course)+' - Section '+esc(me.section),['Student','Group','Browse'])}
+  <div class="card b-primary"><div class="card-block"><div class="table-wrap"><table class="dtable">
+    <thead><tr><th>Group Name</th><th>Project Title</th><th>Leader</th><th>Members</th><th>Action</th></tr></thead>
+    <tbody>${groups.length?groups.map(g=>{
+      const full = g.members.length>=g.max;
+      const already = DB.joinRequests.some(r=>r.groupId===g.id && r.studentId===me.id && r.status==='pending');
+      return `<tr><td><b>${esc(g.name)}</b></td><td>${esc(g.projectTitle)}</td><td>${esc(studentById(g.leader)?.name)}</td><td>${g.members.length}/${g.max}</td>
+      <td>${full?'<span class="badge badge-muted">Full</span>':already?'<span class="badge badge-warning">Request Pending</span>':`<button class="btn btn-primary btn-sm" data-join="${g.id}">Join</button>`}</td></tr>`;
+    }).join(''):`<tr><td colspan="5">${emptyState('No groups available','Be the first to create one!','group')}</td></tr>`}</tbody>
+  </table></div></div></div>
+  ${(function(){setTimeout(()=>{
+    document.querySelectorAll('[data-join]').forEach(b=>b.addEventListener('click', async ()=>{
+      const gid = parseInt(b.dataset.join);
+      b.disabled=true; b.textContent='Sending...';
+      await delay(500);
+      // A student may only have one active join request at a time (cannot end up in 2+ groups)
+      DB.joinRequests.filter(r=>r.studentId===me.id && r.status==='pending').forEach(r=>r.status='cancelled');
+      DB.joinRequests.push({id:uid(),groupId:gid,studentId:me.id,status:'pending'});
+      renderPageContent(); showToast('Join request sent to group leader.');
+    }));
+  },0);return '';})()}`;
+}
+
+function pageStudentIterations(){
+  const g = myGroup();
+  return `${pageHeader('Iterations',['Student','Coursework','Iterations'])}
+  ${!g?`<div class="alert alert-warning">${icon('warning',16)} Join or create a group to start submitting iterations.</div>`:''}
+  <div class="card b-primary"><div class="card-block">
+    ${DB.iterations.map(it=>{
+      const hasRubrics = it.rubrics.length>0;
+      const sub = g ? it.submissions.find(s=>s.groupId===g.id) : null;
+      const dl = daysLeft(it.deadline);
+      let statusHtml, actionHtml;
+      if(!hasRubrics){ statusHtml = statusBadge('locked')+' Not Yet Available'; actionHtml=''; }
+      else if(sub){ statusHtml = `${icon('check',14)} Submitted on ${fmtDate(sub.submittedAt)} ${sub.late?'<span class="badge badge-danger">Late</span>':''}`; actionHtml = `<button class="btn btn-outline btn-sm" data-view-iter="${it.id}">View Details</button>`; }
+      else { statusHtml = `${icon('warning',14)} Not Submitted`; actionHtml = `<button class="btn btn-outline btn-sm" data-view-iter="${it.id}">View Details</button> ${g?`<button class="btn btn-primary btn-sm" data-submit-iter="${it.id}">Submit Work</button>`:''}`; }
+      return `<div class="rubric-block">
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div>
+            <h6>${esc(it.title)}</h6>
+            <div class="small-muted">Deadline: ${fmtDate(it.deadline)} ${hasRubrics?`(${icon('clock',13)} ${dl>=0?dl+' days remaining':'past due'})`:''}</div>
+            <div style="margin-top:6px;">${statusHtml}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">${actionHtml}</div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    document.querySelectorAll('[data-view-iter]').forEach(b=>b.addEventListener('click',()=>navigate('#/student/iterations/'+b.dataset.viewIter)));
+    document.querySelectorAll('[data-submit-iter]').forEach(b=>b.addEventListener('click',()=>navigate('#/student/iterations/'+b.dataset.submitIter+'/submit')));
+  },0);return '';})()}`;
+}
+function pageIterationDetail(id){
+  const it = DB.iterations.find(x=>x.id===id);
+  if(!it) return emptyState('Iteration not found','','file');
+  const g = myGroup();
+  const sub = g ? it.submissions.find(s=>s.groupId===g.id) : null;
+  return `${pageHeader(it.title,['Student','Iterations',it.title])}
+  <div class="card b-primary"><div class="card-block">
+    <div class="small-muted">Deadline</div><div style="margin-bottom:12px;font-weight:600;color:var(--dark-text);">${fmtDate(it.deadline)}</div>
+    <div class="small-muted">Details</div><div style="margin-bottom:16px;">${esc(it.details)}</div>
+    ${it.rubrics.length?`<div class="small-muted" style="margin-bottom:8px;">Evaluation Rubric Preview</div>
+    ${it.rubrics.map(r=>`<div class="rubric-block"><h6>${esc(r.question)} <span class="badge badge-info">${r.weight}%</span></h6>
+      <div class="level-grid">${[0,1,2,3,4,5].map(lv=>`<div class="level-opt">${lv} — ${esc(r.levels[lv]||'')}</div>`).join('')}</div></div>`).join('')}`:''}
+    ${sub?`<div class="alert alert-info">${icon('check',16)} Submitted: ${esc(sub.file)} on ${fmtDate(sub.submittedAt)}</div>`:g&&it.rubrics.length?`<button class="btn btn-primary btn-sm" id="id-submit">Submit Work</button>`:''}
+  </div></div>
+  ${(function(){setTimeout(()=>{const b=document.getElementById('id-submit'); if(b) b.onclick=()=>navigate('#/student/iterations/'+id+'/submit');},0);return '';})()}`;
+}
+function pageSubmitWork(id){
+  const it = DB.iterations.find(x=>x.id===id);
+  const g = myGroup();
+  if(!g) return emptyState('Join a group first','You need to be part of a group to submit work.','group');
+  const isLate = daysLeft(it.deadline) < 0;
+  return `${pageHeader('Submit: '+it.title,['Student','Iterations','Submit'])}
+  <div class="card b-primary"><div class="card-block" style="max-width:520px;">
+    <div class="small-muted" style="margin-bottom:14px;">Deadline: ${fmtDate(it.deadline)}</div>
+    ${isLate?`<div class="alert alert-danger">${icon('warning',16)} This deadline has passed. Your submission will be marked late.</div>`:`<div class="alert alert-warning">${icon('warning',16)} Late submissions will be marked.</div>`}
+    <div class="dropzone" id="sw-dropzone">${icon('upload',30)}<div>Drag and drop file here, or click to browse</div><div class="small-muted">Supported: PDF, DOCX, ZIP (Max 10MB)</div></div>
+    <input type="file" id="sw-file" style="display:none;" accept=".pdf,.docx,.zip">
+    <div id="sw-file-chosen"></div>
+    <div class="progress-bar" id="sw-progress-wrap" style="display:none;"><div class="progress-fill" id="sw-progress"></div></div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button class="btn btn-outline" id="sw-cancel">Cancel</button>
+      <button class="btn btn-primary" id="sw-submit" disabled>Submit</button>
+    </div>
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    let chosenFile = null;
+    const dz = document.getElementById('sw-dropzone');
+    const fi = document.getElementById('sw-file');
+    const submitBtn = document.getElementById('sw-submit');
+    function setFile(f){ chosenFile=f; document.getElementById('sw-file-chosen').innerHTML=`<div class="file-chip">${icon('file',16)} ${esc(f.name)}</div>`; submitBtn.disabled=false; }
+    dz.onclick = ()=>fi.click();
+    ['dragover','dragleave','drop'].forEach(evt=>dz.addEventListener(evt,e=>{e.preventDefault();dz.classList.toggle('drag',evt==='dragover'); if(evt==='drop'&&e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);}));
+    fi.onchange = ()=>{ if(fi.files[0]) setFile(fi.files[0]); };
+    document.getElementById('sw-cancel').onclick = ()=>navigate('#/student/iterations');
+    submitBtn.onclick = async ()=>{
+      submitBtn.disabled=true; submitBtn.textContent='Uploading...';
+      document.getElementById('sw-progress-wrap').style.display='block';
+      const bar = document.getElementById('sw-progress');
+      for(let p=0;p<=100;p+=20){ bar.style.width=p+'%'; await delay(120); }
+      it.submissions.push({groupId:g.id,status:'submitted',file:chosenFile.name,submittedAt:todayISO(),late:isLate});
+      showToast('Work submitted successfully'+(isLate?' (marked late).':'.'));
+      navigate('#/student/iterations');
+    };
+  },0);return '';})()}`;
+}
+
+function pageStudentSurveyList(){
+  const me = currentStudent();
+  return `${pageHeader('Surveys',['Student','Feedback','Surveys'])}
+  <div class="card b-primary"><div class="card-block">
+    ${DB.surveys.length?DB.surveys.map(s=>{
+      const filled = s.responses.some(r=>r.studentId===me.id);
+      return `<div class="rubric-block"><div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><h6>${esc(s.title)}</h6><div class="small-muted">${esc(s.course)} — ${s.questions.length} question(s)</div></div>
+        ${filled?`<span class="badge badge-success">Completed</span>`:`<button class="btn btn-primary btn-sm" data-fill-survey="${s.id}">Fill Survey</button>`}
+      </div></div>`;
+    }).join(''):emptyState('No surveys available','Check back later.','survey')}
+  </div></div>
+  ${(function(){setTimeout(()=>{document.querySelectorAll('[data-fill-survey]').forEach(b=>b.addEventListener('click',()=>navigate('#/student/survey/'+b.dataset.fillSurvey)));},0);return '';})()}`;
+}
+function pageFillSurvey(id){
+  const s = DB.surveys.find(x=>x.id===id);
+  const me = currentStudent();
+  const already = s.responses.find(r=>r.studentId===me.id);
+  return `${pageHeader(s.title,['Student','Surveys',s.title])}
+  <div class="card b-primary"><div class="card-block" style="max-width:560px;">
+    <div class="alert alert-warning">${icon('warning',16)} You can only submit once.</div>
+    ${already?`<div class="locked-banner">${icon('lock',16)} You already submitted this survey. Thank you for your feedback!</div>`:`
+    <form id="fs-form">
+      ${s.questions.map((q,i)=>`
+        <div class="rubric-block">
+          <h6>${i+1}. ${esc(q.question)}</h6>
+          <div class="level-grid" data-qgroup="${q.id}">
+            ${[1,2,3,4,5].map(lv=>`<label class="level-opt"><input type="radio" name="q_${q.id}" value="${lv}" required> ${lv} — ${esc(q.levels[lv])}</label>`).join('')}
+          </div>
+        </div>`).join('')}
+      <button class="btn btn-primary btn-block" type="submit">Submit Survey</button>
+    </form>`}
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    document.querySelectorAll('[data-qgroup] input').forEach(r=>r.addEventListener('change',()=>{
+      const group = r.closest('[data-qgroup]');
+      group.querySelectorAll('.level-opt').forEach(o=>o.classList.remove('sel'));
+      r.closest('.level-opt').classList.add('sel');
+    }));
+    const form = document.getElementById('fs-form');
+    if(form) form.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const fd = new FormData(form);
+      const answers = {};
+      s.questions.forEach(q=> answers[q.id] = parseInt(fd.get('q_'+q.id)));
+      const btn = form.querySelector('button'); btn.disabled=true; btn.textContent='Submitting...';
+      await delay(600);
+      s.responses.push({studentId:me.id,answers});
+      showToast('Survey submitted. Thank you!');
+      navigate('#/student/survey');
+    });
+  },0);return '';})()}`;
+}
+
+/* =====================================================================
+   EVALUATOR PAGES
+   ===================================================================== */
+function myAssignment(){ return DB.assignments.find(a=>a.evaluatorEmail===state.user.email) || {groupIds:[]}; }
+function pageEvaluatorDashboard(){
+  const a = myAssignment();
+  const groups = DB.groups.filter(g=>a.groupIds.includes(g.id));
+  const pendingApprovals = groups.filter(g=>g.status==='pending').length;
+  const totalPossibleEvals = groups.length * DB.iterations.filter(i=>i.rubrics.length).length;
+  const doneEvals = DB.evaluations.filter(e=>a.groupIds.includes(e.groupId)).length;
+  return `${pageHeader('Dashboard',['Home','Dashboard'])}
+  <div class="stat-grid">
+    ${statCard(groups.length,'Assigned Groups','group')}
+    ${statCard(pendingApprovals,'Pending Approvals','clock','warning')}
+    ${statCard(doneEvals,'Evaluations Completed','check','success')}
+    ${statCard(Math.max(totalPossibleEvals-doneEvals,0),'Remaining Evaluations','layers','info')}
+  </div>
+  <div class="card b-primary"><div class="card-block">
+    <div class="card-title">Assigned Groups</div>
+    <div class="table-wrap"><table class="dtable"><thead><tr><th>Group</th><th>Members</th><th>Project Title</th><th>Status</th></tr></thead>
+    <tbody>${groups.length?groups.map(g=>`<tr><td><b>${esc(g.name)}</b></td><td>${g.members.length}</td><td>${esc(g.projectTitle)}</td><td>${statusBadge(g.status)}</td></tr>`).join(''):`<tr><td colspan="4">${emptyState('No groups assigned yet','Ask your PBL Manager to assign groups to you.','group')}</td></tr>`}</tbody></table></div>
+  </div></div>`;
+}
+function pageAssignedGroups(){
+  const a = myAssignment();
+  const groups = DB.groups.filter(g=>a.groupIds.includes(g.id));
+  return `${pageHeader('Assigned Groups',['Evaluator','Assigned Groups'])}
+  <div class="card b-primary"><div class="card-block">
+    ${groups.length? groups.map(g=>`
+      <div class="rubric-block">
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div><h6>${esc(g.name)} ${statusBadge(g.status)}</h6><div class="small-muted">${esc(g.projectTitle)} — ${g.members.length} members</div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${g.status==='pending'?`<button class="btn btn-success btn-sm" data-approve-g="${g.id}">Approve</button>`:''}
+            ${DB.iterations.filter(i=>i.rubrics.length).map(it=>{
+              const already = DB.evaluations.some(e=>e.iterationId===it.id && e.groupId===g.id);
+              return `<button class="btn ${already?'btn-outline':'btn-primary'} btn-sm" data-eval="${it.id}|${g.id}">${already?'View':'Evaluate'} ${esc(it.title.slice(0,16))}</button>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>`).join('') : emptyState('No groups assigned yet','Ask your PBL Manager to assign groups.','group')}
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    document.querySelectorAll('[data-approve-g]').forEach(b=>b.addEventListener('click',()=>{
+      const id = parseInt(b.dataset.approveG);
+      openConfirm('Approve Group','This group will be approved and can begin submitting iterations.','Approve',()=>{
+        DB.groups.find(g=>g.id===id).status='approved';
+        renderPageContent(); showToast('Group approved.');
+      },false);
+    }));
+    document.querySelectorAll('[data-eval]').forEach(b=>b.addEventListener('click',()=>{
+      const [itId,gId] = b.dataset.eval.split('|');
+      navigate('#/evaluator/evaluate/'+itId+'/'+gId);
+    }));
+  },0);return '';})()}`;
+}
+function pageEvaluationSheet(iterId,groupId){
+  const it = DB.iterations.find(i=>i.id===iterId);
+  const g = DB.groups.find(x=>x.id===groupId);
+  const existing = DB.evaluations.find(e=>e.iterationId===iterId && e.groupId===groupId);
+  return `${pageHeader('Evaluating: '+g.name+' — '+it.title,['Evaluator','Evaluate',it.title])}
+  <div class="card b-primary"><div class="card-block" style="max-width:640px;">
+    <div class="small-muted">Group Members: ${g.members.map(m=>esc(studentById(m).name)).join(', ')}</div>
+    <div class="section-divider"></div>
+    <form id="ev-form">
+      ${it.rubrics.map(r=>`<div class="rubric-block"><h6>${esc(r.question)} <span class="badge badge-info">${r.weight}%</span></h6>
+        <div class="level-grid" data-evgroup="${r.id}">${[0,1,2,3,4,5].map(lv=>`<label class="level-opt ${existing&&existing.scores[r.id]===lv?'sel':''}"><input type="radio" name="c_${r.id}" value="${lv}" ${existing&&existing.scores[r.id]===lv?'checked':''} ${existing?'disabled':''} required> ${lv} — ${esc(r.levels[lv])}</label>`).join('')}</div>
+      </div>`).join('')}
+      <div class="small-muted">Total Score: <b id="ev-total" style="color:var(--dark-text);">${existing?existing.total+'%':'—'}</b></div>
+      <div class="form-group" style="margin-top:14px;"><label>Comments (optional)</label><textarea class="form-control" rows="3" id="ev-comments" ${existing?'disabled':''}>${existing?esc(existing.comments):''}</textarea></div>
+      ${existing?`<div class="locked-banner">${icon('lock',15)} Evaluation already submitted.</div>`:`<button class="btn btn-primary" type="submit">Save Evaluation</button>`}
+    </form>
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    document.querySelectorAll('[data-evgroup] input').forEach(inp=>inp.addEventListener('change', computeTotal));
+    function computeTotal(){
+      let total=0, maxTotal=0;
+      it.rubrics.forEach(r=>{
+        const sel = document.querySelector(`input[name="c_${r.id}"]:checked`);
+        if(sel){ total += (parseInt(sel.value)/5)*r.weight; }
+        maxTotal += r.weight;
+      });
+      const totalEl = document.getElementById('ev-total');
+      if(totalEl) totalEl.textContent = Math.round(total)+'%';
+      document.querySelectorAll('[data-evgroup]').forEach(gr=>{
+        gr.querySelectorAll('.level-opt').forEach(o=>o.classList.toggle('sel', o.querySelector('input').checked));
+      });
+    }
+    const form = document.getElementById('ev-form');
+    if(form && !existing) form.addEventListener('submit', async e=>{
+      e.preventDefault();
+      let total=0;
+      const scores={};
+      it.rubrics.forEach(r=>{
+        const sel = document.querySelector(`input[name="c_${r.id}"]:checked`);
+        scores[r.id]=parseInt(sel.value);
+        total += (scores[r.id]/5)*r.weight;
+      });
+      const btn = form.querySelector('button'); btn.disabled=true; btn.textContent='Saving...';
+      await delay(600);
+      DB.evaluations.push({id:uid(),iterationId:iterId,groupId,scores,total:Math.round(total),comments:document.getElementById('ev-comments').value,evaluatorId:state.user.email});
+      showToast('Evaluation saved.');
+      navigate('#/evaluator/groups');
+    });
+  },0);return '';})()}`;
+}
+function pageExhibitionList(){
+  const a = myAssignment();
+  const groups = DB.groups.filter(g=>a.groupIds.includes(g.id));
+  return `${pageHeader('Exhibition Evaluation',['Evaluator','Exhibition'])}
+  <div class="card b-primary"><div class="card-block">
+    ${groups.length?groups.map(g=>{
+      const done = DB.exhibitionEvaluations.some(e=>e.groupId===g.id);
+      return `<div class="member-row"><span><b>${esc(g.name)}</b> — ${esc(g.projectTitle)}</span>
+      <button class="btn ${done?'btn-outline':'btn-primary'} btn-sm" data-exhibit="${g.id}">${done?'View':'Evaluate'}</button></div>`;
+    }).join(''):emptyState('No groups to evaluate','Assigned groups will appear here.','exhibit')}
+  </div></div>
+  ${(function(){setTimeout(()=>{document.querySelectorAll('[data-exhibit]').forEach(b=>b.addEventListener('click',()=>navigate('#/evaluator/exhibition/'+b.dataset.exhibit)));},0);return '';})()}`;
+}
+function pageExhibitionEval(groupId){
+  const g = DB.groups.find(x=>x.id===groupId);
+  const existing = DB.exhibitionEvaluations.find(e=>e.groupId===groupId);
+  return `${pageHeader('Exhibition Evaluation: '+g.name,['Evaluator','Exhibition',g.name])}
+  <div class="card b-primary"><div class="card-block" style="max-width:640px;">
+    <div class="small-muted">Evaluator: ${esc(state.user.name)}</div>
+    <div class="alert alert-warning">${icon('warning',16)} Same score applies to ALL group members</div>
+    <form id="ex-form">
+      ${DB.exhibitionCriteria.map(c=>`<div class="rubric-block"><h6>${esc(c.question)}</h6>
+        <div class="level-grid" data-exgroup="${c.id}">${[0,1,2,3,4,5].map(lv=>`<label class="level-opt ${existing&&existing.scores[c.id]===lv?'sel':''}"><input type="radio" name="ec_${c.id}" value="${lv}" ${existing&&existing.scores[c.id]===lv?'checked':''} ${existing?'disabled':''} required> ${lv} — ${esc(c.levels[lv])}</label>`).join('')}</div>
+      </div>`).join('')}
+      <div class="small-muted">Total Score: <b id="ex-total" style="color:var(--dark-text);">${existing?existing.total+' / '+(DB.exhibitionCriteria.length*5)+' ('+Math.round(existing.total/(DB.exhibitionCriteria.length*5)*100)+'%)':'—'}</b></div>
+      ${existing?`<div class="locked-banner" style="margin-top:14px;">${icon('lock',15)} Evaluation submitted — cannot be changed.</div>`:`<button class="btn btn-primary" type="submit" style="margin-top:14px;">Submit Evaluation</button><div class="small-muted" style="margin-top:6px;">${icon('warning',12)} Cannot be changed later</div>`}
+    </form>
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    document.querySelectorAll('[data-exgroup] input').forEach(inp=>inp.addEventListener('change',()=>{
+      let total=0;
+      DB.exhibitionCriteria.forEach(c=>{ const sel=document.querySelector(`input[name="ec_${c.id}"]:checked`); if(sel) total+=parseInt(sel.value); });
+      const max = DB.exhibitionCriteria.length*5;
+      document.getElementById('ex-total').textContent = `${total} / ${max} (${Math.round(total/max*100)}%)`;
+      document.querySelectorAll('[data-exgroup]').forEach(gr=>gr.querySelectorAll('.level-opt').forEach(o=>o.classList.toggle('sel',o.querySelector('input').checked)));
+    }));
+    const form = document.getElementById('ex-form');
+    if(form && !existing) form.addEventListener('submit', e=>{
+      e.preventDefault();
+      openConfirm('Submit Exhibition Evaluation','Once submitted, this evaluation cannot be changed. Continue?','Submit',async()=>{
+        let total=0; const scores={};
+        DB.exhibitionCriteria.forEach(c=>{ const sel=document.querySelector(`input[name="ec_${c.id}"]:checked`); scores[c.id]=parseInt(sel.value); total+=scores[c.id]; });
+        await delay(600);
+        DB.exhibitionEvaluations.push({groupId,evaluatorEmail:state.user.email,scores,total,locked:true});
+        DB.groups.find(x=>x.id===groupId).evaluated = true;
+        showToast('Exhibition evaluation submitted.');
+        navigate('#/evaluator/exhibition');
+      },false);
+    });
+  },0);return '';})()}`;
+}
+function pageAddMeeting(){
+  const a = myAssignment();
+  const groups = DB.groups.filter(g=>a.groupIds.includes(g.id));
+  return `${pageHeader('Record Meeting Minutes',['Evaluator','Meetings','Add'])}
+  <div class="card b-primary"><div class="card-block" style="max-width:600px;">
+    <form id="mt-form">
+      <div class="form-row">
+        <div class="form-group"><label>Group</label><select class="form-control" name="group" required>${groups.map(g=>`<option>${esc(g.name)}</option>`).join('')}</select></div>
+        <div class="form-group"><label>Iteration (optional)</label><select class="form-control" name="iteration"><option value="">None</option>${DB.iterations.map(i=>`<option>${esc(i.title)}</option>`).join('')}</select></div>
+      </div>
+      <div class="form-group"><label>Title</label><input class="form-control" name="title" required></div>
+      <div class="form-row">
+        <div class="form-group"><label>Date</label><input class="form-control" type="date" name="date" required value="${todayISO()}"></div>
+        <div class="form-group"><label>Next Meeting (optional)</label><input class="form-control" type="date" name="nextMeeting"></div>
+      </div>
+      <div class="form-group"><label>Agenda</label><input class="form-control" name="agenda" required></div>
+      <div class="form-row">
+        <div class="form-group"><label>Start Time</label><input class="form-control" type="time" name="start" required></div>
+        <div class="form-group"><label>End Time</label><input class="form-control" type="time" name="end" required></div>
+      </div>
+      <div class="form-group"><label>Minutes</label><textarea class="form-control" name="minutes" rows="4" placeholder="Notes from meeting..."></textarea></div>
+      <button class="btn btn-primary" type="submit">Save Meeting</button>
+    </form>
+  </div></div>
+  ${(function(){setTimeout(()=>{
+    document.getElementById('mt-form').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const btn = e.target.querySelector('button'); btn.disabled=true; btn.textContent='Saving...';
+      await delay(600);
+      DB.meetings.push({id:uid(),group:fd.get('group'),iteration:fd.get('iteration'),title:fd.get('title'),date:fd.get('date'),agenda:fd.get('agenda'),start:fd.get('start'),end:fd.get('end'),nextMeeting:fd.get('nextMeeting'),minutes:fd.get('minutes'),evaluatorEmail:state.user.email});
+      showToast('Meeting recorded.');
+      navigate('#/evaluator/meetings');
+    });
+  },0);return '';})()}`;
+}
+function pageViewMeetings(){
+  const mine = DB.meetings.filter(m=>m.evaluatorEmail===state.user.email);
+  return `${pageHeader('Meetings',['Evaluator','Meetings','View'])}
+  <div class="toolbar"><div></div><button class="btn btn-primary btn-sm" id="vm-add">${icon('plus',14)} Record Meeting</button></div>
+  <div class="card b-primary"><div class="card-block">
+    ${mine.length?mine.map(m=>`<div class="rubric-block"><h6>${esc(m.title)} <span class="badge badge-info">${esc(m.group)}</span></h6>
+      <div class="small-muted">${fmtDate(m.date)} · ${m.start} - ${m.end} ${m.iteration?'· '+esc(m.iteration):''}</div>
+      <div style="margin-top:8px;"><b>Agenda:</b> ${esc(m.agenda)}</div>
+      <div style="margin-top:4px;"><b>Minutes:</b> ${esc(m.minutes||'—')}</div>
+      ${m.nextMeeting?`<div class="small-muted" style="margin-top:6px;">Next Meeting: ${fmtDate(m.nextMeeting)}</div>`:''}
+    </div>`).join(''):emptyState('No meetings recorded','Record your first meeting with a group.','calendar')}
+  </div></div>
+  ${(function(){setTimeout(()=>{document.getElementById('vm-add').onclick=()=>navigate('#/evaluator/meetings/add');},0);return '';})()}`;
+}
+
+/* =====================================================================
+   OVERSIGHT (HOD / HODI&C / DEAN)
+   ===================================================================== */
+function pageOversightDashboard(role){
+  if(role==='hod' || role==='hodic') return pageHodDashboard(role);
+  if(role==='dean') return pageDeanDashboard();
+  return `${pageHeader('Dashboard',['Home','Dashboard'])}
+  <div class="alert alert-info">${icon('info',16)} You have read-only oversight access as ${roleLabel(role)}.</div>
+  <div class="stat-grid">
+    ${statCard(DB.groups.length,'Total Project Groups','group')}
+    ${statCard(DB.groups.filter(g=>g.status==='approved').length,'Approved Groups','check','success')}
+    ${statCard(DB.iterations.length,'Total Iterations','layers','info')}
+    ${statCard(DB.students.filter(s=>!s.deleted).length,'Total Students','users','warning')}
+  </div>`;
+}
+
+function wirePdfPrintButton(id){
+  setTimeout(()=>{ const b=document.getElementById(id); if(b) b.onclick=()=>window.print(); },0);
+  return '';
+}
+
+/* ---- HOD / HODI&C: department-scoped groups, charts, Save as PDF ---- */
+function pageHodDashboard(role){
+  const dept = state.user.dept;
+  const groups = DB.groups.filter(g=>groupDept(g)===dept);
+  const students = DB.students.filter(s=>!s.deleted && s.dept===dept);
+  const noGroup = studentsWithoutGroup(dept);
+  const approved = groups.filter(g=>g.status==='approved').length;
+  const pending = groups.filter(g=>g.status==='pending').length;
+  const sections = [...new Set(students.map(s=>s.section))];
+  const maxCount = Math.max(1, approved, pending, ...sections.map(sec=>groups.filter(g=>g.section===sec).length));
+
+  return `
+  ${pageHeader('Department Dashboard',['Home','Dashboard'])}
+  <div class="alert alert-info">${icon('info',16)} You have read-only oversight access as ${roleLabel(role)} — <b>${esc(dept)} Department</b>.</div>
+  <div class="stat-grid">
+    ${statCard(groups.length,'FYP Groups in Department','group')}
+    ${statCard(approved,'Approved Groups','check','success')}
+    ${statCard(pending,'Pending Approval','clock','warning')}
+    ${statCard(noGroup.length,'Students Without a Group','users','info')}
+  </div>
+  <div class="grid-2">
+    <div class="card b-primary"><div class="card-block">
+      <div class="card-title">Groups by Status</div>
+      <div class="bar-row"><span style="width:90px;">Approved</span><div class="bar-track"><div class="bar-fill" style="width:${approved/maxCount*100}%;background:var(--success);"></div></div><span>${approved}</span></div>
+      <div class="bar-row"><span style="width:90px;">Pending</span><div class="bar-track"><div class="bar-fill" style="width:${pending/maxCount*100}%;background:var(--warning);"></div></div><span>${pending}</span></div>
+    </div></div>
+    <div class="card b-info"><div class="card-block">
+      <div class="card-title">Groups by Section</div>
+      ${sections.length? sections.map(sec=>{const c=groups.filter(g=>g.section===sec).length; return `<div class="bar-row"><span style="width:90px;">Section ${esc(sec)}</span><div class="bar-track"><div class="bar-fill" style="width:${c/maxCount*100}%;"></div></div><span>${c}</span></div>`;}).join('') : emptyState('No sections yet','','group')}
+    </div></div>
+  </div>
+  <div class="card b-primary"><div class="card-block">
+    <div class="card-title">All FYP Groups — ${esc(dept)} Department <button class="btn btn-outline btn-sm no-print" id="hod-pdf-btn">${icon('download',13)} Save as PDF</button></div>
+    <div class="table-wrap"><table class="dtable">
+      <thead><tr><th>Group</th><th>Project Title</th><th>Section</th><th>Members</th><th>Status</th></tr></thead>
+      <tbody>${groups.length?groups.map(g=>`<tr><td>${esc(g.name)}</td><td>${esc(g.projectTitle)}</td><td>${esc(g.section)}</td><td>${g.members.length}/${g.max}</td><td>${statusBadge(g.status)}</td></tr>`).join(''):`<tr><td colspan="5">${emptyState('No groups yet','No FYP groups have been formed in this department.','group')}</td></tr>`}</tbody>
+    </table></div>
+  </div></div>
+  ${wirePdfPrintButton('hod-pdf-btn')}`;
+}
+
+/* ---- Dean: university-wide, department-wise breakdown + students without groups ---- */
+function pageDeanDashboard(){
+  const depts = DB.departments.filter(d=>!d.deleted);
+  const rows = depts.map(d=>{
+    const deptGroups = DB.groups.filter(g=>groupDept(g)===d.code);
+    const deptStudents = DB.students.filter(s=>!s.deleted && s.dept===d.code);
+    return {
+      code:d.code, name:d.name,
+      totalGroups:deptGroups.length,
+      approved:deptGroups.filter(g=>g.status==='approved').length,
+      pending:deptGroups.filter(g=>g.status==='pending').length,
+      totalStudents:deptStudents.length,
+      noGroup:studentsWithoutGroup(d.code).length,
+    };
+  });
+  const noGroupAll = studentsWithoutGroup();
+
+  return `
+  ${pageHeader('Dean Dashboard',['Home','Dashboard'])}
+  <div class="alert alert-info">${icon('info',16)} You have read-only, university-wide oversight access as ${roleLabel('dean')}.</div>
+  <div class="stat-grid">
+    ${statCard(DB.groups.length,'Total FYP Groups','group')}
+    ${statCard(DB.groups.filter(g=>g.status==='approved').length,'Approved Groups','check','success')}
+    ${statCard(DB.students.filter(s=>!s.deleted).length,'Total Students','users','warning')}
+    ${statCard(noGroupAll.length,'Students Without a Group','clock','info')}
+  </div>
+  <div class="card b-primary"><div class="card-block">
+    <div class="card-title">Department-Wise Group Formation <button class="btn btn-outline btn-sm no-print" id="dean-pdf-btn">${icon('download',13)} Save as PDF</button></div>
+    <div class="table-wrap"><table class="dtable">
+      <thead><tr><th>Department</th><th>Total Students</th><th>Total Groups</th><th>Approved</th><th>Pending</th><th>Students Without Group</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr><td><b>${esc(r.name)}</b> <span class="small-muted">(${esc(r.code)})</span></td><td>${r.totalStudents}</td><td>${r.totalGroups}</td><td>${r.approved}</td><td>${r.pending}</td><td>${r.noGroup>0?`<span class="badge badge-warning">${r.noGroup}</span>`:`<span class="badge badge-success">0</span>`}</td></tr>`).join('')}</tbody>
+    </table></div>
+  </div></div>
+  <div class="card b-warning"><div class="card-block">
+    <div class="card-title">Students Who Have Not Created or Joined a Group</div>
+    <div class="table-wrap"><table class="dtable">
+      <thead><tr><th>Name</th><th>Roll No</th><th>Department</th><th>Section</th><th>Session</th></tr></thead>
+      <tbody>${noGroupAll.length?noGroupAll.map(s=>`<tr><td>${esc(s.name)}</td><td>${esc(s.roll)}</td><td>${esc(s.dept)}</td><td>${esc(s.section)}</td><td>${esc(s.session)}</td></tr>`).join(''):`<tr><td colspan="5">${emptyState('None','Every student has created or joined a group.','check')}</td></tr>`}</tbody>
+    </table></div>
+  </div></div>
+  ${wirePdfPrintButton('dean-pdf-btn')}`;
+}
+
+/* ---------------- Master render ---------------- */
+function render(){
+  if(!state.user){
+    document.getElementById('app-shell').style.display='none';
+    document.getElementById('login-root').style.display='flex';
+    renderLogin();
+    return;
+  }
+  document.getElementById('login-root').style.display='none';
+  document.getElementById('app-shell').style.display='block';
+  renderNavbar();
+  renderSidebar();
+  applySidebarCollapse();
+  renderPageContent();
+}
+
+/* ---------------- Init ---------------- */
+window.addEventListener('DOMContentLoaded', ()=>{
+  setTimeout(()=>{
+    document.getElementById('preloader').classList.add('hide');
+    setTimeout(()=>document.getElementById('preloader').remove(),450);
+  },500);
+  if(!location.hash) location.hash = '#/login';
+  state.route = location.hash;
+  render();
+});
+window.addEventListener('resize', ()=>{
+  if(window.innerWidth>900 && state.mobileSidebar){ state.mobileSidebar=false; renderSidebar(); }
+});
+window.addEventListener('keydown', e=>{
+  if(e.key==='Escape' && state.mobileSidebar){ state.mobileSidebar=false; renderSidebar(); }
+});
+</script>
+</body>
+</html>
