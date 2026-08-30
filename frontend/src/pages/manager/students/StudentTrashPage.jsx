@@ -81,7 +81,7 @@ export const StudentTrashPage = () => {
     if (!studentToPermanentDelete) return;
     try {
       setActionLoading(true);
-      await studentsApi.delete(studentToPermanentDelete.id || studentToPermanentDelete._id);
+      await studentsApi.permanentDelete(studentToPermanentDelete.id || studentToPermanentDelete._id);
       setToast({ message: 'Student permanently deleted.', type: 'success' });
       setStudentToPermanentDelete(null);
       fetchDeleted(true);

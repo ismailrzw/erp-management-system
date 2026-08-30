@@ -66,8 +66,16 @@ def create_student(data: dict) -> dict:
     
     return {
         "student_id": str(result.inserted_id),
+        "id": str(result.inserted_id),
+        "name": student_doc[UserFields.NAME],
+        "roll": student_doc[UserFields.ROLL],
+        "dept": student_doc[UserFields.DEPT],
+        "section": student_doc[UserFields.SECTION],
+        "course": student_doc[UserFields.COURSE],
+        "teacher": student_doc["teacher"],
         "email": email,
         "password": password,
+        "initial_password": password,
     }
 
 
@@ -99,7 +107,9 @@ def list_students(filters: dict | None = None, page: int = 1, limit: int = 20) -
     if filters.get("section"):
         query[UserFields.SECTION] = filters["section"].upper()
     if filters.get("deleted") is not None:
-        query[UserFields.DELETED] = filters["deleted"]
+        query[UserFields.DELETED] = True if filters["deleted"] else {"$ne": True}
+    else:
+        query[UserFields.DELETED] = {"$ne": True}
     if filters.get("search"):
         import re
         pattern = re.compile(filters["search"], re.IGNORECASE)
@@ -156,7 +166,7 @@ def soft_delete_student(student_id: str) -> dict:
     now = datetime.now(timezone.utc)
     
     result = mongo.db.users.update_one(
-        {"_id": ObjectId(student_id), UserFields.ROLE: Role.STUDENT, UserFields.DELETED: False},
+        {"_id": ObjectId(student_id), UserFields.ROLE: Role.STUDENT, UserFields.DELETED: {"$ne": True}},
         {"$set": {UserFields.DELETED: True, UserFields.DELETED_AT: now, UserFields.UPDATED_AT: now}}
     )
     

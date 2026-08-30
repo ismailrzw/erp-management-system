@@ -30,4 +30,9 @@ export const teachersApi = {
     const response = await api.post(`/manager/teachers/${id}/restore`);
     return response.data;
   },
+
+  permanentDelete: async (id) => {
+    const response = await api.delete(`/manager/teachers/${id}/permanent`);
+    return response.data;
+  },
 };

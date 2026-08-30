@@ -81,13 +81,13 @@ export const CourseTrashPage = () => {
     if (!courseToPermanentDelete) return;
     try {
       setActionLoading(true);
-      await coursesApi.delete(courseToPermanentDelete.id || courseToPermanentDelete._id);
+      await coursesApi.permanentDelete(courseToPermanentDelete.id || courseToPermanentDelete._id);
       setToast({ message: 'Course permanently deleted.', type: 'success' });
       setCourseToPermanentDelete(null);
       fetchDeleted(true);
     } catch (err) {
       setToast({
-        message: err.response?.data?.message || 'Failed to delete course',
+        message: err.response?.data?.message || 'Failed to permanently delete course',
         type: 'error',
       });
     } finally {

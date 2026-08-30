@@ -91,7 +91,7 @@ def create_course(name: str, dept: str, min_group: int, max_group: int, deadline
 
 def list_courses(deleted: bool = False, dept: str | None = None, search: str | None = None) -> list[dict]:
     """List courses, optionally filtered by deleted status, department, and search term."""
-    query = {course_model.Field.DELETED: deleted}
+    query = {course_model.Field.DELETED: True if deleted else {"$ne": True}}
     if dept:
         query[course_model.Field.DEPT] = dept.strip().upper()
     if search:

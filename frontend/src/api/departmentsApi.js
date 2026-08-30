@@ -30,4 +30,9 @@ export const departmentsApi = {
     const response = await api.post(`/manager/departments/${id}/restore`);
     return response.data;
   },
+
+  permanentDelete: async (id) => {
+    const response = await api.delete(`/manager/departments/${id}/permanent`);
+    return response.data;
+  },
 };

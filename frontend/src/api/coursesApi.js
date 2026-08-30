@@ -30,4 +30,9 @@ export const coursesApi = {
     const response = await api.post(`/manager/courses/${id}/restore`);
     return response.data;
   },
+
+  permanentDelete: async (id) => {
+    const response = await api.delete(`/manager/courses/${id}/permanent`);
+    return response.data;
+  },
 };

@@ -109,7 +109,11 @@ export const AddStudentPage = () => {
 
       const res = await studentsApi.create(payload);
       if (res.success && res.data) {
-        setCreatedStudent(res.data);
+        setCreatedStudent({
+          ...payload,
+          ...res.data,
+          initial_password: res.data.initial_password || res.data.password,
+        });
         setToast({ message: 'Student account created successfully!', type: 'success' });
       }
     } catch (err) {

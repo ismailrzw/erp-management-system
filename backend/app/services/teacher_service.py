@@ -23,15 +23,16 @@ def send_mock_credentials_email(email: str, password: str) -> None:
     print(f"[MOCK EMAIL] To: {email} | Temporary password: {password}")
 
 
-def _serialize(doc: dict) -> dict:
-    doc = dict(doc)
-    doc["id"] = str(doc.pop(UserFields.ID))
-    doc.pop(UserFields.PASSWORD_HASH, None)
-    if isinstance(doc.get(UserFields.CREATED_AT), datetime):
-        doc[UserFields.CREATED_AT] = doc[UserFields.CREATED_AT].isoformat()
-    if isinstance(doc.get(UserFields.UPDATED_AT), datetime):
-        doc[UserFields.UPDATED_AT] = doc[UserFields.UPDATED_AT].isoformat()
-    return doc
+def _serialize(doc: dict | None) -> dict | None:
+    if doc is None:
+        return None
+    result = dict(doc)
+    result["id"] = str(result.pop(UserFields.ID))
+    result.pop(UserFields.PASSWORD_HASH, None)
+    for key, value in list(result.items()):
+        if isinstance(value, datetime):
+            result[key] = value.isoformat()
+    return result
 
 
 def create_teacher(name: str, email: str, dept: str, type_: str) -> dict:
@@ -113,9 +114,14 @@ def soft_delete_teacher(teacher_id: str) -> dict | None:
         oid = ObjectId(teacher_id)
     except InvalidId:
         return None
+    now = datetime.now(timezone.utc)
     result = mongo.db[UserFields.COLLECTION].find_one_and_update(
-        {UserFields.ID: oid, UserFields.ROLE: Role.EVALUATOR, UserFields.DELETED: False},
-        {"$set": {UserFields.DELETED: True}},
+        {
+            UserFields.ID: oid,
+            UserFields.ROLE: Role.EVALUATOR,
+            UserFields.DELETED: False,
+        },
+        {"$set": {UserFields.DELETED: True, UserFields.DELETED_AT: now, UserFields.UPDATED_AT: now}},
         return_document=True,
     )
     return _serialize(result) if result else None
@@ -126,9 +132,14 @@ def restore_teacher(teacher_id: str) -> dict | None:
         oid = ObjectId(teacher_id)
     except InvalidId:
         return None
+    now = datetime.now(timezone.utc)
     result = mongo.db[UserFields.COLLECTION].find_one_and_update(
-        {UserFields.ID: oid, UserFields.ROLE: Role.EVALUATOR, UserFields.DELETED: True},
-        {"$set": {UserFields.DELETED: False}},
+        {
+            UserFields.ID: oid,
+            UserFields.ROLE: Role.EVALUATOR,
+            UserFields.DELETED: True,
+        },
+        {"$set": {UserFields.DELETED: False, UserFields.DELETED_AT: None, UserFields.UPDATED_AT: now}},
         return_document=True,
     )
     return _serialize(result) if result else None
@@ -140,7 +151,11 @@ def permanent_delete_teacher(teacher_id: str) -> dict | None:
     except InvalidId:
         return None
     doc = mongo.db[UserFields.COLLECTION].find_one(
-        {UserFields.ID: oid, UserFields.ROLE: Role.EVALUATOR, UserFields.DELETED: True}
+        {
+            UserFields.ID: oid,
+            UserFields.ROLE: Role.EVALUATOR,
+            UserFields.DELETED: True,
+        }
     )
     if doc is None:
         return None

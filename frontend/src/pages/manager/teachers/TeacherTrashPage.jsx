@@ -81,13 +81,13 @@ export const TeacherTrashPage = () => {
     if (!teacherToPermanentDelete) return;
     try {
       setActionLoading(true);
-      await teachersApi.delete(teacherToPermanentDelete.id || teacherToPermanentDelete._id);
+      await teachersApi.permanentDelete(teacherToPermanentDelete.id || teacherToPermanentDelete._id);
       setToast({ message: 'Teacher permanently deleted.', type: 'success' });
       setTeacherToPermanentDelete(null);
       fetchDeleted(true);
     } catch (err) {
       setToast({
-        message: err.response?.data?.message || 'Failed to delete teacher',
+        message: err.response?.data?.message || 'Failed to permanently delete teacher',
         type: 'error',
       });
     } finally {

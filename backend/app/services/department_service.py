@@ -53,7 +53,7 @@ def create_department(name: str, code: str) -> dict:
 
 def list_departments(deleted: bool = False, search: str | None = None) -> list[dict]:
     """List departments, optionally filtered by deleted status and search term."""
-    query = {DepartmentFields.DELETED: deleted}
+    query = {DepartmentFields.DELETED: True if deleted else {"$ne": True}}
     if search:
         query["$or"] = [
             {DepartmentFields.NAME: {"$regex": search, "$options": "i"}},

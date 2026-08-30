@@ -81,13 +81,13 @@ export const DepartmentTrashPage = () => {
     if (!deptToPermanentDelete) return;
     try {
       setActionLoading(true);
-      await departmentsApi.delete(deptToPermanentDelete.id || deptToPermanentDelete._id);
+      await departmentsApi.permanentDelete(deptToPermanentDelete.id || deptToPermanentDelete._id);
       setToast({ message: 'Department permanently deleted.', type: 'success' });
       setDeptToPermanentDelete(null);
       fetchDeleted(true);
     } catch (err) {
       setToast({
-        message: err.response?.data?.message || 'Failed to delete department',
+        message: err.response?.data?.message || 'Failed to permanently delete department',
         type: 'error',
       });
     } finally {

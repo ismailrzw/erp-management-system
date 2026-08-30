@@ -31,6 +31,11 @@ export const studentsApi = {
     return response.data;
   },
 
+  permanentDelete: async (id) => {
+    const response = await api.delete(`/manager/students/${id}/permanent`);
+    return response.data;
+  },
+
   bulkImport: async (file) => {
     const formData = new FormData();
     formData.append('file', file);
