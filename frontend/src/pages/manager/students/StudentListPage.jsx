@@ -45,10 +45,7 @@ export const StudentListPage = () => {
     teacher: '',
     recovery_email: '',
   });
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [importFile, setImportFile] = useState(null);
-  const [importLoading, setImportLoading] = useState(false);
-  const [importReport, setImportReport] = useState(null);
+
   const [studentToDelete, setStudentToDelete] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -198,31 +195,6 @@ export const StudentListPage = () => {
     }
   };
 
-  const handleImportSubmit = async (e) => {
-    e.preventDefault();
-    if (!importFile) {
-      setToast({ message: 'Please select a CSV or XLSX file', type: 'error' });
-      return;
-    }
-
-    try {
-      setImportLoading(true);
-      const res = await studentsApi.bulkImport(importFile);
-      if (res.success) {
-        setImportReport(res.data);
-        setToast({ message: res.message || 'Bulk import processed', type: 'success' });
-        fetchStudents(1, true);
-      }
-    } catch (err) {
-      setToast({
-        message: err.response?.data?.message || 'Failed to import students file',
-        type: 'error',
-      });
-    } finally {
-      setImportLoading(false);
-    }
-  };
-
   if (loading) {
     return <Preloader />;
   }
@@ -277,30 +249,6 @@ export const StudentListPage = () => {
           >
             <Plus size={15} />
             <span>Add New Student</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setImportReport(null);
-              setImportFile(null);
-              setIsImportModalOpen(true);
-            }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13px',
-              fontWeight: 500,
-              padding: '8px 14px',
-              backgroundColor: '#ffffff',
-              border: '1px solid #cbd5e1',
-              color: '#334155',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
-            <Upload size={15} />
-            <span>Bulk Import</span>
           </button>
           <button
             type="button"
@@ -741,91 +689,6 @@ export const StudentListPage = () => {
               style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, border: 'none', backgroundColor: '#0073aa', color: '#ffffff', borderRadius: '4px', cursor: actionLoading ? 'not-allowed' : 'pointer' }}
             >
               {actionLoading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Modal: Bulk Import */}
-      <Modal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} title="Bulk Import Students">
-        <form onSubmit={handleImportSubmit}>
-          <div style={{ marginBottom: '16px' }}>
-            <div
-              style={{
-                backgroundColor: '#f8fafc',
-                border: '1px dashed #cbd5e1',
-                borderRadius: '6px',
-                padding: '20px',
-                textAlign: 'center',
-              }}
-            >
-              <FileSpreadsheet size={32} color="#0073aa" style={{ margin: '0 auto 8px' }} />
-              <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '14px' }}>
-                Upload Excel or CSV File
-              </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', marginBottom: '14px' }}>
-                Supported formats: <code>.xlsx</code>, <code>.csv</code>
-              </div>
-              <input
-                type="file"
-                accept=".xlsx,.csv"
-                onChange={(e) => setImportFile(e.target.files[0])}
-                style={{ fontSize: '13px', color: '#475569' }}
-              />
-            </div>
-            <div style={{ fontSize: '11.5px', color: '#94a3b8', marginTop: '6px' }}>
-              Required columns in spreadsheet: <strong>Name, Roll, Dept, Section, Session, Course, Teacher</strong>
-            </div>
-          </div>
-
-          {importReport && (
-            <div
-              style={{
-                backgroundColor: '#f0fdf4',
-                border: '1px solid #bbf7d0',
-                borderRadius: '4px',
-                padding: '12px 14px',
-                fontSize: '12.5px',
-                marginBottom: '16px',
-                color: '#166534',
-              }}
-            >
-              <div style={{ fontWeight: 600 }}>Import Summary:</div>
-              <div>• Total Processed: {importReport.total_processed || 0}</div>
-              <div>• Successfully Created: {importReport.created_count || 0}</div>
-              <div>• Duplicates / Skipped: {importReport.skipped_count || 0}</div>
-              {importReport.errors && importReport.errors.length > 0 && (
-                <div style={{ color: '#dc2626', marginTop: '6px' }}>
-                  Errors ({importReport.errors.length}): {importReport.errors.join(', ')}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={() => setIsImportModalOpen(false)}
-              style={{ padding: '8px 14px', fontSize: '13px', fontWeight: 500, border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569', borderRadius: '4px', cursor: 'pointer' }}
-            >
-              Close
-            </button>
-            <button
-              type="submit"
-              disabled={importLoading || !importFile}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: 600,
-                border: 'none',
-                backgroundColor: '#0073aa',
-                color: '#ffffff',
-                borderRadius: '4px',
-                cursor: importLoading || !importFile ? 'not-allowed' : 'pointer',
-                opacity: importLoading || !importFile ? 0.7 : 1,
-              }}
-            >
-              {importLoading ? 'Importing...' : 'Start Import'}
             </button>
           </div>
         </form>

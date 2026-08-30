@@ -34,11 +34,8 @@ export const studentsApi = {
   bulkImport: async (file) => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await api.post('/manager/students/bulk-import', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    // Let axios automatically set the correct multipart/form-data headers with boundary
+    const response = await api.post('/manager/students/bulk-import', formData);
     return response.data;
   },
 };

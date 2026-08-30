@@ -20,17 +20,43 @@ from app.services.student_service import (
 REQUIRED_COLUMNS = ("Name", "Roll", "Department", "Section", "Session", "Course", "Teacher", "Recovery Email")
 _COLUMN_MAP = {column.casefold(): column for column in REQUIRED_COLUMNS}
 
+HEADER_ALIASES = {
+    "name": "Name",
+    "student name": "Name",
+    "full name": "Name",
+    "roll": "Roll",
+    "roll no": "Roll",
+    "roll no.": "Roll",
+    "roll number": "Roll",
+    "roll_no": "Roll",
+    "department": "Department",
+    "dept": "Department",
+    "section": "Section",
+    "sec": "Section",
+    "session": "Session",
+    "academic session": "Session",
+    "course": "Course",
+    "course name": "Course",
+    "teacher": "Teacher",
+    "assigned teacher": "Teacher",
+    "instructor": "Teacher",
+    "recovery email": "Recovery Email",
+    "recovery_email": "Recovery Email",
+    "personal email": "Recovery Email",
+    "email": "Recovery Email",
+}
+
 
 def _normalise_row(row: dict) -> dict:
     return {
-        "name": str(row["Name"] or "").strip(),
-        "roll": str(row["Roll"] or "").strip(),
-        "dept": str(row["Department"] or "").strip(),
-        "section": str(row["Section"] or "").strip(),
-        "session": str(row["Session"] or "").strip(),
-        "course": str(row["Course"] or "").strip(),
-        "teacher": str(row["Teacher"] or "").strip(),
-        "recovery_email": str(row["Recovery Email"] or "").strip() or None,
+        "name": str(row.get("Name") or "").strip(),
+        "roll": str(row.get("Roll") or "").strip(),
+        "dept": str(row.get("Department") or "").strip(),
+        "section": str(row.get("Section") or "").strip(),
+        "session": str(row.get("Session") or "").strip(),
+        "course": str(row.get("Course") or "").strip(),
+        "teacher": str(row.get("Teacher") or "").strip(),
+        "recovery_email": str(row.get("Recovery Email") or "").strip() or None,
     }
 
 
@@ -58,15 +84,24 @@ def parse_excel(file: FileStorage) -> tuple[list[dict], list[dict]]:
     rows = _read_rows(file)
     if not rows:
         raise ValueError("The import file has no data rows.")
-    headers = {str(key).strip().casefold(): str(key).strip() for key in rows[0]}
-    missing = [column for column in REQUIRED_COLUMNS if column.casefold() not in headers]
+    
+    # Map raw headers to canonical column names using HEADER_ALIASES
+    raw_header_map = {}
+    for key in rows[0].keys():
+        if key is None:
+            continue
+        cleaned = str(key).strip().casefold()
+        canonical = HEADER_ALIASES.get(cleaned, cleaned)
+        raw_header_map[canonical.casefold()] = key
+
+    missing = [column for column in REQUIRED_COLUMNS if column.casefold() not in raw_header_map]
     if missing:
         raise ValueError(f"Missing required columns: {', '.join(missing)}.")
 
     schema = CreateStudentSchema()
     valid_rows, errors, seen_rolls = [], [], set()
     for index, raw_row in enumerate(rows, start=2):
-        canonical = {required: raw_row.get(headers[required.casefold()]) for required in REQUIRED_COLUMNS}
+        canonical = {required: raw_row.get(raw_header_map[required.casefold()]) for required in REQUIRED_COLUMNS}
         data = _normalise_row(canonical)
         try:
             data = schema.load(data)

@@ -227,6 +227,7 @@ class StudentPermanentDelete(Resource):
 
 
 @students_ns.route("/bulk")
+@students_ns.route("/bulk-import")
 class StudentBulkImport(Resource):
     @students_ns.doc(security="Bearer Auth", consumes=["multipart/form-data"])
     @students_ns.expect(bulk_import_parser)
@@ -234,7 +235,16 @@ class StudentBulkImport(Resource):
     def post(self):
         """Bulk import students from a CSV or XLSX file.  Every row is validated individually."""
         try:
-            file = bulk_import_parser.parse_args()["file"]
+            file = request.files.get("file")
+            if not file:
+                try:
+                    args = bulk_import_parser.parse_args()
+                    file = args.get("file")
+                except Exception:
+                    file = None
+            if not file:
+                return {"success": False, "message": "No file uploaded. Please select a CSV or XLSX file."}, 400
+
             rows, validation_errors = parse_excel(file)
             result = bulk_create_students(rows)
             result["errors"] = validation_errors + result["errors"]
@@ -254,5 +264,7 @@ class StudentBulkImport(Resource):
             }, 200
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 400
-        except Exception:  # noqa: BLE001 - deliberate catch-all, returns error response to client
-            return {"success": False, "message": "Unable to import students."}, 500
+        except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
+            import logging
+            logging.getLogger(__name__).exception("Bulk import exception: %s", exc)
+            return {"success": False, "message": f"Unable to import students: {str(exc)}"}, 500

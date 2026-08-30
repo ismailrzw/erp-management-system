@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { UserPlus, ArrowLeft, CheckCircle2, AlertCircle, Upload, FileSpreadsheet, Download, RefreshCw } from 'lucide-react';
 import { studentsApi } from '../../../api/studentsApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { coursesApi } from '../../../api/coursesApi';
 import { teachersApi } from '../../../api/teachersApi';
 import { Toast } from '../../../components/ui/Toast';
+import { Modal } from '../../../components/ui/Modal';
 
 export const AddStudentPage = () => {
   const [formData, setFormData] = useState({
@@ -26,6 +27,10 @@ export const AddStudentPage = () => {
   const [createdStudent, setCreatedStudent] = useState(null);
   const [formError, setFormError] = useState('');
   const [toast, setToast] = useState({ message: '', type: 'success' });
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importReport, setImportReport] = useState(null);
 
   const navigate = useNavigate();
 
@@ -123,6 +128,52 @@ export const AddStudentPage = () => {
     }
   };
 
+  const handleDownloadTemplate = () => {
+    const csvContent =
+      'Name,Roll,Department,Section,Session,Course,Teacher,Recovery Email\n' +
+      'Muhammad Ali,2024-CS-101,CS,A,Fall 2025,Final Year Project,Dr. Sarah Ahmed,ali@example.com\n' +
+      'Fatima Zahra,2024-CS-102,CS,B,Fall 2025,Final Year Project,Dr. Sarah Ahmed,fatima@example.com\n';
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'students_bulk_import_template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportSubmit = async (e) => {
+    e.preventDefault();
+    if (!importFile) {
+      setToast({ message: 'Please select a CSV or XLSX file', type: 'error' });
+      return;
+    }
+    try {
+      setImportLoading(true);
+      const res = await studentsApi.bulkImport(importFile);
+      if (res.success && res.data) {
+        setImportReport(res.data);
+        const { imported, skipped } = res.data;
+        setToast({
+          message: `Import complete: ${imported} imported, ${skipped} skipped.`,
+          type: imported > 0 ? 'success' : 'info',
+        });
+      } else {
+        setToast({ message: res.message || 'Bulk import processed', type: 'success' });
+        setIsImportModalOpen(false);
+      }
+    } catch (err) {
+      const errMsg = err.response?.data?.message || err.message || 'Failed to import students file';
+      setToast({
+        message: errMsg,
+        type: 'error',
+      });
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
       <Toast
@@ -155,8 +206,205 @@ export const AddStudentPage = () => {
           Add New Student
         </h1>
         <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-          Create an individual student account with auto-generated credentials.
+          Create an individual student account or bulk import students via spreadsheet.
         </div>
+        <div style={{ marginTop: '14px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => { setImportReport(null); setImportFile(null); setIsImportModalOpen(true); }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '13px',
+              fontWeight: 600,
+              padding: '8px 16px',
+              backgroundColor: '#0073aa',
+              border: 'none',
+              color: '#ffffff',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            <Upload size={15} />
+            <span>Bulk Import Students</span>
+          </button>
+        </div>
+
+        {/* Bulk Import Modal */}
+        <Modal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          title="Bulk Import Students"
+          maxWidth="560px"
+        >
+          {importReport ? (
+            <div>
+              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                <CheckCircle2 size={40} color="#16a34a" style={{ margin: '0 auto 8px' }} />
+                <h3 style={{ margin: 0, fontSize: '17px', color: '#1e293b' }}>Import Finished</h3>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '22px', fontWeight: 700, color: '#16a34a' }}>{importReport.imported}</div>
+                  <div style={{ fontSize: '12.5px', color: '#15803d', fontWeight: 500 }}>Successfully Imported</div>
+                </div>
+                <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '6px', padding: '12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '22px', fontWeight: 700, color: '#d97706' }}>{importReport.skipped}</div>
+                  <div style={{ fontSize: '12.5px', color: '#b45309', fontWeight: 500 }}>Skipped (Existing / Error)</div>
+                </div>
+              </div>
+
+              {importReport.errors && importReport.errors.length > 0 && (
+                <div style={{ marginBottom: '18px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                    Skipped Items Details:
+                  </div>
+                  <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '4px', backgroundColor: '#f8fafc', padding: '8px 12px' }}>
+                    {importReport.errors.map((err, idx) => (
+                      <div key={idx} style={{ fontSize: '12px', color: '#dc2626', marginBottom: '4px', display: 'flex', gap: '6px' }}>
+                        <span>•</span>
+                        <span>
+                          {err.row ? `Row ${err.row}: ` : ''}
+                          {err.roll ? `[${err.roll}] ` : ''}
+                          {err.error || JSON.stringify(err)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => { setImportReport(null); setImportFile(null); }}
+                  style={{
+                    padding: '8px 14px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#ffffff',
+                    color: '#475569',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Import Another File
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsImportModalOpen(false); navigate('/manager/students/view'); }}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    border: 'none',
+                    backgroundColor: '#0073aa',
+                    color: '#ffffff',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  View All Students
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleImportSubmit}>
+              <div style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5, marginBottom: '14px' }}>
+                Upload a <strong>CSV</strong> or <strong>Excel (.xlsx)</strong> file containing student records. Existing roll numbers in the database will be skipped automatically, while new students will be imported.
+              </div>
+
+              <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', marginBottom: '16px', fontSize: '12.5px', color: '#475569' }}>
+                <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '4px' }}>Required Columns:</div>
+                <code>Name, Roll, Department, Section, Session, Course, Teacher, Recovery Email</code>
+                <div style={{ marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={handleDownloadTemplate}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      fontSize: '12px',
+                      color: '#0073aa',
+                      background: 'none',
+                      border: 'none',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  >
+                    <Download size={13} />
+                    <span>Download Sample CSV Template</span>
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '6px' }}>
+                  Select CSV / XLSX File *
+                </label>
+                <input
+                  type="file"
+                  accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                  style={{
+                    width: '100%',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '4px',
+                    padding: '8px 10px',
+                    fontSize: '13px',
+                    backgroundColor: '#ffffff',
+                  }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsImportModalOpen(false)}
+                  style={{
+                    padding: '8px 14px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#ffffff',
+                    color: '#475569',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={importLoading || !importFile}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    border: 'none',
+                    backgroundColor: '#0073aa',
+                    color: '#ffffff',
+                    borderRadius: '4px',
+                    cursor: importLoading || !importFile ? 'not-allowed' : 'pointer',
+                    opacity: importLoading || !importFile ? 0.7 : 1,
+                  }}
+                >
+                  {importLoading ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={14} />}
+                  <span>{importLoading ? 'Importing...' : 'Upload and Import'}</span>
+                </button>
+              </div>
+            </form>
+          )}
+        </Modal>
       </div>
 
       {formError && (

@@ -14,6 +14,11 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // If sending FormData, delete Content-Type to let browser/axios set multipart/form-data with boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+      delete config.headers['content-type'];
+    }
     return config;
   },
   (error) => Promise.reject(error)
