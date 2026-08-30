@@ -7,6 +7,9 @@ import {
   Trash2,
   Upload,
   Megaphone,
+  Search,
+  X,
+  Sparkles,
 } from 'lucide-react';
 import { dashboardApi } from '../../api/dashboardApi';
 import { announcementsApi } from '../../api/announcementsApi';
@@ -29,6 +32,8 @@ export const ManagerDashboard = () => {
   const [isAnnModalOpen, setIsAnnModalOpen] = useState(false);
   const [annFormData, setAnnFormData] = useState({ id: null, title: '', content: '' });
   const [annLoading, setAnnLoading] = useState(false);
+  const [annSearch, setAnnSearch] = useState('');
+  const [annFilterMode, setAnnFilterMode] = useState('recent'); // 'recent' | 'all'
 
   // Delete Announcement Modal
   const [annToDelete, setAnnToDelete] = useState(null);
@@ -295,82 +300,328 @@ export const ManagerDashboard = () => {
         }}
       >
         {/* Left: Announcements */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '6px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              padding: '16px 20px',
-              borderBottom: '1px solid #e2e8f0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderTop: '3px solid #0073aa',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Megaphone size={18} color="#0073aa" />
-              <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-                Announcements
-              </h2>
-            </div>
-            <button
-              type="button"
-              onClick={handleOpenNewAnnouncement}
+        {(() => {
+          const allAnnouncements = data?.announcements || [];
+          const searchedAnnouncements = allAnnouncements.filter((ann) => {
+            if (!annSearch.trim()) return true;
+            const term = annSearch.toLowerCase();
+            const titleMatch = (ann.title || '').toLowerCase().includes(term);
+            const contentMatch = (ann.content || '').toLowerCase().includes(term);
+            const dateMatch = (ann.date || ann.created_at || '').toLowerCase().includes(term);
+            return titleMatch || contentMatch || dateMatch;
+          });
+
+          const isShowingRecent = annFilterMode === 'recent' && !annSearch.trim();
+          const displayedAnnouncements = isShowingRecent
+            ? searchedAnnouncements.slice(0, 5)
+            : searchedAnnouncements;
+
+          return (
+            <div
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                fontSize: '12px',
-                fontWeight: 600,
-                padding: '5px 10px',
-                backgroundColor: '#0073aa',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
+                backgroundColor: '#ffffff',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
-              <Plus size={14} />
-              <span>New</span>
-            </button>
-          </div>
-
-          <div style={{ padding: '16px 20px' }}>
-            {!data?.announcements || data.announcements.length === 0 ? (
+              {/* Card Header */}
               <div
                 style={{
-                  textAlign: 'center',
-                  padding: '36px 20px',
-                  color: '#94a3b8',
+                  padding: '16px 20px',
+                  borderBottom: '1px solid #e2e8f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderTop: '3px solid #0073aa',
+                  flexWrap: 'wrap',
+                  gap: '10px',
                 }}
               >
-                <Megaphone size={36} style={{ margin: '0 auto 10px', opacity: 0.5 }} />
-                <div style={{ fontWeight: 600, color: '#475569', fontSize: '14px' }}>
-                  No announcements yet
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Megaphone size={18} color="#0073aa" />
+                  <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
+                    Announcements
+                  </h2>
+                  {allAnnouncements.length > 0 && (
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        backgroundColor: '#e0f2fe',
+                        color: '#0369a1',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        border: '1px solid #bae6fd',
+                      }}
+                    >
+                      {allAnnouncements.length}
+                    </span>
+                  )}
                 </div>
-                <div style={{ fontSize: '12.5px', marginTop: '4px' }}>
-                  Publish an announcement to keep everyone informed.
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={handleOpenNewAnnouncement}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      padding: '5px 12px',
+                      backgroundColor: '#0073aa',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.15s ease',
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#005f8d')}
+                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#0073aa')}
+                  >
+                    <Plus size={14} />
+                    <span>New</span>
+                  </button>
                 </div>
               </div>
-            ) : (
-              data.announcements.map((ann) => (
-                <AccordionItem
-                  key={ann.id || ann._id}
-                  announcement={ann}
-                  onEdit={handleOpenEditAnnouncement}
-                  onDelete={() => setAnnToDelete(ann)}
-                />
-              ))
-            )}
-          </div>
-        </div>
+
+              {/* Sub-bar: Filter Tabs & Search */}
+              {allAnnouncements.length > 0 && (
+                <div
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#f8fafc',
+                    borderBottom: '1px solid #f1f5f9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '10px',
+                  }}
+                >
+                  {/* Segmented Controls */}
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      backgroundColor: '#e2e8f0',
+                      borderRadius: '6px',
+                      padding: '2px',
+                      gap: '2px',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setAnnFilterMode('recent')}
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        borderRadius: '4px',
+                        border: 'none',
+                        backgroundColor: annFilterMode === 'recent' ? '#ffffff' : 'transparent',
+                        color: annFilterMode === 'recent' ? '#0073aa' : '#64748b',
+                        boxShadow: annFilterMode === 'recent' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      Recent ({Math.min(5, allAnnouncements.length)})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAnnFilterMode('all')}
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        borderRadius: '4px',
+                        border: 'none',
+                        backgroundColor: annFilterMode === 'all' ? '#ffffff' : 'transparent',
+                        color: annFilterMode === 'all' ? '#0073aa' : '#64748b',
+                        boxShadow: annFilterMode === 'all' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      All ({allAnnouncements.length})
+                    </button>
+                  </div>
+
+                  {/* Search Bar */}
+                  <div
+                    style={{
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
+                      minWidth: '180px',
+                    }}
+                  >
+                    <Search
+                      size={13}
+                      color="#94a3b8"
+                      style={{ position: 'absolute', left: '9px', pointerEvents: 'none' }}
+                    />
+                    <input
+                      type="text"
+                      value={annSearch}
+                      onChange={(e) => setAnnSearch(e.target.value)}
+                      placeholder="Search announcements..."
+                      style={{
+                        fontSize: '12px',
+                        padding: '5px 26px 5px 28px',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '5px',
+                        backgroundColor: '#ffffff',
+                        color: '#1e293b',
+                        outline: 'none',
+                        width: '100%',
+                      }}
+                    />
+                    {annSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setAnnSearch('')}
+                        style={{
+                          position: 'absolute',
+                          right: '6px',
+                          border: 'none',
+                          background: 'none',
+                          color: '#94a3b8',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '2px',
+                        }}
+                        title="Clear search"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Announcements List Container with Scroll Limit */}
+              <div
+                style={{
+                  padding: '16px 20px',
+                  maxHeight: '480px',
+                  overflowY: 'auto',
+                  flex: 1,
+                }}
+              >
+                {allAnnouncements.length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      padding: '36px 20px',
+                      color: '#94a3b8',
+                    }}
+                  >
+                    <Megaphone size={36} style={{ margin: '0 auto 10px', opacity: 0.5 }} />
+                    <div style={{ fontWeight: 600, color: '#475569', fontSize: '14px' }}>
+                      No announcements yet
+                    </div>
+                    <div style={{ fontSize: '12.5px', marginTop: '4px' }}>
+                      Publish an announcement to keep everyone informed.
+                    </div>
+                  </div>
+                ) : displayedAnnouncements.length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      padding: '30px 20px',
+                      color: '#64748b',
+                    }}
+                  >
+                    <Search size={28} style={{ margin: '0 auto 8px', opacity: 0.5, color: '#94a3b8' }} />
+                    <div style={{ fontWeight: 600, fontSize: '13.5px' }}>
+                      No announcements match "{annSearch}"
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAnnSearch('')}
+                      style={{
+                        marginTop: '8px',
+                        fontSize: '12px',
+                        color: '#0073aa',
+                        background: 'none',
+                        border: 'none',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                      }}
+                    >
+                      Clear search filter
+                    </button>
+                  </div>
+                ) : (
+                  displayedAnnouncements.map((ann, idx) => (
+                    <AccordionItem
+                      key={ann.id || ann._id}
+                      announcement={ann}
+                      onEdit={handleOpenEditAnnouncement}
+                      onDelete={() => setAnnToDelete(ann)}
+                      defaultOpen={idx === 0 && !annSearch.trim()}
+                      isRecent={idx < 3}
+                    />
+                  ))
+                )}
+              </div>
+
+              {/* Bottom Expand / View All Toggle when list is long */}
+              {allAnnouncements.length > 5 && !annSearch.trim() && (
+                <div
+                  style={{
+                    padding: '8px 20px',
+                    backgroundColor: '#f8fafc',
+                    borderTop: '1px solid #f1f5f9',
+                    textAlign: 'center',
+                  }}
+                >
+                  {isShowingRecent ? (
+                    <button
+                      type="button"
+                      onClick={() => setAnnFilterMode('all')}
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        color: '#0073aa',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '4px 8px',
+                      }}
+                    >
+                      View All {allAnnouncements.length} Announcements ({allAnnouncements.length - 5} older) ↓
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setAnnFilterMode('recent')}
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        color: '#64748b',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '4px 8px',
+                      }}
+                    >
+                      Show Recent (Top 5) Only ↑
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Right: Attachments */}
         <div
