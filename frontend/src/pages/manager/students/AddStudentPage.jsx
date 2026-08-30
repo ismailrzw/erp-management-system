@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, ArrowLeft, CheckCircle2, AlertCircle, Upload, FileSpreadsheet, Download, RefreshCw } from 'lucide-react';
+import { UserPlus, ArrowLeft, CheckCircle2, AlertCircle, Upload, Download, RefreshCw } from 'lucide-react';
 import { studentsApi } from '../../../api/studentsApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { coursesApi } from '../../../api/coursesApi';

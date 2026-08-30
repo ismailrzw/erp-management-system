@@ -3,14 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Plus,
-  Upload,
   Trash2,
   Edit2,
   RefreshCw,
   Users,
   ChevronLeft,
   ChevronRight,
-  FileSpreadsheet,
 } from 'lucide-react';
 import { studentsApi } from '../../../api/studentsApi';
 import { departmentsApi } from '../../../api/departmentsApi';

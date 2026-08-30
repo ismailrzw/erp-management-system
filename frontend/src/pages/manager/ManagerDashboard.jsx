@@ -9,7 +9,6 @@ import {
   Megaphone,
   Search,
   X,
-  Sparkles,
 } from 'lucide-react';
 import { dashboardApi } from '../../api/dashboardApi';
 import { announcementsApi } from '../../api/announcementsApi';
