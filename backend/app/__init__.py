@@ -26,6 +26,16 @@ def create_app(config_class=Config):
     # Register middleware to fix Authorization header
     app.before_request(fix_authorization_header)
 
+    # ── Root & Health Check Endpoints ──────────────────────
+    @app.route('/')
+    @app.route('/health')
+    def health_check():
+        return {
+            'status': 'healthy',
+            'service': 'ERP Management System API',
+            'docs': '/api/docs'
+        }, 200
+
     # ── Swagger / OpenAPI ──────────────────────────────────
     api = Api(
         app,
