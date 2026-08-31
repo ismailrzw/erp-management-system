@@ -88,3 +88,187 @@ input, select, textarea {
   animation: ballScale 1s ease-in-out infinite;
   animation-delay: 0.3s;
 }
+
+/* ========================================================
+   RESPONSIVE UTILITIES & GRID DESIGN SYSTEM
+   ======================================================== */
+
+/* Mobile Backdrop Overlay */
+.mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(3px);
+  z-index: 450;
+  transition: opacity 0.25s ease;
+}
+
+/* Main Layout Container */
+.app-main-content {
+  margin-top: 60px;
+  min-height: calc(100vh - 60px);
+  transition: margin-left 0.2s ease, padding 0.2s ease;
+}
+
+@media (min-width: 1024px) {
+  .app-main-content.sidebar-open {
+    margin-left: 235px;
+    padding: 24px 30px;
+  }
+  .app-main-content.sidebar-collapsed {
+    margin-left: 64px;
+    padding: 24px 30px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .app-main-content {
+    margin-left: 0 !important;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-main-content {
+    margin-left: 0 !important;
+    padding: 14px 12px;
+  }
+}
+
+/* Responsive Metric Stat Grid */
+.stat-grid-responsive {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+  grid-template-columns: repeat(5, 1fr);
+}
+
+@media (max-width: 1280px) {
+  .stat-grid-responsive {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .stat-grid-responsive {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+}
+
+@media (max-width: 540px) {
+  .stat-grid-responsive {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+/* Dashboard Dual Grid (Announcements + Attachments) */
+.dashboard-dual-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-dual-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+/* Responsive Form Grids */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 768px) {
+  .form-grid-2,
+  .form-grid-3 {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+/* Responsive Action Toolbar */
+.toolbar-responsive {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.toolbar-group-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 300px;
+}
+
+.toolbar-group-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .toolbar-responsive {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .toolbar-group-left,
+  .toolbar-group-right {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+  .toolbar-group-left > *,
+  .toolbar-group-right > * {
+    flex: 1 1 auto;
+  }
+}
+
+/* Responsive Table Wrapper */
+.table-responsive-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 6px;
+}
+
+.table-responsive-container table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+}
+
+/* Card Container Responsive */
+.card-responsive {
+  background-color: var(--card-bg);
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 20px;
+}
+
+@media (max-width: 640px) {
+  .card-responsive {
+    padding: 14px;
+    border-radius: 6px;
+  }
+}
+

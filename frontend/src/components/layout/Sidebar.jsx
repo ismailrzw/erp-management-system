@@ -11,7 +11,12 @@ import {
   ChevronDown,
 } from 'lucide-react';
 
-export const Sidebar = ({ isCollapsed }) => {
+export const Sidebar = ({
+  isCollapsed,
+  isMobileView,
+  isMobileDrawerOpen,
+  onCloseMobileDrawer,
+}) => {
   const location = useLocation();
   const [openMenus, setOpenMenus] = useState({
     students: false,
@@ -134,9 +139,25 @@ export const Sidebar = ({ isCollapsed }) => {
     },
   ];
 
-  return (
-    <aside
-      style={{
+  const sidebarStyle = isMobileView
+    ? {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        bottom: 0,
+        width: '260px',
+        backgroundColor: '#ffffff',
+        borderRight: '1px solid #e2e8f0',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        zIndex: 500,
+        boxShadow: isMobileDrawerOpen ? '0 20px 25px -5px rgba(0, 0, 0, 0.2)' : 'none',
+        transform: isMobileDrawerOpen ? 'translateX(0)' : 'translateX(-100%)',
+        transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        paddingTop: '16px',
+        paddingBottom: '30px',
+      }
+    : {
         position: 'fixed',
         top: '60px',
         left: 0,
@@ -149,11 +170,67 @@ export const Sidebar = ({ isCollapsed }) => {
         zIndex: 400,
         transition: 'width 0.2s ease',
         paddingBottom: '30px',
-      }}
-    >
+      };
+
+  const isCollapsedView = !isMobileView && isCollapsed;
+
+  return (
+    <aside style={sidebarStyle}>
+      {/* Mobile Drawer Header */}
+      {isMobileView && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '4px 18px 16px',
+            borderBottom: '1px solid #f1f5f9',
+            marginBottom: '8px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                backgroundColor: '#0073aa',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                fontSize: '13px',
+              }}
+            >
+              PBL
+            </div>
+            <span style={{ fontWeight: 700, fontSize: '15px', color: '#1e293b' }}>
+              Navigation Menu
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onCloseMobileDrawer}
+            style={{
+              border: 'none',
+              background: 'none',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '4px',
+              fontSize: '16px',
+            }}
+            aria-label="Close navigation"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {navSections.map((sec, idx) => (
         <div key={idx} style={{ marginBottom: '4px' }}>
-          {!isCollapsed && (
+          {!isCollapsedView && (
             <div
               style={{
                 fontSize: '11px',
@@ -161,7 +238,7 @@ export const Sidebar = ({ isCollapsed }) => {
                 color: '#94a3b8',
                 textTransform: 'uppercase',
                 letterSpacing: '0.6px',
-                padding: '16px 18px 6px',
+                padding: '14px 18px 6px',
               }}
             >
               {sec.section}
@@ -176,24 +253,25 @@ export const Sidebar = ({ isCollapsed }) => {
                 <NavLink
                   key={itemIdx}
                   to={item.to}
+                  onClick={() => isMobileView && onCloseMobileDrawer()}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: isCollapsed ? 'center' : 'flex-start',
-                    gap: isCollapsed ? 0 : '10px',
-                    padding: isCollapsed ? '12px 0' : '10px 18px',
+                    justifyContent: isCollapsedView ? 'center' : 'flex-start',
+                    gap: isCollapsedView ? 0 : '10px',
+                    padding: isCollapsedView ? '12px 0' : '10px 18px',
                     fontSize: '13.5px',
                     color: isActive ? '#0073aa' : '#334155',
                     backgroundColor: isActive ? '#eaf5fb' : 'transparent',
-                    borderRight: isActive && !isCollapsed ? '3px solid #0073aa' : 'none',
+                    borderRight: isActive && !isCollapsedView ? '3px solid #0073aa' : 'none',
                     fontWeight: isActive ? 600 : 500,
                     textDecoration: 'none',
                     transition: 'background-color 0.15s ease',
                   }}
-                  title={isCollapsed ? item.text : undefined}
+                  title={isCollapsedView ? item.text : undefined}
                 >
                   <Icon size={18} strokeWidth={isActive ? 2.2 : 1.8} />
-                  {!isCollapsed && <span>{item.text}</span>}
+                  {!isCollapsedView && <span>{item.text}</span>}
                 </NavLink>
               );
             }
@@ -205,13 +283,13 @@ export const Sidebar = ({ isCollapsed }) => {
               <div key={itemIdx}>
                 <button
                   type="button"
-                  onClick={() => !isCollapsed && toggleMenu(item.key)}
+                  onClick={() => !isCollapsedView && toggleMenu(item.key)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: isCollapsed ? 'center' : 'space-between',
+                    justifyContent: isCollapsedView ? 'center' : 'space-between',
                     width: '100%',
-                    padding: isCollapsed ? '12px 0' : '10px 18px',
+                    padding: isCollapsedView ? '12px 0' : '10px 18px',
                     fontSize: '13.5px',
                     color: hasActiveChild ? '#0073aa' : '#334155',
                     backgroundColor: 'transparent',
@@ -220,13 +298,13 @@ export const Sidebar = ({ isCollapsed }) => {
                     fontWeight: hasActiveChild ? 600 : 500,
                     textAlign: 'left',
                   }}
-                  title={isCollapsed ? item.text : undefined}
+                  title={isCollapsedView ? item.text : undefined}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: isCollapsed ? 0 : '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: isCollapsedView ? 0 : '10px' }}>
                     <Icon size={18} strokeWidth={hasActiveChild ? 2.2 : 1.8} />
-                    {!isCollapsed && <span>{item.text}</span>}
+                    {!isCollapsedView && <span>{item.text}</span>}
                   </div>
-                  {!isCollapsed && (
+                  {!isCollapsedView && (
                     <ChevronDown
                       size={15}
                       style={{
@@ -237,7 +315,7 @@ export const Sidebar = ({ isCollapsed }) => {
                   )}
                 </button>
 
-                {!isCollapsed && isMenuOpen && (
+                {!isCollapsedView && isMenuOpen && (
                   <div style={{ backgroundColor: '#f8fafc', padding: '4px 0' }}>
                     {item.subitems.map((sub, subIdx) => {
                       const isSubActive = location.pathname === sub.to;
@@ -245,6 +323,7 @@ export const Sidebar = ({ isCollapsed }) => {
                         <NavLink
                           key={subIdx}
                           to={sub.to}
+                          onClick={() => isMobileView && onCloseMobileDrawer()}
                           style={{
                             display: 'block',
                             padding: '8px 18px 8px 46px',
@@ -269,3 +348,4 @@ export const Sidebar = ({ isCollapsed }) => {
     </aside>
   );
 };
+

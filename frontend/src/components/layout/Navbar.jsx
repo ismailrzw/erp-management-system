@@ -3,7 +3,7 @@ import { Menu, Bell, ChevronDown, LogOut, User as UserIcon } from 'lucide-react'
 import { useAuth } from '../../context/useAuth';
 import { useNavigate } from 'react-router-dom';
 
-export const Navbar = ({ onToggleSidebar, isSidebarCollapsed }) => {
+export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) => {
   const { user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -51,49 +51,73 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 20px',
+        padding: isMobileView ? '0 12px' : '0 20px',
         zIndex: 500,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        <div
-          style={{
-            width: isSidebarCollapsed ? '64px' : '235px',
-            marginLeft: '-20px',
-            paddingLeft: '18px',
-            height: '60px',
-            backgroundColor: '#1f2d3a',
-            color: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            transition: 'width 0.2s ease',
-            overflow: 'hidden',
-            flexShrink: 0,
-          }}
-        >
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? '8px' : '14px' }}>
+        {/* Desktop Brand Column */}
+        {!isMobileView && (
+          <div
+            style={{
+              width: isSidebarCollapsed ? '64px' : '235px',
+              marginLeft: '-20px',
+              paddingLeft: '18px',
+              height: '60px',
+              backgroundColor: '#1f2d3a',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              transition: 'width 0.2s ease',
+              overflow: 'hidden',
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                backgroundColor: '#0073aa',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                fontSize: '13px',
+                flexShrink: 0,
+              }}
+            >
+              PBL
+            </div>
+            {!isSidebarCollapsed && (
+              <div style={{ fontWeight: 600, fontSize: '14px', letterSpacing: '0.3px', whiteSpace: 'nowrap' }}>
+                PBL Portal
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mobile Brand Badge */}
+        {isMobileView && (
           <div
             style={{
               width: '32px',
               height: '32px',
               borderRadius: '8px',
               backgroundColor: '#0073aa',
+              color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 700,
-              fontSize: '13px',
+              fontSize: '12px',
               flexShrink: 0,
             }}
           >
             PBL
           </div>
-          {!isSidebarCollapsed && (
-            <div style={{ fontWeight: 600, fontSize: '14px', letterSpacing: '0.3px', whiteSpace: 'nowrap' }}>
-              PBL Portal
-            </div>
-          )}
-        </div>
+        )}
 
         <button
           type="button"
@@ -103,28 +127,33 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed }) => {
             background: 'none',
             color: '#64748b',
             cursor: 'pointer',
-            padding: '6px',
+            padding: '8px',
             borderRadius: '4px',
             display: 'flex',
             alignItems: 'center',
+            minWidth: '36px',
+            minHeight: '36px',
+            justifyContent: 'center',
           }}
-          title="Toggle Sidebar"
+          title="Toggle Navigation Menu"
+          aria-label="Toggle Navigation Menu"
         >
           <Menu size={20} />
         </button>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? '8px' : '12px' }}>
         <div
           style={{
             backgroundColor: '#eef6fb',
             color: '#0073aa',
             fontSize: '11px',
             fontWeight: 700,
-            padding: '4px 10px',
+            padding: '4px 8px',
             borderRadius: '20px',
             textTransform: 'uppercase',
-            letterSpacing: '0.4px',
+            letterSpacing: '0.3px',
+            whiteSpace: 'nowrap',
           }}
         >
           {getRoleLabel(user?.role)}
