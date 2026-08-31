@@ -214,11 +214,13 @@ export const ManagerDashboard = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: '24px',
+          flexWrap: 'wrap',
+          gap: '12px',
+          marginBottom: '20px',
         }}
       >
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
             Dashboard
           </h1>
           <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
@@ -251,14 +253,7 @@ export const ManagerDashboard = () => {
         </button>
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-          gap: '16px',
-          marginBottom: '24px',
-        }}
-      >
+      <div className="stat-grid-responsive">
         <StatCard
           title="Total Created Groups"
           count={data?.total_groups}
@@ -291,13 +286,7 @@ export const ManagerDashboard = () => {
         />
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-          gap: '20px',
-        }}
-      >
+      <div className="dashboard-dual-grid">
         {/* Left: Announcements */}
         {(() => {
           const allAnnouncements = data?.announcements || [];

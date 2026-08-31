@@ -57,19 +57,26 @@ def app():
 
 @pytest.fixture(autouse=True)
 def reset_test_database(app):
-    """Drop all test data and seed the manager before each test."""
+    """Clear all test collections and seed the manager before each test."""
     with app.app_context():
-        mongo.cx.drop_database(TEST_DATABASE_NAME)
+        for collection_name in mongo.db.list_collection_names():
+            if not collection_name.startswith("system."):
+                mongo.db[collection_name].delete_many({})
         mongo.db.users.create_index("email", unique=True)
         mongo.db.users.insert_one({
-            "name": "Zaman Aziz", "email": MANAGER_EMAIL,
+            "name": "Zaman Aziz",
+            "email": MANAGER_EMAIL,
             "password_hash": bcrypt.hashpw(MANAGER_PASSWORD.encode(), bcrypt.gensalt()).decode(),
-            "role": Role.MANAGER, "deleted": False,
+            "role": Role.MANAGER,
+            "deleted": False,
             "created_at": datetime.now(timezone.utc),
         })
     yield
     with app.app_context():
-        mongo.cx.drop_database(TEST_DATABASE_NAME)
+        for collection_name in mongo.db.list_collection_names():
+            if not collection_name.startswith("system."):
+                mongo.db[collection_name].delete_many({})
+
 
 
 @pytest.fixture(autouse=True)
