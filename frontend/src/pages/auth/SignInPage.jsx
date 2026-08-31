@@ -287,16 +287,16 @@ export const SignInPage = () => {
 
         <div
           style={{
-            marginTop: '22px',
+            marginTop: '20px',
             backgroundColor: '#f8fafc',
             border: '1px dashed #cbd5e1',
             borderRadius: '4px',
-            padding: '12px 14px',
+            padding: '12px',
             fontSize: '12px',
             color: '#64748b',
           }}
         >
-          <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
+          <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '8px' }}>
             Demo Accounts (click to autofill)
           </div>
           {DEMO_ACCOUNTS.map((acc, idx) => (
@@ -306,15 +306,26 @@ export const SignInPage = () => {
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                padding: '3px 0',
+                flexWrap: 'wrap',
+                gap: '2px 8px',
+                padding: '5px 4px',
+                borderRadius: '3px',
                 cursor: 'pointer',
-                transition: 'color 0.1s ease',
+                transition: 'background-color 0.1s ease, color 0.1s ease',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#0073aa')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#eaf5fb';
+                e.currentTarget.style.color = '#0073aa';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = '#64748b';
+              }}
             >
-              <span>{acc.role}</span>
-              <span style={{ fontFamily: 'monospace' }}>{acc.email}</span>
+              <span style={{ fontWeight: 500 }}>{acc.role}</span>
+              <span style={{ fontFamily: 'monospace', fontSize: '11px', wordBreak: 'break-all' }}>
+                {acc.email}
+              </span>
             </div>
           ))}
         </div>
