@@ -59,4 +59,9 @@ export const studentGroupApi = {
     });
     return response.data;
   },
+
+  browseGroups: async (params = {}) => {
+    const response = await api.get('/student/groups/', { params });
+    return response.data;
+  },
 };

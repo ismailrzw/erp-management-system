@@ -21,7 +21,7 @@ Security
     if their collections are empty or do not yet exist).
 """
 
-from datetime import datetime
+import logging
 
 from bson import ObjectId
 from flask_jwt_extended import get_jwt_identity
@@ -29,28 +29,19 @@ from flask_restx import Namespace, Resource
 
 from app.extensions import mongo
 from app.models.group import INVITATIONS_COLLECTION, InvitationField, InvitationStatus
-from app.models.user import Role, UserFields
+from app.models.user import Role
+from app.services.announcement_service import list_announcements
+from app.services.attachment_service import list_attachments
 from app.services.group_service import get_my_group
 from app.services.student_profile_service import get_profile
 from app.utils.decorators import role_required
+
+logger = logging.getLogger(__name__)
 
 # ── Namespace ──────────────────────────────────────────────────────────────────
 student_dashboard_ns = Namespace(
     "student_dashboard", description="Student dashboard aggregated view"
 )
-
-
-def _serialize_doc(doc: dict) -> dict:
-    """Convert ObjectId and datetime fields to JSON-safe types."""
-    result = dict(doc)
-    if "_id" in result:
-        result["id"] = str(result.pop("_id"))
-    for key, value in list(result.items()):
-        if isinstance(value, ObjectId):
-            result[key] = str(value)
-        elif isinstance(value, datetime):
-            result[key] = value.isoformat()
-    return result
 
 
 @student_dashboard_ns.route("/")
@@ -70,45 +61,45 @@ class StudentDashboard(Resource):
             # ── Own profile ────────────────────────────────────────────────
             try:
                 profile = get_profile(student_id)
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Error loading student profile for %s: %s", student_id, exc)
                 profile = {}
 
             # ── Group status ───────────────────────────────────────────────
             try:
                 group = get_my_group(student_id)
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Error loading group for %s: %s", student_id, exc)
                 group = None
 
             # ── Pending invitation count ───────────────────────────────────
             try:
+                student_oid = ObjectId(student_id)
                 pending_count = mongo.db[INVITATIONS_COLLECTION].count_documents({
-                    InvitationField.INVITED_USER: mongo.db[UserFields.COLLECTION].find_one(
-                        {"_id": __import__("bson").ObjectId(student_id)}, {"_id": 1}
-                    )["_id"] if student_id else None,
+                    InvitationField.INVITED_USER: student_oid,
                     InvitationField.STATUS: InvitationStatus.PENDING,
                 })
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Error counting pending invites for %s: %s", student_id, exc)
                 pending_count = 0
 
             # ── Announcements (newest 20) ──────────────────────────────────
             try:
-                raw_announcements = list(
-                    mongo.db.announcements.find({}).sort("created_at", -1).limit(20)
-                )
-                announcements = [_serialize_doc(a) for a in raw_announcements]
-            except Exception:  # noqa: BLE001
+                announcements = list_announcements()[:20]
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Error fetching announcements: %s", exc)
                 announcements = []
 
             # ── Attachments (newest 10) ────────────────────────────────────
             try:
-                raw_attachments = list(
-                    mongo.db.attachments.find({}).sort("uploaded_at", -1).limit(10)
-                )
-                attachments = [_serialize_doc(a) for a in raw_attachments]
-                # Strip internal file_path from student view
-                for att in attachments:
-                    att.pop("file_path", None)
-            except Exception:  # noqa: BLE001
+                raw_attachments = list_attachments()[:10]
+                attachments = []
+                for att in raw_attachments:
+                    clean_att = dict(att)
+                    clean_att.pop("file_path", None)
+                    attachments.append(clean_att)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Error fetching attachments: %s", exc)
                 attachments = []
 
             return {
@@ -124,4 +115,5 @@ class StudentDashboard(Resource):
             }, 200
 
         except Exception as exc:  # noqa: BLE001
+            logger.error("Student dashboard unhandled error: %s", exc)
             return {"success": False, "message": str(exc)}, 500

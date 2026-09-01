@@ -44,6 +44,7 @@ from app.services.group_service import (
     get_pending_invitations,
     invite_member,
     leave_group,
+    list_groups_for_student,
     remove_member,
     respond_to_invitation,
     search_students,
@@ -108,7 +109,26 @@ class MyGroup(Resource):
 
 
 @student_groups_ns.route("/")
-class GroupCreate(Resource):
+class GroupListCreate(Resource):
+
+    @student_groups_ns.doc(security="Bearer Auth")
+    @role_required(Role.STUDENT)
+    def get(self):
+        """Browse project groups in the student's enrolled course with search and status filter."""
+        student_id = get_jwt_identity()
+        search = request.args.get("search", "").strip()
+        status_filter = request.args.get("status", "").strip()
+        try:
+            groups = list_groups_for_student(student_id, search=search, status_filter=status_filter)
+            return {
+                "success": True,
+                "message": "Groups retrieved.",
+                "data": {"items": groups, "total": len(groups)},
+            }, 200
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, 400
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
 
     @student_groups_ns.doc(security="Bearer Auth")
     @student_groups_ns.expect(create_group_model)
@@ -366,22 +386,21 @@ class StudentSearch(Resource):
     @role_required(Role.STUDENT)
     def get(self):
         """
-        Search students by roll number fragment (same dept + section).
+        Search students by roll number or name in the same course (cross-section allowed).
 
         Query params
         ------------
-        roll  — roll number prefix/fragment to search (required, min 1 char)
+        roll  — roll number or name prefix/fragment to search (required, min 1 char)
         """
         student_id = get_jwt_identity()
 
-        # Get the calling student's dept + section to scope the search
         from bson import ObjectId
 
         from app.extensions import mongo as _mongo
         from app.models.user import UserFields
         caller = _mongo.db[UserFields.COLLECTION].find_one(
             {"_id": ObjectId(student_id)},
-            {UserFields.DEPT: 1, UserFields.SECTION: 1},
+            {UserFields.DEPT: 1, UserFields.SECTION: 1, UserFields.COURSE: 1},
         )
         if caller is None:
             return {"success": False, "message": "Student account not found."}, 404
@@ -393,8 +412,9 @@ class StudentSearch(Resource):
         try:
             results = search_students(
                 roll_fragment,
-                caller.get(UserFields.DEPT, ""),
-                caller.get(UserFields.SECTION, ""),
+                course=caller.get(UserFields.COURSE, ""),
+                dept=caller.get(UserFields.DEPT, ""),
+                current_student_id=student_id,
             )
             return {
                 "success": True,

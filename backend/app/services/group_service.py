@@ -64,10 +64,14 @@ def _serialize_group(doc: dict) -> dict:
     result["id"] = str(result.pop(Field.ID))
 
     # Convert ObjectId arrays / scalars
-    if Field.LEADER_ID in result:
+    if result.get(Field.LEADER_ID):
         result[Field.LEADER_ID] = str(result[Field.LEADER_ID])
-    if Field.MEMBER_IDS in result:
+    if result.get(Field.MEMBER_IDS):
         result[Field.MEMBER_IDS] = [str(m) for m in result[Field.MEMBER_IDS]]
+    if result.get(Field.APPROVED_BY):
+        result[Field.APPROVED_BY] = str(result[Field.APPROVED_BY])
+    if result.get(Field.REJECTED_BY):
+        result[Field.REJECTED_BY] = str(result[Field.REJECTED_BY])
 
     for key, value in result.items():
         if isinstance(value, datetime):
@@ -293,14 +297,16 @@ def update_group(group_id: str, leader_id: str, data: dict) -> dict:
 
     Rules
     -----
-    - Only ``pending`` groups may be modified (approved groups are frozen).
+    - Only ``pending`` or ``rejected`` groups may be modified (approved groups are frozen).
+    - If a ``rejected`` group is updated, status is automatically reset to ``pending`` so
+      the manager can re-evaluate the updated proposal.
     - ``version`` is incremented on every successful update (optimistic lock audit trail).
 
     Raises
     ------
     ValueError
         - Caller is not the group leader (403-level).
-        - Group is not in ``pending`` status.
+        - Group is not in ``pending`` or ``rejected`` status.
         - Group not found.
         - No fields to update.
     """
@@ -310,12 +316,15 @@ def update_group(group_id: str, leader_id: str, data: dict) -> dict:
 
     now = _now()
     update_payload[Field.UPDATED_AT] = now
+    # If previously rejected, reset to pending for manager re-approval
+    update_payload[Field.STATUS] = Status.PENDING
+    update_payload[Field.REJECTION_REASON] = None
 
     result = mongo.db[COLLECTION].find_one_and_update(
         {
             Field.ID:        _oid(group_id),
             Field.LEADER_ID: _oid(leader_id),
-            Field.STATUS:    Status.PENDING,
+            Field.STATUS:    {"$in": [Status.PENDING, Status.REJECTED]},
         },
         {
             "$set": update_payload,
@@ -325,7 +334,7 @@ def update_group(group_id: str, leader_id: str, data: dict) -> dict:
     )
 
     if result is None:
-        # Distinguish between "not leader" and "group not found / not pending"
+        # Distinguish between "not leader" and "group not found / approved"
         group = mongo.db[COLLECTION].find_one({Field.ID: _oid(group_id)})
         if group is None:
             raise ValueError("Group not found.")
@@ -555,6 +564,15 @@ def invite_member(group_id: str, leader_id: str, roll: str) -> dict:
     if target_id == _oid(leader_id):
         raise ValueError("You cannot invite yourself to your own group.")
 
+    # Rule: Same course constraint (cross-section allowed)
+    target_course = (target.get(UserFields.COURSE) or "").strip().upper()
+    group_course = (group.get(Field.COURSE) or "").strip().upper()
+    if target_course != group_course:
+        raise ValueError(
+            f"Students must be enrolled in the same course ('{group.get(Field.COURSE)}') to join this group. "
+            f"Target student is enrolled in '{target.get(UserFields.COURSE) or 'None'}'."
+        )
+
     # Rule 5 — target must not already be in a group
     if target.get(Field.GROUP_ID):
         raise ValueError(
@@ -778,31 +796,48 @@ def respond_to_invitation(invitation_id: str, student_id: str, accept: bool) -> 
 # ══════════════════════════════════════════════════════════════════════════════
 # Peer discovery
 # ══════════════════════════════════════════════════════════════════════════════
+# Peer discovery and Group browsing
+# ══════════════════════════════════════════════════════════════════════════════
 
-def search_students(roll_fragment: str, dept: str, section: str) -> list[dict]:
+def search_students(query_fragment: str, course: str, dept: str = "", current_student_id: str | None = None) -> list[dict]:
     """
-    Search for students in the same dept + section by roll number fragment.
+    Search for students in the same course by roll number or name (cross-section allowed).
 
-    Used by the "Find peers" UI so a leader can discover and invite teammates.
+    Used by the "Invite Peers" modal so a leader can discover and invite classmates.
 
     Returns
     -------
     list[dict]
-        Each entry includes id, name, roll, email, and ``has_group`` boolean.
+        Each entry includes id, name, roll, email, section, dept, and ``has_group`` boolean.
     """
-    import re  # local import to keep module-level imports clean
+    import re
 
-    pattern = re.compile(re.escape(roll_fragment.strip()), re.IGNORECASE)
+    pattern = re.compile(re.escape(query_fragment.strip()), re.IGNORECASE)
+    query = {
+        UserFields.ROLE:    Role.STUDENT,
+        UserFields.DELETED: {"$ne": True},
+        "$or": [
+            {UserFields.ROLL: pattern},
+            {UserFields.NAME: pattern},
+        ],
+    }
+    if course:
+        query[UserFields.COURSE] = {"$regex": f"^{re.escape(course.strip())}$", "$options": "i"}
+    if current_student_id:
+        query[UserFields.ID] = {"$ne": _oid(current_student_id)}
+
     cursor = mongo.db[UserFields.COLLECTION].find(
+        query,
         {
-            UserFields.ROLE:    Role.STUDENT,
-            UserFields.DELETED: {"$ne": True},
-            UserFields.DEPT:    dept.upper(),
-            UserFields.SECTION: section.upper(),
-            UserFields.ROLL:    pattern,
+            UserFields.NAME: 1,
+            UserFields.ROLL: 1,
+            UserFields.EMAIL: 1,
+            UserFields.SECTION: 1,
+            UserFields.DEPT: 1,
+            UserFields.COURSE: 1,
+            Field.GROUP_ID: 1,
         },
-        {UserFields.NAME: 1, UserFields.ROLL: 1, UserFields.EMAIL: 1, Field.GROUP_ID: 1},
-    ).limit(20)
+    ).limit(25)
 
     results = []
     for doc in cursor:
@@ -811,6 +846,93 @@ def search_students(roll_fragment: str, dept: str, section: str) -> list[dict]:
             "name":      doc.get(UserFields.NAME, ""),
             "roll":      doc.get(UserFields.ROLL, ""),
             "email":     doc.get(UserFields.EMAIL, ""),
+            "section":   doc.get(UserFields.SECTION, ""),
+            "dept":      doc.get(UserFields.DEPT, ""),
+            "course":    doc.get(UserFields.COURSE, ""),
             "has_group": bool(doc.get(Field.GROUP_ID)),
         })
+    return results
+
+
+def list_groups_for_student(student_id: str, search: str = "", status_filter: str = "") -> list[dict]:
+    """
+    List all active project groups in the student's enrolled course for discovery.
+
+    Parameters
+    ----------
+    student_id:
+        Calling student's ID.
+    search:
+        Optional search term to filter by group name or project title.
+    status_filter:
+        Optional status filter ('pending', 'approved', 'rejected').
+    """
+    import re
+
+    student = _get_active_student(student_id)
+    course_name = student.get(UserFields.COURSE, "").strip()
+    student_oid = _oid(student_id)
+
+    query = {
+        Field.STATUS: {"$ne": Status.DELETED},
+    }
+    if course_name:
+        query[Field.COURSE] = {"$regex": f"^{re.escape(course_name)}$", "$options": "i"}
+
+    if status_filter and status_filter.lower() != "all":
+        query[Field.STATUS] = status_filter.lower()
+
+    if search.strip():
+        term_pattern = re.compile(re.escape(search.strip()), re.IGNORECASE)
+        query["$or"] = [
+            {Field.NAME: term_pattern},
+            {Field.PROJECT_TITLE: term_pattern},
+        ]
+
+    groups_cursor = mongo.db[COLLECTION].find(query).sort(Field.CREATED_AT, -1).limit(50)
+    groups = list(groups_cursor)
+
+    results = []
+    for g in groups:
+        serialized = _serialize_group(g)
+        member_oids = g.get(Field.MEMBER_IDS, [])
+        leader_oid  = g.get(Field.LEADER_ID)
+
+        # Look up leader
+        leader_doc = mongo.db[UserFields.COLLECTION].find_one(
+            {UserFields.ID: leader_oid},
+            {UserFields.NAME: 1, UserFields.ROLL: 1, UserFields.EMAIL: 1},
+        )
+        if leader_doc:
+            serialized["leader_name"] = leader_doc.get(UserFields.NAME, "")
+            serialized["leader_roll"] = leader_doc.get(UserFields.ROLL, "")
+            serialized["leader_email"] = leader_doc.get(UserFields.EMAIL, "")
+
+        # Look up members
+        member_docs = list(mongo.db[UserFields.COLLECTION].find(
+            {UserFields.ID: {"$in": member_oids}},
+            {UserFields.NAME: 1, UserFields.ROLL: 1, UserFields.SECTION: 1},
+        ))
+        serialized["members"] = [
+            {
+                "id": str(m[UserFields.ID]),
+                "name": m.get(UserFields.NAME, ""),
+                "roll": m.get(UserFields.ROLL, ""),
+                "section": m.get(UserFields.SECTION, ""),
+                "is_leader": m[UserFields.ID] == leader_oid,
+            }
+            for m in member_docs
+        ]
+
+        constraints = _get_course_constraints(
+            g.get(Field.COURSE, ""), g.get(Field.DEPT, "")
+        )
+        serialized["member_count"] = len(member_oids)
+        serialized["min_group"]    = constraints["min_group"]
+        serialized["max_group"]    = constraints["max_group"]
+        serialized["is_full"]      = len(member_oids) >= constraints["max_group"]
+        serialized["is_my_group"]  = student_oid in member_oids
+
+        results.append(serialized)
+
     return results

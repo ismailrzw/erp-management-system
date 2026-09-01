@@ -12,16 +12,18 @@ import {
   FileText,
   Crown,
   RefreshCw,
-  Clock,
-  BookOpen,
+  AlertCircle,
+  Edit,
 } from 'lucide-react';
 import { studentDashboardApi } from '../../api/studentDashboardApi';
 import { studentAttachmentsApi } from '../../api/studentAttachmentsApi';
 import { StatCard } from '../../components/ui/StatCard';
 import { AccordionItem } from '../../components/ui/Accordion';
+import { StatusBadge } from '../../components/ui/StatusBadge';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { Toast } from '../../components/ui/Toast';
 import { Preloader } from '../../components/ui/Preloader';
-import { formatDate } from '../../utils/dateUtils';
 import { formatFileSize } from '../../utils/fileUtils';
 
 export const StudentDashboard = () => {
@@ -88,74 +90,90 @@ export const StudentDashboard = () => {
       )}
 
       {/* Page Header */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '14px',
-          marginBottom: '22px',
-        }}
+      <PageHeader
+        title={`Welcome back, ${student.name || 'Student'}!`}
+        subtitle={`Roll: ${student.roll || 'N/A'} • ${student.dept || 'Department'} (Section ${student.section || 'N/A'}) • Course: ${student.course || 'N/A'}`}
       >
-        <div>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: '22px',
-              fontWeight: 700,
-              color: 'var(--heading)',
-              letterSpacing: '-0.2px',
-            }}
-          >
-            Welcome back, {student.name || 'Student'}!
-          </h1>
-          <div
-            style={{
-              fontSize: '13px',
-              color: 'var(--muted)',
-              marginTop: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <span>Roll: <b>{student.roll}</b></span>
-            <span>•</span>
-            <span>{student.dept} - Section {student.section}</span>
-            <span>•</span>
-            <span>Course: <b>{student.course}</b></span>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => fetchDashboard(true)}
+          disabled={refreshing}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 14px',
+            fontSize: '13px',
+            fontWeight: 500,
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '6px',
+            color: '#334155',
+            cursor: refreshing ? 'not-allowed' : 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+        >
+          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+          <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+        </button>
+      </PageHeader>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      {/* Rejection Alert Banner if group was rejected */}
+      {group && group.status === 'rejected' && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '14px',
+            padding: '14px 18px',
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: '1 1 300px' }}>
+            <AlertCircle size={20} color="#dc2626" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#991b1b' }}>
+                Group Proposal Requires Revisions
+              </div>
+              <div style={{ fontSize: '13px', color: '#b91c1c', marginTop: '4px', lineHeight: 1.5 }}>
+                <b>Manager Feedback:</b> {group.rejection_reason || 'Please review your project proposal and resubmit.'}
+              </div>
+              <div style={{ fontSize: '12px', color: '#7f1d1d', marginTop: '4px' }}>
+                Group leaders can revise group name and project title on the group page to automatically resubmit for manager approval.
+              </div>
+            </div>
+          </div>
+
           <button
             type="button"
-            onClick={() => fetchDashboard(true)}
-            disabled={refreshing}
+            onClick={() => navigate('/student/group/my')}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '8px 14px',
-              fontSize: '13px',
-              fontWeight: 500,
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
+              padding: '7px 14px',
+              fontSize: '12.5px',
+              fontWeight: 600,
+              backgroundColor: '#dc2626',
+              color: '#ffffff',
+              border: 'none',
               borderRadius: '6px',
-              color: '#334155',
               cursor: 'pointer',
-              transition: 'all 0.15s ease',
+              flexShrink: 0,
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
           >
-            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+            <Edit size={14} />
+            <span>Update Proposal</span>
           </button>
         </div>
-      </div>
+      )}
 
       {/* 4 Metric Cards */}
       <div className="stat-grid-responsive" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
@@ -163,16 +181,16 @@ export const StudentDashboard = () => {
           title="Project Group"
           value={group ? group.name : 'No Group'}
           icon={Users}
-          color={group ? 'primary' : 'warning'}
-          subtext={group ? `Status: ${group.status?.toUpperCase()}` : 'Not in a group'}
+          color={group ? (group.status === 'approved' ? 'success' : group.status === 'rejected' ? 'danger' : 'primary') : 'warning'}
+          subtext={group ? `Status: ${(group.status || '').toUpperCase()}` : 'Not in a group'}
           onClick={() => navigate(group ? '/student/group/my' : '/student/group/browse')}
         />
         <StatCard
           title="Group Members"
-          value={group ? `${group.member_count || group.members?.length || 1} / ${group.max_group || 5}` : '0'}
+          value={group ? `${group.member_count || group.members?.length || 1} / ${group.max_group || 4}` : '0'}
           icon={FolderGit2}
           color={group ? 'success' : 'muted'}
-          subtext={group?.is_leader ? '👑 You are Group Leader' : (group ? 'Team Member' : 'Join a group to collaborate')}
+          subtext={group?.is_leader ? '👑 Group Leader' : group ? 'Team Member' : 'Join a group to collaborate'}
           onClick={() => group && navigate('/student/group/my')}
         />
         <StatCard
@@ -219,21 +237,7 @@ export const StudentDashboard = () => {
                 My Project Group
               </h2>
             </div>
-            {group && (
-              <span
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  padding: '3px 8px',
-                  borderRadius: '12px',
-                  backgroundColor: group.status === 'approved' ? '#dcfce7' : '#fef9c3',
-                  color: group.status === 'approved' ? '#15803d' : '#a16207',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {group.status}
-              </span>
-            )}
+            {group && <StatusBadge status={group.status} />}
           </div>
 
           {group ? (
@@ -249,7 +253,7 @@ export const StudentDashboard = () => {
                 <div style={{ fontSize: '11.5px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
                   Project Title
                 </div>
-                <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>
+                <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginTop: '2px', wordBreak: 'break-word' }}>
                   {group.project_title || 'Untitled Project'}
                 </div>
                 <div style={{ fontSize: '13px', color: '#475569', marginTop: '6px' }}>
@@ -266,18 +270,18 @@ export const StudentDashboard = () => {
                     color: '#64748b',
                   }}
                 >
+                  <div>Course: <b>{group.course}</b></div>
+                  <div>•</div>
                   <div>Department: <b>{group.dept}</b></div>
                   <div>•</div>
                   <div>Section: <b>{group.section}</b></div>
-                  <div>•</div>
-                  <div>Course: <b>{group.course}</b></div>
                 </div>
               </div>
 
               {/* Members Preview */}
               <div>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--heading)', marginBottom: '8px' }}>
-                  Members ({group.members?.length || group.member_count || 1} / {group.max_group || 5})
+                  Members ({group.members?.length || group.member_count || 1} / {group.max_group || 4})
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {group.members?.map((m) => (
@@ -291,9 +295,11 @@ export const StudentDashboard = () => {
                         backgroundColor: m.is_leader ? '#eff6ff' : '#ffffff',
                         border: '1px solid #e2e8f0',
                         borderRadius: '6px',
+                        flexWrap: 'wrap',
+                        gap: '6px',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                         <div
                           style={{
                             width: '28px',
@@ -306,16 +312,17 @@ export const StudentDashboard = () => {
                             justifyContent: 'center',
                             fontSize: '12px',
                             fontWeight: 600,
+                            flexShrink: 0,
                           }}
                         >
                           {m.name?.[0]?.toUpperCase()}
                         </div>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 500, color: '#1e293b' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 500, color: '#1e293b', wordBreak: 'break-word' }}>
                             {m.name}
                           </div>
                           <div style={{ fontSize: '11px', color: '#64748b' }}>
-                            {m.roll}
+                            {m.roll} {m.section ? `• Sec ${m.section}` : ''}
                           </div>
                         </div>
                       </div>
@@ -371,107 +378,68 @@ export const StudentDashboard = () => {
               </button>
             </div>
           ) : (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                textAlign: 'center',
-                padding: '28px 16px',
-                gap: '12px',
-              }}
-            >
-              <div
-                style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '50%',
-                  backgroundColor: '#fef9c3',
-                  color: '#ca8a04',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '4px',
-                }}
-              >
-                <Users size={28} />
-              </div>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--heading)' }}>
-                You are not in a group yet
-              </h3>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: '13px',
-                  color: 'var(--body-text)',
-                  maxWidth: '360px',
-                  lineHeight: '1.5',
-                }}
-              >
-                Form a new group as leader with your course peers, or browse existing groups in your section and send join requests.
-              </p>
-
-              <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '10px',
-                  justifyContent: 'center',
-                  marginTop: '12px',
-                  width: '100%',
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => navigate('/student/group/create')}
+            <EmptyState
+              icon={Users}
+              title="You are not in a group yet"
+              description="Form a new group as leader with your course peers, or browse existing groups to join."
+              action={
+                <div
                   style={{
                     display: 'flex',
-                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '10px',
                     justifyContent: 'center',
-                    gap: '6px',
-                    padding: '9px 16px',
-                    backgroundColor: 'var(--primary)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    flex: '1 1 160px',
+                    width: '100%',
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--primary-hover)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--primary)')}
                 >
-                  <PlusCircle size={16} />
-                  <span>Create Group</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/student/group/create')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '9px 16px',
+                      backgroundColor: 'var(--primary)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      flex: '1 1 150px',
+                    }}
+                  >
+                    <PlusCircle size={16} />
+                    <span>Create Group</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => navigate('/student/group/browse')}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    padding: '9px 16px',
-                    backgroundColor: '#ffffff',
-                    color: '#334155',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    flex: '1 1 160px',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
-                >
-                  <Compass size={16} />
-                  <span>Browse & Invites {pendingInvitesCount > 0 && `(${pendingInvitesCount})`}</span>
-                </button>
-              </div>
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/student/group/browse')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '9px 16px',
+                      backgroundColor: '#ffffff',
+                      color: '#334155',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      flex: '1 1 150px',
+                    }}
+                  >
+                    <Compass size={16} />
+                    <span>Browse Groups {pendingInvitesCount > 0 && `(${pendingInvitesCount})`}</span>
+                  </button>
+                </div>
+              }
+            />
           )}
         </div>
 
@@ -493,9 +461,11 @@ export const StudentDashboard = () => {
               justifyContent: 'space-between',
               borderBottom: '1px solid #f1f5f9',
               paddingBottom: '10px',
+              flexWrap: 'wrap',
+              gap: '8px',
             }}
           >
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={() => setActiveTab('announcements')}
@@ -543,9 +513,11 @@ export const StudentDashboard = () => {
           {activeTab === 'announcements' && (
             <div>
               {announcements.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '30px 16px', color: 'var(--muted)', fontSize: '13px' }}>
-                  No announcements published yet.
-                </div>
+                <EmptyState
+                  icon={Megaphone}
+                  title="No announcements yet"
+                  description="Announcements and guidelines posted by your PBL Manager will appear here."
+                />
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {announcements.map((ann, idx) => (
@@ -564,9 +536,11 @@ export const StudentDashboard = () => {
           {activeTab === 'attachments' && (
             <div>
               {attachments.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '30px 16px', color: 'var(--muted)', fontSize: '13px' }}>
-                  No shared attachments available.
-                </div>
+                <EmptyState
+                  icon={FileText}
+                  title="No attachments shared yet"
+                  description="Project guidelines, rubrics, and templates uploaded by the coordinator will appear here."
+                />
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {attachments.map((att) => (
@@ -581,9 +555,10 @@ export const StudentDashboard = () => {
                         border: '1px solid #e2e8f0',
                         borderRadius: '6px',
                         gap: '12px',
+                        flexWrap: 'wrap',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: '1 1 200px' }}>
                         <div
                           style={{
                             width: '32px',

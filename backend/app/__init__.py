@@ -84,6 +84,9 @@ def create_app(config_class=Config):
     from app.blueprints.manager.teachers import teachers_ns
     api.add_namespace(teachers_ns, path="/api/manager/teachers")
 
+    from app.blueprints.manager.groups import manager_groups_ns
+    api.add_namespace(manager_groups_ns, path="/api/manager/groups")
+
     # ── Register Student Namespaces ──────────────────────────────
     from app.blueprints.student.dashboard import student_dashboard_ns
     api.add_namespace(student_dashboard_ns, path="/api/student/dashboard")
