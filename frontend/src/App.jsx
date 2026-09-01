@@ -30,6 +30,9 @@ import { TeacherListPage } from './pages/manager/teachers/TeacherListPage';
 import { AddTeacherPage } from './pages/manager/teachers/AddTeacherPage';
 import { TeacherTrashPage } from './pages/manager/teachers/TeacherTrashPage';
 
+// Manager Profile
+import { ManagerProfilePage } from './pages/manager/profile/ManagerProfilePage';
+
 // Student Pages
 import { StudentDashboard } from './pages/student/StudentDashboard';
 import { MyGroupPage } from './pages/student/groups/MyGroupPage';
@@ -106,6 +109,9 @@ export default function App() {
             <Route path="teachers/view" element={<TeacherListPage />} />
             <Route path="teachers/add" element={<AddTeacherPage />} />
             <Route path="teachers/trash" element={<TeacherTrashPage />} />
+
+            {/* Profile & Security */}
+            <Route path="profile" element={<ManagerProfilePage />} />
 
             {/* Fallback for other subpages */}
             <Route path="*" element={<NotFoundPage />} />

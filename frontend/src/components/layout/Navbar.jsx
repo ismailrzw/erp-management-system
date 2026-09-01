@@ -244,7 +244,7 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
                   if (user?.role === 'student') {
                     navigate('/student/profile');
                   } else {
-                    navigate('/manager/dashboard');
+                    navigate('/manager/profile');
                   }
                 }}
                 style={{
