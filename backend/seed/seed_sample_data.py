@@ -1,12 +1,13 @@
 import os
 import sys
 from datetime import datetime, timezone
+
 import bcrypt
 from pymongo import MongoClient
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from app.models.user import Role, UserFields
 from app.models.teacher import TeacherType
+from app.models.user import Role
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/pbl_system")
 client = MongoClient(MONGO_URI)

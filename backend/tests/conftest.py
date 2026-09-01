@@ -63,20 +63,23 @@ def reset_test_database(app):
             if not collection_name.startswith("system."):
                 mongo.db[collection_name].delete_many({})
         mongo.db.users.create_index("email", unique=True)
-        mongo.db.users.insert_one({
-            "name": "Zaman Aziz",
-            "email": MANAGER_EMAIL,
-            "password_hash": bcrypt.hashpw(MANAGER_PASSWORD.encode(), bcrypt.gensalt()).decode(),
-            "role": Role.MANAGER,
-            "deleted": False,
-            "created_at": datetime.now(timezone.utc),
-        })
+        mongo.db.users.replace_one(
+            {"email": MANAGER_EMAIL},
+            {
+                "name": "Zaman Aziz",
+                "email": MANAGER_EMAIL,
+                "password_hash": bcrypt.hashpw(MANAGER_PASSWORD.encode(), bcrypt.gensalt()).decode(),
+                "role": Role.MANAGER,
+                "deleted": False,
+                "created_at": datetime.now(timezone.utc),
+            },
+            upsert=True,
+        )
     yield
     with app.app_context():
         for collection_name in mongo.db.list_collection_names():
             if not collection_name.startswith("system."):
                 mongo.db[collection_name].delete_many({})
-
 
 
 @pytest.fixture(autouse=True)
@@ -106,7 +109,7 @@ def manager_headers(manager_token) -> dict[str, str]:
 
 @pytest.fixture
 def student_headers(app, client) -> dict[str, str]:
-    """Return a valid non-manager JWT for authorization tests."""
+    """Return a valid non-manager JWT for RBAC authorization tests (existing tests only)."""
     password = "student-password"
     with app.app_context():
         mongo.db.users.insert_one({
@@ -115,5 +118,78 @@ def student_headers(app, client) -> dict[str, str]:
             "role": Role.STUDENT, "roll": "TEST-001", "dept": "CS", "section": "A", "deleted": False,
         })
     response = client.post("/api/auth/login", json={"email": "student.test@bnu.edu.pk", "password": password})
+    assert response.status_code == 200, response.get_json()
+    return {"Authorization": f"Bearer {response.get_json()['data']['token']}"}
+
+
+# ── Student fixtures for dashboard & group integration tests ───────────────────
+
+@pytest.fixture
+def student_user(app, manager_headers, client) -> dict:
+    """
+    Create a real student via the Manager API and return their credentials.
+
+    Returns the full ``data`` dict from POST /api/manager/students/, including:
+      - student_id, email, password (initial), name, roll, dept, section, course, teacher
+    """
+    import uuid
+    uid = uuid.uuid4().hex[:4].upper()
+    payload = {
+        "name": "Sara Ahmed",
+        "roll": f"SE-F23-01{uid}",
+        "dept": "SE",
+        "section": "A",
+        "session": "Fall 2023",
+        "course": "Final Year Project",
+        "teacher": "Dr. Imran",
+    }
+    response = client.post("/api/manager/students/", json=payload, headers=manager_headers)
+    assert response.status_code == 201, response.get_json()
+    return response.get_json()["data"]
+
+
+@pytest.fixture
+def student_token(client, student_user) -> str:
+    """Login as the real student and return their JWT."""
+    response = client.post(
+        "/api/auth/login",
+        json={"email": student_user["email"], "password": student_user["password"]},
+    )
+    assert response.status_code == 200, response.get_json()
+    return response.get_json()["data"]["token"]
+
+
+@pytest.fixture
+def real_student_headers(student_token) -> dict[str, str]:
+    """Authorization headers for the real student (for group/profile/dashboard tests)."""
+    return {"Authorization": f"Bearer {student_token}"}
+
+
+@pytest.fixture
+def second_student_user(app, manager_headers, client) -> dict:
+    """Create a second student in the same dept/section for invitation workflow tests."""
+    import uuid
+    uid = uuid.uuid4().hex[:4].upper()
+    payload = {
+        "name": "Ali Hassan",
+        "roll": f"SE-F23-02{uid}",
+        "dept": "SE",
+        "section": "A",
+        "session": "Fall 2023",
+        "course": "Final Year Project",
+        "teacher": "Dr. Imran",
+    }
+    response = client.post("/api/manager/students/", json=payload, headers=manager_headers)
+    assert response.status_code == 201, response.get_json()
+    return response.get_json()["data"]
+
+
+@pytest.fixture
+def second_student_headers(client, second_student_user) -> dict[str, str]:
+    """Authorization headers for the second real student."""
+    response = client.post(
+        "/api/auth/login",
+        json={"email": second_student_user["email"], "password": second_student_user["password"]},
+    )
     assert response.status_code == 200, response.get_json()
     return {"Authorization": f"Bearer {response.get_json()['data']['token']}"}

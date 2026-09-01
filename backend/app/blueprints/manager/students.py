@@ -240,7 +240,7 @@ class StudentBulkImport(Resource):
                 try:
                     args = bulk_import_parser.parse_args()
                     file = args.get("file")
-                except Exception:
+                except Exception:  # noqa: BLE001
                     file = None
             if not file:
                 return {"success": False, "message": "No file uploaded. Please select a CSV or XLSX file."}, 400
@@ -264,7 +264,7 @@ class StudentBulkImport(Resource):
             }, 200
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 400
-        except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
+        except Exception as exc:
             import logging
-            logging.getLogger(__name__).exception("Bulk import exception: %s", exc)
-            return {"success": False, "message": f"Unable to import students: {str(exc)}"}, 500
+            logging.getLogger(__name__).exception("Bulk import exception")
+            return {"success": False, "message": f"Unable to import students: {exc!s}"}, 500
