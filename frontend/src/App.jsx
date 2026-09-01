@@ -42,8 +42,22 @@ import { NotFoundPage } from './pages/NotFoundPage';
 
 const RootRedirect = () => {
   const { user, isAuthenticated } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (user?.role === 'student') return <Navigate to="/student/dashboard" replace />;
+  const effectiveUser =
+    user ||
+    (() => {
+      try {
+        const stored = localStorage.getItem('pbl_user') || sessionStorage.getItem('pbl_user');
+        return stored ? JSON.parse(stored) : null;
+      } catch {
+        return null;
+      }
+    })();
+  const effectiveToken =
+    localStorage.getItem('pbl_token') || sessionStorage.getItem('pbl_token');
+  const isAuthed = isAuthenticated || (!!effectiveToken && !!effectiveUser);
+
+  if (!isAuthed) return <Navigate to="/login" replace />;
+  if (effectiveUser?.role === 'student') return <Navigate to="/student/dashboard" replace />;
   return <Navigate to="/manager/dashboard" replace />;
 };
 

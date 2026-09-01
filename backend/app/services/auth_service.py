@@ -10,6 +10,7 @@ This is the *only* place in the codebase that:
 Both the auth blueprint and any future API consumers must delegate here
 rather than performing these operations inline.
 """
+import re
 from datetime import timedelta
 
 from bson.objectid import ObjectId
@@ -34,7 +35,7 @@ class AuthService:
         Parameters
         ----------
         email : str
-            Already normalised (lowercased, stripped) email address.
+            Email address (handled case-insensitively).
         password : str
             Plaintext password from the request payload.
 
@@ -48,8 +49,9 @@ class AuthService:
             deleted account, DB error).  The caller must return 401.
         """
         try:
+            clean_email = email.strip()
             user = mongo.db.users.find_one({
-                UserFields.EMAIL: email,
+                UserFields.EMAIL: {"$regex": f"^{re.escape(clean_email)}$", "$options": "i"},
                 UserFields.DELETED: {"$ne": True},
             })
 

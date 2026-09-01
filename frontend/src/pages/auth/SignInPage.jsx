@@ -1,15 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
   { role: 'PBL Manager', email: 'zamanaziz@bnu.edu.pk', pass: '11223344' },
-  { role: 'Student — Ahmed Khan', email: 'BCSM-F16-327@SUPERIOR.EDU.PK', pass: 'pbl123*' },
-  { role: 'Evaluator (Internal)', email: 'sarah.ahmed@superior.edu.pk', pass: 'pbl123*' },
-  { role: 'Evaluator (External)', email: 'kashif.mehmood@techvista.com', pass: 'pbl123*' },
+  { role: 'Student — Haroon Ibrahim', email: 'F2020-909@bnu.edu.pk', pass: '11223344' },
+  { role: 'Student — Muhammad Ismail', email: 'F2023-551@bnu.edu.pk', pass: 'pbl123*' },
+  { role: 'Evaluator (Internal)', email: 'ahmed.khan@bnu.edu.pk', pass: 'pbl123*' },
+  { role: 'Evaluator (External)', email: 'sarah.ali@industry.com', pass: 'pbl123*' },
   { role: 'HOD', email: 'hod@superior.edu.pk', pass: 'pbl123*' },
-  { role: 'DEAN', email: 'dean@superior.edu.pk', pass: 'pbl123*' },
 ];
 
 export const SignInPage = () => {
@@ -22,6 +22,13 @@ export const SignInPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('expired') === 'true') {
+      setError('Your session has expired or requires authorization. Please sign in again.');
+    }
+  }, [location.search]);
 
   const from = location.state?.from?.pathname || '/manager/dashboard';
 

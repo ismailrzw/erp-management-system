@@ -551,14 +551,9 @@ export const StudentDashboard = () => {
                   {announcements.map((ann, idx) => (
                     <AccordionItem
                       key={ann.id || ann._id || idx}
-                      title={ann.title}
-                      badge={formatDate(ann.date || ann.created_at)}
+                      announcement={ann}
                       defaultOpen={idx === 0}
-                    >
-                      <div style={{ fontSize: '13.5px', lineHeight: '1.6', color: '#334155', whiteSpace: 'pre-wrap' }}>
-                        {ann.content}
-                      </div>
-                    </AccordionItem>
+                    />
                   ))}
                 </div>
               )}
