@@ -29,8 +29,10 @@ def _serialize(document: dict | None) -> dict | None:
         return None
     result = dict(document)
     result["id"] = str(result.pop(course_model.Field.ID))
-    for key, value in result.items():
-        if isinstance(value, datetime):
+    for key, value in list(result.items()):
+        if isinstance(value, ObjectId):
+            result[key] = str(value)
+        elif isinstance(value, datetime):
             result[key] = value.isoformat()
     return result
 

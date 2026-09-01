@@ -338,20 +338,10 @@ def update_group(group_id: str, leader_id: str, data: dict) -> dict:
 
 def leave_group(student_id: str, group_id: str) -> dict:
     """
-    Remove a non-leader student from the group.
-
-    Rules
-    -----
-    - The group leader cannot leave; they must first transfer leadership
-      (not yet implemented) or disband the group.
-    - Only works on ``pending`` groups (approved groups are frozen).
-
-    Raises
-    ------
-    ValueError
-        - Student is the group leader.
-        - Student is not a member of this group.
-        - Group is not found or not pending.
+    Remove a student from the group.
+    - If student is the leader and sole member, disbands the group.
+    - If student is the leader and other members remain, raises ValueError instructing to transfer leadership.
+    - If student is a non-leader member, removes student from group.
     """
     group = mongo.db[COLLECTION].find_one({
         Field.ID:        _oid(group_id),
@@ -361,13 +351,31 @@ def leave_group(student_id: str, group_id: str) -> dict:
     if group is None:
         raise ValueError("Group not found, or you are not a member of this pending group.")
 
-    if group[Field.LEADER_ID] == _oid(student_id):
-        raise ValueError(
-            "Group leaders cannot leave. Assign a new leader before leaving, "
-            "or contact the manager to disband the group."
-        )
-
     now = _now()
+    is_leader = group[Field.LEADER_ID] == _oid(student_id)
+    member_count = len(group.get(Field.MEMBER_IDS, []))
+
+    if is_leader:
+        if member_count > 1:
+            raise ValueError(
+                "Group leaders cannot leave while other members remain. Please transfer leadership to another member first."
+            )
+        # Sole member leader: disband group
+        mongo.db[COLLECTION].update_one(
+            {Field.ID: _oid(group_id)},
+            {"$set": {Field.STATUS: Status.DELETED, Field.UPDATED_AT: now}},
+        )
+        mongo.db[UserFields.COLLECTION].update_one(
+            {UserFields.ID: _oid(student_id)},
+            {"$unset": {Field.GROUP_ID: ""}, "$set": {UserFields.UPDATED_AT: now}},
+        )
+        mongo.db[INVITATIONS_COLLECTION].update_many(
+            {InvitationField.GROUP_ID: _oid(group_id), InvitationField.STATUS: InvitationStatus.PENDING},
+            {"$set": {InvitationField.STATUS: InvitationStatus.DECLINED, InvitationField.RESPONDED_AT: now}},
+        )
+        return {"left": True, "disbanded": True, "student_id": student_id, "group_id": group_id}
+
+    # Non-leader member leaving
     mongo.db[COLLECTION].update_one(
         {Field.ID: _oid(group_id)},
         {
@@ -387,6 +395,51 @@ def leave_group(student_id: str, group_id: str) -> dict:
                   InvitationField.RESPONDED_AT: now}},
     )
     return {"left": True, "student_id": student_id, "group_id": group_id}
+
+
+def transfer_leadership(group_id: str, leader_id: str, new_leader_id: str) -> dict:
+    """
+    Transfer group leadership to another active group member.
+    Only the current group leader can initiate this.
+    """
+    if leader_id == new_leader_id:
+        raise ValueError("You are already the group leader.")
+
+    group = mongo.db[COLLECTION].find_one({
+        Field.ID:        _oid(group_id),
+        Field.STATUS:    Status.PENDING,
+        Field.LEADER_ID: _oid(leader_id),
+    })
+    if group is None:
+        raise ValueError("Group not found, not in pending status, or you are not the leader.")
+
+    new_leader_oid = _oid(new_leader_id)
+    if new_leader_oid not in group.get(Field.MEMBER_IDS, []):
+        raise ValueError("The designated new leader is not a member of this group.")
+
+    new_leader_doc = mongo.db[UserFields.COLLECTION].find_one({
+        UserFields.ID:      new_leader_oid,
+        UserFields.DELETED: {"$ne": True},
+    })
+    if new_leader_doc is None:
+        raise ValueError("The designated student account does not exist or is inactive.")
+
+    now = _now()
+    mongo.db[COLLECTION].update_one(
+        {Field.ID: _oid(group_id)},
+        {
+            "$set": {Field.LEADER_ID: new_leader_oid, Field.UPDATED_AT: now},
+            "$inc": {Field.VERSION: 1},
+        },
+    )
+
+    return {
+        "transferred":     True,
+        "group_id":        group_id,
+        "new_leader_id":   new_leader_id,
+        "new_leader_name": new_leader_doc.get(UserFields.NAME, ""),
+        "new_leader_roll": new_leader_doc.get(UserFields.ROLL, ""),
+    }
 
 
 def remove_member(group_id: str, leader_id: str, member_id: str) -> dict:
@@ -551,8 +604,8 @@ def get_pending_invitations(student_id: str) -> list[dict]:
     """
     Return all pending invitations addressed to this student.
 
-    Each invitation is enriched with group name, leader name, and course
-    so the student can make an informed decision.
+    Each invitation is enriched with group name, project title, leader name,
+    inviter name, and course so the student can make an informed decision.
 
     Returns
     -------
@@ -571,11 +624,12 @@ def get_pending_invitations(student_id: str) -> list[dict]:
         # Enrich with group details
         group = mongo.db[COLLECTION].find_one(
             {Field.ID: inv[InvitationField.GROUP_ID]},
-            {Field.NAME: 1, Field.COURSE: 1, Field.DEPT: 1, Field.SECTION: 1,
+            {Field.NAME: 1, Field.PROJECT_TITLE: 1, Field.COURSE: 1, Field.DEPT: 1, Field.SECTION: 1,
              Field.LEADER_ID: 1, Field.MEMBER_IDS: 1},
         )
         if group:
             serialized["group_name"]    = group.get(Field.NAME, "")
+            serialized["project_title"] = group.get(Field.PROJECT_TITLE, "")
             serialized["group_course"]  = group.get(Field.COURSE, "")
             serialized["group_dept"]    = group.get(Field.DEPT, "")
             serialized["group_section"] = group.get(Field.SECTION, "")
@@ -589,6 +643,16 @@ def get_pending_invitations(student_id: str) -> list[dict]:
             if leader:
                 serialized["leader_name"] = leader.get(UserFields.NAME, "")
                 serialized["leader_roll"] = leader.get(UserFields.ROLL, "")
+
+        # Enrich with inviter details
+        if inv.get(InvitationField.INVITED_BY):
+            inviter = mongo.db[UserFields.COLLECTION].find_one(
+                {UserFields.ID: inv[InvitationField.INVITED_BY]},
+                {UserFields.NAME: 1, UserFields.ROLL: 1},
+            )
+            if inviter:
+                serialized["invited_by_name"] = inviter.get(UserFields.NAME, "")
+                serialized["invited_by_roll"] = inviter.get(UserFields.ROLL, "")
 
         enriched.append(serialized)
     return enriched

@@ -47,6 +47,7 @@ from app.services.group_service import (
     remove_member,
     respond_to_invitation,
     search_students,
+    transfer_leadership,
     update_group,
 )
 from app.utils.audit import log_audit
@@ -76,6 +77,10 @@ update_group_model = student_groups_ns.model("UpdateGroup", {
 
 invite_model = student_groups_ns.model("InviteMember", {
     "roll": fields.String(required=True, description="Roll number of the student to invite"),
+})
+
+transfer_leadership_model = student_groups_ns.model("TransferLeadership", {
+    "new_leader_id": fields.String(required=True, description="User ID of the new group leader"),
 })
 
 
@@ -176,7 +181,7 @@ class GroupLeave(Resource):
     @student_groups_ns.doc(security="Bearer Auth")
     @role_required(Role.STUDENT)
     def post(self, group_id):
-        """Leave a group.  Non-leader members only.  Leaders cannot leave."""
+        """Leave a group. Non-leader members or sole-member leaders."""
         student_id = get_jwt_identity()
         try:
             result = leave_group(student_id, group_id)
@@ -189,6 +194,36 @@ class GroupLeave(Resource):
 
         log_audit(mongo.db, student_id, Role.STUDENT, "groups", "leave", target_id=group_id)
         return {"success": True, "message": "You have left the group.", "data": result}, 200
+
+
+@student_groups_ns.route("/<string:group_id>/transfer-leadership")
+class GroupTransferLeadership(Resource):
+
+    @student_groups_ns.doc(security="Bearer Auth")
+    @student_groups_ns.expect(transfer_leadership_model)
+    @role_required(Role.STUDENT)
+    def post(self, group_id):
+        """Transfer group leadership to another active group member. Leader only."""
+        payload = request.get_json() or {}
+        new_leader_id = payload.get("new_leader_id", "").strip()
+        if not new_leader_id:
+            return {"success": False, "message": "Field 'new_leader_id' is required."}, 400
+
+        student_id = get_jwt_identity()
+        try:
+            result = transfer_leadership(group_id, student_id, new_leader_id)
+        except ValueError as exc:
+            msg = str(exc)
+            code = 403 if "leader" in msg.lower() else 400
+            return {"success": False, "message": msg}, code
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
+
+        log_audit(
+            mongo.db, student_id, Role.STUDENT, "groups", "transfer_leadership",
+            target_id=group_id, new_value={"new_leader_id": new_leader_id},
+        )
+        return {"success": True, "message": f"Leadership transferred to {result['new_leader_name']}.", "data": result}, 200
 
 
 @student_groups_ns.route("/<string:group_id>/invite")

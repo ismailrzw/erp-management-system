@@ -22,8 +22,10 @@ def _serialize(document: dict | None) -> dict | None:
     result = dict(document)
     result["id"] = str(result.pop(AttachmentFields.ID))
     result.pop(AttachmentFields.FILE_PATH, None)
-    for key, value in result.items():
-        if isinstance(value, datetime):
+    for key, value in list(result.items()):
+        if isinstance(value, ObjectId):
+            result[key] = str(value)
+        elif isinstance(value, datetime):
             result[key] = value.isoformat()
     return result
 

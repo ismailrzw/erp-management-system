@@ -26,6 +26,13 @@ export const studentGroupApi = {
     return response.data;
   },
 
+  transferLeadership: async (groupId, newLeaderId) => {
+    const response = await api.post(`/student/groups/${groupId}/transfer-leadership`, {
+      new_leader_id: newLeaderId,
+    });
+    return response.data;
+  },
+
   inviteMember: async (groupId, roll) => {
     const response = await api.post(`/student/groups/${groupId}/invite`, { roll });
     return response.data;

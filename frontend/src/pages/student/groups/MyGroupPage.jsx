@@ -15,7 +15,10 @@ import {
   PlusCircle,
   Compass,
   RefreshCw,
-  Info,
+  X,
+  BookOpen,
+  Layers,
+  ShieldCheck,
 } from 'lucide-react';
 import { studentGroupApi } from '../../../api/studentGroupApi';
 import { useAuth } from '../../../context/useAuth';
@@ -31,10 +34,11 @@ export const MyGroupPage = () => {
   const [toast, setToast] = useState({ message: '', type: 'success' });
   const navigate = useNavigate();
 
-  // Invite Modal States
+  // Multi-Select Invite Modal States
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [inviteRoll, setInviteRoll] = useState('');
+  const [inviteRollQuery, setInviteRollQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [selectedPeers, setSelectedPeers] = useState([]); // [{ id, name, roll }]
   const [searching, setSearching] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState('');
@@ -49,9 +53,11 @@ export const MyGroupPage = () => {
   const [memberToRemove, setMemberToRemove] = useState(null);
   const [removing, setRemoving] = useState(false);
 
-  // Leave Group Modal
+  // Leave Group & Leadership Transfer Modal
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+  const [selectedSuccessorId, setSelectedSuccessorId] = useState('');
   const [leaving, setLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState('');
 
   const fetchGroup = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -77,16 +83,16 @@ export const MyGroupPage = () => {
     fetchGroup();
   }, [fetchGroup]);
 
-  // Peer Search on input change
+  // Peer Search on input change with 300ms debounce
   useEffect(() => {
-    if (!inviteRoll.trim() || inviteRoll.length < 2) {
+    if (!inviteRollQuery.trim() || inviteRollQuery.trim().length < 1) {
       setSearchResults([]);
       return;
     }
     const timer = setTimeout(async () => {
       try {
         setSearching(true);
-        const res = await studentGroupApi.searchStudents(inviteRoll.trim());
+        const res = await studentGroupApi.searchStudents(inviteRollQuery.trim());
         if (res.success && res.data?.items) {
           setSearchResults(res.data.items);
         }
@@ -98,32 +104,75 @@ export const MyGroupPage = () => {
     }, 250);
 
     return () => clearTimeout(timer);
-  }, [inviteRoll]);
+  }, [inviteRollQuery]);
 
   const handleOpenInvite = () => {
-    setInviteRoll('');
+    setInviteRollQuery('');
     setSearchResults([]);
+    setSelectedPeers([]);
     setInviteError('');
     setIsInviteModalOpen(true);
   };
 
-  const handleSendInvite = async (rollToSend) => {
-    const targetRoll = rollToSend || inviteRoll.trim();
-    if (!targetRoll) {
-      setInviteError('Please enter or select a student roll number.');
+  const handleTogglePeerSelection = (peer) => {
+    if (peer.has_group) return;
+
+    const currentMemberCount = group?.members?.length || group?.member_count || 1;
+    const maxGroup = group?.max_group || 5;
+    const remainingCapacity = maxGroup - currentMemberCount;
+
+    const isAlreadySelected = selectedPeers.some((p) => p.roll.toUpperCase() === peer.roll.toUpperCase());
+
+    if (isAlreadySelected) {
+      setSelectedPeers((prev) => prev.filter((p) => p.roll.toUpperCase() !== peer.roll.toUpperCase()));
+      setInviteError('');
+    } else {
+      if (selectedPeers.length >= remainingCapacity) {
+        setInviteError(`Capacity limit reached: You can invite a maximum of ${remainingCapacity} peer(s).`);
+        return;
+      }
+      setSelectedPeers((prev) => [...prev, peer]);
+      setInviteError('');
+    }
+  };
+
+  const handleRemoveSelectedPeer = (roll) => {
+    setSelectedPeers((prev) => prev.filter((p) => p.roll.toUpperCase() !== roll.toUpperCase()));
+  };
+
+  const handleSendBatchInvitations = async () => {
+    if (selectedPeers.length === 0) {
+      setInviteError('Please select at least one peer to invite.');
       return;
     }
 
     try {
       setInviting(true);
       setInviteError('');
-      const res = await studentGroupApi.inviteMember(group.id, targetRoll);
-      if (res.success) {
-        setToast({ message: `Invitation sent to ${targetRoll}!`, type: 'success' });
+
+      const results = await Promise.allSettled(
+        selectedPeers.map((peer) => studentGroupApi.inviteMember(group.id, peer.roll))
+      );
+
+      const successful = results.filter((r) => r.status === 'fulfilled' && r.value?.success);
+      const failed = results.filter((r) => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value?.success));
+
+      if (successful.length > 0) {
+        setToast({
+          message: `Successfully sent ${successful.length} invitation(s)!`,
+          type: 'success',
+        });
         setIsInviteModalOpen(false);
+        setSelectedPeers([]);
+        fetchGroup();
+      }
+
+      if (failed.length > 0) {
+        const errorMsg = failed[0].reason?.response?.data?.message || failed[0].reason?.message || 'Some invitations failed to send.';
+        setInviteError(errorMsg);
       }
     } catch (err) {
-      setInviteError(err.response?.data?.message || err.message || 'Failed to send invitation');
+      setInviteError(err.response?.data?.message || err.message || 'Failed to send invitations');
     } finally {
       setInviting(false);
     }
@@ -184,22 +233,50 @@ export const MyGroupPage = () => {
     }
   };
 
-  const handleConfirmLeaveGroup = async () => {
+  const handleOpenLeaveModal = () => {
+    setSelectedSuccessorId('');
+    setLeaveError('');
+    setIsLeaveModalOpen(true);
+  };
+
+  const handleConfirmLeaveOrTransfer = async () => {
+    const isLeader = group.is_leader || group.leader_id === user?.id || group.leader_id === user?._id;
+    const memberCount = group.members?.length || group.member_count || 1;
+
     try {
       setLeaving(true);
-      const res = await studentGroupApi.leaveGroup(group.id);
-      if (res.success) {
-        setToast({ message: res.message || 'You have left the group.', type: 'success' });
+      setLeaveError('');
+
+      // Leader leaving multi-member group: must transfer leadership first
+      if (isLeader && memberCount > 1) {
+        if (!selectedSuccessorId) {
+          setLeaveError('Please select a new group leader before leaving.');
+          setLeaving(false);
+          return;
+        }
+
+        const transferRes = await studentGroupApi.transferLeadership(group.id, selectedSuccessorId);
+        if (!transferRes.success) {
+          setLeaveError(transferRes.message || 'Failed to transfer leadership.');
+          setLeaving(false);
+          return;
+        }
+      }
+
+      // Execute leave
+      const leaveRes = await studentGroupApi.leaveGroup(group.id);
+      if (leaveRes.success) {
+        setToast({
+          message: leaveRes.message || 'You have successfully left the group.',
+          type: 'success',
+        });
         setIsLeaveModalOpen(false);
         setTimeout(() => {
           navigate('/student/dashboard');
-        }, 800);
+        }, 700);
       }
     } catch (err) {
-      setToast({
-        message: err.response?.data?.message || 'Failed to leave group',
-        type: 'error',
-      });
+      setLeaveError(err.response?.data?.message || err.message || 'Failed to complete request.');
     } finally {
       setLeaving(false);
     }
@@ -248,7 +325,7 @@ export const MyGroupPage = () => {
               lineHeight: '1.5',
             }}
           >
-            Form a new group as leader and invite your classmates, or browse open groups in your course section and accept pending invitations.
+            Create a new group as team leader and invite your classmates, or check your pending group invitations.
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center' }}>
@@ -291,7 +368,7 @@ export const MyGroupPage = () => {
               }}
             >
               <Compass size={16} />
-              <span>Browse Groups & Invites</span>
+              <span>Browse Invitations</span>
             </button>
           </div>
         </div>
@@ -304,6 +381,8 @@ export const MyGroupPage = () => {
   const maxGroup = group.max_group || 5;
   const minGroup = group.min_group || 2;
   const isFull = memberCount >= maxGroup;
+  const remainingCapacity = Math.max(0, maxGroup - memberCount);
+  const otherMembers = group.members?.filter((m) => !m.is_leader && m.id !== group.leader_id) || [];
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -324,7 +403,7 @@ export const MyGroupPage = () => {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '14px',
-          marginBottom: '22px',
+          marginBottom: '20px',
         }}
       >
         <div>
@@ -348,7 +427,7 @@ export const MyGroupPage = () => {
             </span>
           </div>
           <p style={{ margin: '4px 0 0', fontSize: '13.5px', color: 'var(--body-text)' }}>
-            {group.project_title || 'No project title set'}
+            Project: <b style={{ color: 'var(--primary)' }}>{group.project_title || 'No project title set'}</b>
           </p>
         </div>
 
@@ -368,7 +447,7 @@ export const MyGroupPage = () => {
               border: '1px solid #e2e8f0',
               borderRadius: '6px',
               color: '#334155',
-              cursor: 'pointer',
+              cursor: refreshing ? 'not-allowed' : 'pointer',
             }}
           >
             <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
@@ -417,14 +496,14 @@ export const MyGroupPage = () => {
                 }}
               >
                 <UserPlus size={15} />
-                <span>{isFull ? 'Group Full' : 'Invite Peer'}</span>
+                <span>{isFull ? 'Group Full' : '+ Invite Peer'}</span>
               </button>
             </>
           )}
 
           <button
             type="button"
-            onClick={() => setIsLeaveModalOpen(true)}
+            onClick={handleOpenLeaveModal}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -456,19 +535,25 @@ export const MyGroupPage = () => {
           backgroundColor: '#ffffff',
           border: '1px solid #e2e8f0',
           borderRadius: '8px',
-          marginBottom: '22px',
+          marginBottom: '20px',
           fontSize: '13px',
           color: '#475569',
         }}
       >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <BookOpen size={15} color="var(--primary)" />
+          <span>Course: <b>{group.course}</b></span>
+        </div>
+        <div>•</div>
         <div>Department: <b>{group.dept}</b></div>
         <div>•</div>
         <div>Section: <b>{group.section}</b></div>
         <div>•</div>
-        <div>Course: <b>{group.course}</b></div>
-        <div>•</div>
-        <div>
-          Capacity: <b>{memberCount} / {maxGroup}</b> (Min required: {minGroup})
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Layers size={15} color="var(--primary)" />
+          <span>
+            Capacity: <b>{memberCount} / {maxGroup}</b> (Min required: {minGroup})
+          </span>
         </div>
       </div>
 
@@ -492,7 +577,7 @@ export const MyGroupPage = () => {
           </div>
 
           <span style={{ fontSize: '12.5px', color: 'var(--muted)' }}>
-            {maxGroup - memberCount} slot{maxGroup - memberCount === 1 ? '' : 's'} remaining
+            {remainingCapacity} slot{remainingCapacity === 1 ? '' : 's'} remaining
           </span>
         </div>
 
@@ -506,6 +591,7 @@ export const MyGroupPage = () => {
                 key={m.id}
                 style={{
                   display: 'flex',
+                  flexWrap: 'wrap',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '12px 16px',
@@ -535,7 +621,7 @@ export const MyGroupPage = () => {
                   </div>
 
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>
                         {m.name}
                       </span>
@@ -572,7 +658,7 @@ export const MyGroupPage = () => {
                       )}
                     </div>
                     <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                      Roll: <b>{m.roll}</b>
+                      Roll: <b>{m.roll}</b> • {m.email}
                     </div>
                   </div>
                 </div>
@@ -608,16 +694,16 @@ export const MyGroupPage = () => {
         </div>
       </div>
 
-      {/* ── Invite Peer Modal ── */}
+      {/* ── Multi-Select Invite Peer Modal ── */}
       {isInviteModalOpen && (
         <Modal
           isOpen={isInviteModalOpen}
           onClose={() => setIsInviteModalOpen(false)}
-          title="Invite Peer to Project Group"
+          title="Invite Peers to Project Group"
         >
           <div>
             <p style={{ margin: '0 0 14px', fontSize: '13px', color: 'var(--body-text)' }}>
-              Search for eligible students in <b>{group.dept} - Section {group.section}</b> by their roll number.
+              Search and select eligible students from <b>{group.dept} (Section {group.section})</b> to invite.
             </p>
 
             {inviteError && (
@@ -636,6 +722,51 @@ export const MyGroupPage = () => {
               </div>
             )}
 
+            {/* Selected Peers Chips */}
+            {selectedPeers.length > 0 && (
+              <div style={{ marginBottom: '14px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                  Selected Peers ({selectedPeers.length} / {remainingCapacity}):
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {selectedPeers.map((peer) => (
+                    <span
+                      key={peer.roll}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        backgroundColor: '#eff6ff',
+                        border: '1px solid #bfdbfe',
+                        borderRadius: '16px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        color: '#1e40af',
+                      }}
+                    >
+                      <span>{peer.name} ({peer.roll})</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSelectedPeer(peer.roll)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          cursor: 'pointer',
+                          color: '#1e40af',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <X size={13} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={{ position: 'relative', marginBottom: '14px' }}>
               <Search
                 size={16}
@@ -644,9 +775,9 @@ export const MyGroupPage = () => {
               />
               <input
                 type="text"
-                placeholder="Type roll number (e.g. SE-F23, 001)..."
-                value={inviteRoll}
-                onChange={(e) => setInviteRoll(e.target.value)}
+                placeholder="Search by roll number or name..."
+                value={inviteRollQuery}
+                onChange={(e) => setInviteRollQuery(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '9px 12px 9px 36px',
@@ -666,59 +797,82 @@ export const MyGroupPage = () => {
               )}
             </div>
 
-            {/* Suggestions list */}
+            {/* Suggestions list with checkboxes */}
             {searchResults.length > 0 && (
               <div
                 style={{
-                  maxHeight: '200px',
+                  maxHeight: '220px',
                   overflowY: 'auto',
                   border: '1px solid #e2e8f0',
                   borderRadius: '6px',
                   marginBottom: '16px',
                 }}
               >
-                {searchResults.map((s) => (
-                  <div
-                    key={s.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '8px 12px',
-                      borderBottom: '1px solid #f1f5f9',
-                      fontSize: '13px',
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 600, color: '#1e293b' }}>{s.name}</div>
-                      <div style={{ fontSize: '11.5px', color: '#64748b' }}>Roll: {s.roll}</div>
-                    </div>
+                {searchResults.map((s) => {
+                  const isSelected = selectedPeers.some((p) => p.roll.toUpperCase() === s.roll.toUpperCase());
+                  const isDisabled = s.has_group;
 
-                    {s.has_group ? (
-                      <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
-                        Already in a group
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleSendInvite(s.roll)}
-                        disabled={inviting}
-                        style={{
-                          padding: '4px 10px',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          backgroundColor: 'var(--primary)',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Invite
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={() => !isDisabled && handleTogglePeerSelection(s)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        borderBottom: '1px solid #f1f5f9',
+                        fontSize: '13px',
+                        backgroundColor: isSelected ? '#f0fdf4' : isDisabled ? '#f8fafc' : '#ffffff',
+                        cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        transition: 'background-color 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={isDisabled}
+                          onChange={() => {}} // handled by row click
+                          style={{ cursor: isDisabled ? 'not-allowed' : 'pointer' }}
+                        />
+                        <div>
+                          <div style={{ fontWeight: 600, color: isDisabled ? '#94a3b8' : '#1e293b' }}>
+                            {s.name}
+                          </div>
+                          <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                            Roll: <b>{s.roll}</b> • {s.email}
+                          </div>
+                        </div>
+                      </div>
+
+                      {isDisabled ? (
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            color: '#94a3b8',
+                            backgroundColor: '#f1f5f9',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontStyle: 'italic',
+                          }}
+                        >
+                          Already in a group
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: '11.5px',
+                            fontWeight: 600,
+                            color: isSelected ? 'var(--success)' : 'var(--primary)',
+                          }}
+                        >
+                          {isSelected ? '✓ Selected' : '+ Select'}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -741,24 +895,30 @@ export const MyGroupPage = () => {
               </button>
               <button
                 type="button"
-                onClick={() => handleSendInvite()}
-                disabled={inviting || !inviteRoll.trim()}
+                onClick={handleSendBatchInvitations}
+                disabled={inviting || selectedPeers.length === 0}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
                   padding: '8px 18px',
-                  backgroundColor: 'var(--primary)',
+                  backgroundColor: selectedPeers.length === 0 ? '#94a3b8' : 'var(--primary)',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '13px',
                   fontWeight: 600,
-                  cursor: inviting || !inviteRoll.trim() ? 'not-allowed' : 'pointer',
+                  cursor: inviting || selectedPeers.length === 0 ? 'not-allowed' : 'pointer',
                 }}
               >
                 {inviting ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />}
-                <span>{inviting ? 'Sending...' : 'Send Invitation'}</span>
+                <span>
+                  {inviting
+                    ? 'Sending Invitations...'
+                    : selectedPeers.length > 0
+                    ? `Send Invitation${selectedPeers.length > 1 ? 's' : ''} (${selectedPeers.length})`
+                    : 'Select Peers to Invite'}
+                </span>
               </button>
             </div>
           </div>
@@ -933,24 +1093,40 @@ export const MyGroupPage = () => {
         </Modal>
       )}
 
-      {/* ── Leave Group Modal ── */}
+      {/* ── Leave Group & Leadership Transfer Modal ── */}
       {isLeaveModalOpen && (
         <Modal
           isOpen={isLeaveModalOpen}
           onClose={() => setIsLeaveModalOpen(false)}
-          title="Leave Project Group"
+          title={isLeader && memberCount > 1 ? 'Designate New Leader & Leave Group' : 'Leave Project Group'}
         >
           <div>
+            {leaveError && (
+              <div
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: 'var(--danger-light)',
+                  border: '1px solid #fecaca',
+                  borderRadius: '6px',
+                  color: '#b91c1c',
+                  fontSize: '13px',
+                  marginBottom: '14px',
+                }}
+              >
+                {leaveError}
+              </div>
+            )}
+
             <div
               style={{
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: '10px',
                 padding: '12px',
-                backgroundColor: '#fef2f2',
-                border: '1px solid #fecaca',
+                backgroundColor: isLeader && memberCount > 1 ? '#eff6ff' : '#fef2f2',
+                border: isLeader && memberCount > 1 ? '1px solid #bfdbfe' : '1px solid #fecaca',
                 borderRadius: '6px',
-                color: '#991b1b',
+                color: isLeader && memberCount > 1 ? '#1e40af' : '#991b1b',
                 fontSize: '13px',
                 marginBottom: '16px',
                 lineHeight: '1.5',
@@ -960,19 +1136,67 @@ export const MyGroupPage = () => {
               <div>
                 {isLeader && memberCount > 1 ? (
                   <span>
-                    You are the designated <b>Group Leader</b>. Leaving will automatically transfer leadership to the next remaining member.
+                    As the <b>Group Leader</b>, you must designate a new leader from your active group members before departing.
                   </span>
                 ) : isLeader && memberCount === 1 ? (
                   <span>
-                    You are the <b>only member</b>. Leaving will permanently delete this group.
+                    You are the <b>only member</b> of this group. Leaving will permanently disband and delete <b>{group.name}</b>.
                   </span>
                 ) : (
                   <span>
-                    You will be removed from <b>{group.name}</b> and will be able to join or create another group.
+                    You will be removed from <b>{group.name}</b> and will be free to join or create another group.
                   </span>
                 )}
               </div>
             </div>
+
+            {/* Successor Selection for Leader */}
+            {isLeader && memberCount > 1 && (
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>
+                  Select the New Group Leader:
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                  {otherMembers.map((member) => {
+                    const isSelected = selectedSuccessorId === member.id;
+                    return (
+                      <label
+                        key={member.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '10px 14px',
+                          borderRadius: '6px',
+                          border: isSelected ? '2px solid var(--primary)' : '1px solid #e2e8f0',
+                          backgroundColor: isSelected ? '#eff6ff' : '#ffffff',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="successor"
+                          value={member.id}
+                          checked={isSelected}
+                          onChange={() => setSelectedSuccessorId(member.id)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '13.5px' }}>
+                            {member.name}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#64748b' }}>
+                            Roll: <b>{member.roll}</b> • {member.email}
+                          </div>
+                        </div>
+                        {isSelected && <ShieldCheck size={18} color="var(--primary)" />}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button
@@ -993,8 +1217,8 @@ export const MyGroupPage = () => {
               </button>
               <button
                 type="button"
-                onClick={handleConfirmLeaveGroup}
-                disabled={leaving}
+                onClick={handleConfirmLeaveOrTransfer}
+                disabled={leaving || (isLeader && memberCount > 1 && !selectedSuccessorId)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1006,11 +1230,19 @@ export const MyGroupPage = () => {
                   borderRadius: '6px',
                   fontSize: '13px',
                   fontWeight: 600,
-                  cursor: leaving ? 'not-allowed' : 'pointer',
+                  cursor: leaving || (isLeader && memberCount > 1 && !selectedSuccessorId) ? 'not-allowed' : 'pointer',
                 }}
               >
                 {leaving && <Loader2 size={15} className="animate-spin" />}
-                <span>{leaving ? 'Leaving Group...' : 'Yes, Leave Group'}</span>
+                <span>
+                  {leaving
+                    ? 'Processing Departure...'
+                    : isLeader && memberCount > 1
+                    ? 'Transfer Leadership & Leave'
+                    : isLeader && memberCount === 1
+                    ? 'Disband & Leave Group'
+                    : 'Yes, Leave Group'}
+                </span>
               </button>
             </div>
           </div>
