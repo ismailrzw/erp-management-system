@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/useAuth';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { AppShell } from './components/layout/AppShell';
 
@@ -9,28 +10,42 @@ import { SignInPage } from './pages/auth/SignInPage';
 // Manager Pages
 import { ManagerDashboard } from './pages/manager/ManagerDashboard';
 
-// Students Management
+// Students Management (Manager)
 import { StudentListPage } from './pages/manager/students/StudentListPage';
 import { AddStudentPage } from './pages/manager/students/AddStudentPage';
 import { StudentTrashPage } from './pages/manager/students/StudentTrashPage';
 
-// Departments Management
+// Departments Management (Manager)
 import { DepartmentListPage } from './pages/manager/departments/DepartmentListPage';
 import { AddDepartmentPage } from './pages/manager/departments/AddDepartmentPage';
 import { DepartmentTrashPage } from './pages/manager/departments/DepartmentTrashPage';
 
-// Courses Management
+// Courses Management (Manager)
 import { CourseListPage } from './pages/manager/courses/CourseListPage';
 import { AddCoursePage } from './pages/manager/courses/AddCoursePage';
 import { CourseTrashPage } from './pages/manager/courses/CourseTrashPage';
 
-// Teachers Management
+// Teachers Management (Manager)
 import { TeacherListPage } from './pages/manager/teachers/TeacherListPage';
 import { AddTeacherPage } from './pages/manager/teachers/AddTeacherPage';
 import { TeacherTrashPage } from './pages/manager/teachers/TeacherTrashPage';
 
+// Student Pages
+import { StudentDashboard } from './pages/student/StudentDashboard';
+import { MyGroupPage } from './pages/student/groups/MyGroupPage';
+import { CreateGroupPage } from './pages/student/groups/CreateGroupPage';
+import { BrowseGroupsPage } from './pages/student/groups/BrowseGroupsPage';
+import { StudentProfilePage } from './pages/student/profile/StudentProfilePage';
+
 // Fallback
 import { NotFoundPage } from './pages/NotFoundPage';
+
+const RootRedirect = () => {
+  const { user, isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role === 'student') return <Navigate to="/student/dashboard" replace />;
+  return <Navigate to="/manager/dashboard" replace />;
+};
 
 export default function App() {
   return (
@@ -41,7 +56,7 @@ export default function App() {
           <Route path="/login" element={<SignInPage />} />
 
           {/* Root Redirect */}
-          <Route path="/" element={<Navigate to="/manager/dashboard" replace />} />
+          <Route path="/" element={<RootRedirect />} />
 
           {/* Protected Manager Routes */}
           <Route
@@ -77,6 +92,25 @@ export default function App() {
             <Route path="teachers/view" element={<TeacherListPage />} />
             <Route path="teachers/add" element={<AddTeacherPage />} />
             <Route path="teachers/trash" element={<TeacherTrashPage />} />
+
+            {/* Fallback for other subpages */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+
+          {/* Protected Student Routes */}
+          <Route
+            path="/student"
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <AppShell />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="dashboard" element={<StudentDashboard />} />
+            <Route path="group/my" element={<MyGroupPage />} />
+            <Route path="group/create" element={<CreateGroupPage />} />
+            <Route path="group/browse" element={<BrowseGroupsPage />} />
+            <Route path="profile" element={<StudentProfilePage />} />
 
             {/* Fallback for other subpages */}
             <Route path="*" element={<NotFoundPage />} />

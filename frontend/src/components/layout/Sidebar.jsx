@@ -9,7 +9,11 @@ import {
   FolderGit2,
   ClipboardList,
   ChevronDown,
+  Compass,
+  PlusCircle,
+  User,
 } from 'lucide-react';
+import { useAuth } from '../../context/useAuth';
 
 export const Sidebar = ({
   isCollapsed,
@@ -18,6 +22,7 @@ export const Sidebar = ({
   onCloseMobileDrawer,
 }) => {
   const location = useLocation();
+  const { user } = useAuth();
   const [openMenus, setOpenMenus] = useState({
     students: false,
     depts: false,
@@ -25,13 +30,16 @@ export const Sidebar = ({
     teachers: false,
     groups: false,
     survey: false,
+    studentGroup: false,
   });
 
   const toggleMenu = (key) => {
     setOpenMenus((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const navSections = [
+  const isStudent = user?.role === 'student';
+
+  const managerNavSections = [
     {
       section: 'Navigation',
       items: [
@@ -138,6 +146,56 @@ export const Sidebar = ({
       ],
     },
   ];
+
+  const studentNavSections = [
+    {
+      section: 'Navigation',
+      items: [
+        {
+          type: 'link',
+          text: 'Dashboard',
+          to: '/student/dashboard',
+          icon: LayoutDashboard,
+        },
+      ],
+    },
+    {
+      section: 'Project Group',
+      items: [
+        {
+          type: 'link',
+          text: 'My Group',
+          to: '/student/group/my',
+          icon: Users,
+        },
+        {
+          type: 'link',
+          text: 'Browse & Invites',
+          to: '/student/group/browse',
+          icon: Compass,
+        },
+        {
+          type: 'link',
+          text: 'Create Group',
+          to: '/student/group/create',
+          icon: PlusCircle,
+        },
+      ],
+    },
+    {
+      section: 'Account',
+      items: [
+        {
+          type: 'link',
+          text: 'Profile & Security',
+          to: '/student/profile',
+          icon: User,
+        },
+      ],
+    },
+  ];
+
+  const navSections = isStudent ? studentNavSections : managerNavSections;
 
   const sidebarStyle = isMobileView
     ? {

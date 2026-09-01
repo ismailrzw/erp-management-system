@@ -38,7 +38,9 @@ export const SignInPage = () => {
       setIsSubmitting(true);
       const user = await login(email.trim(), password, rememberMe);
       
-      if (user.role === 'pbl_manager') {
+      if (user.role === 'student') {
+        navigate('/student/dashboard', { replace: true });
+      } else if (user.role === 'pbl_manager') {
         navigate('/manager/dashboard', { replace: true });
       } else {
         navigate(from, { replace: true });
