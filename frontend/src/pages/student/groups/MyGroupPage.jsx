@@ -5,6 +5,7 @@ import {
   Crown,
   UserPlus,
   Edit,
+  Edit2,
   LogOut,
   Trash2,
   AlertCircle,
@@ -31,6 +32,7 @@ import { Toast } from '../../../components/ui/Toast';
 import { Preloader } from '../../../components/ui/Preloader';
 import { InviteModal } from '../../../components/student/groups/InviteModal';
 import { LeadershipTransferModal } from '../../../components/student/groups/LeadershipTransferModal';
+import { EditGroupModal } from '../../../components/student/groups/EditGroupModal';
 import { GroupMemberList } from '../../../components/student/groups/GroupMemberList';
 import { formatDate } from '../../../utils/dateUtils';
 
@@ -50,9 +52,7 @@ export const MyGroupPage = () => {
 
   // Edit Group Modal States
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editFormData, setEditFormData] = useState({ name: '', project_title: '' });
-  const [editing, setEditing] = useState(false);
-  const [editError, setEditError] = useState('');
+  const [editModalMode, setEditModalMode] = useState('all'); // 'name' | 'all'
 
   // Member Remove Modal
   const [memberToRemove, setMemberToRemove] = useState(null);
@@ -95,44 +95,10 @@ export const MyGroupPage = () => {
   }, [fetchGroup]);
 
   // Edit Group Form Handlers
-  const handleOpenEditModal = () => {
+  const handleOpenEditModal = (mode = 'all') => {
     if (!group) return;
-    setEditFormData({
-      name: group.name || '',
-      project_title: group.project_title || '',
-    });
-    setEditError('');
+    setEditModalMode(mode);
     setIsEditModalOpen(true);
-  };
-
-  const handleSaveEditGroup = async (e) => {
-    e.preventDefault();
-    const name = editFormData.name.trim();
-    const project_title = editFormData.project_title.trim();
-
-    if (!name || name.length < 3) {
-      setEditError('Group name must be at least 3 characters.');
-      return;
-    }
-    if (!project_title || project_title.length < 5) {
-      setEditError('Project title must be at least 5 characters.');
-      return;
-    }
-
-    try {
-      setEditing(true);
-      setEditError('');
-      const res = await studentGroupApi.updateGroup(group.id, { name, project_title });
-      if (res.success) {
-        setToast({ message: 'Group details updated successfully! Proposal submitted for review.', type: 'success' });
-        setIsEditModalOpen(false);
-        fetchGroup(true);
-      }
-    } catch (err) {
-      setEditError(err.response?.data?.message || 'Failed to update group');
-    } finally {
-      setEditing(false);
-    }
   };
 
   // Remove Member Handlers
@@ -310,7 +276,43 @@ export const MyGroupPage = () => {
 
       {/* Page Header */}
       <PageHeader
-        title={group.name}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <span>{group.name}</span>
+            {isLeader && !isApproved && (
+              <button
+                type="button"
+                onClick={() => handleOpenEditModal('name')}
+                title="Change Group Name"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '4px 10px',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  backgroundColor: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  color: '#475569',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e2e8f0';
+                  e.currentTarget.style.color = 'var(--primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                  e.currentTarget.style.color = '#475569';
+                }}
+              >
+                <Edit2 size={13} />
+                <span>Change Name</span>
+              </button>
+            )}
+          </div>
+        }
         badge={<StatusBadge status={group.status} />}
         subtitle={`Course: ${group.course} • Section ${group.section} • Department: ${group.dept}`}
       >
@@ -339,7 +341,7 @@ export const MyGroupPage = () => {
         {isLeader && !isApproved && (
           <button
             type="button"
-            onClick={handleOpenEditModal}
+            onClick={() => handleOpenEditModal('all')}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -355,7 +357,7 @@ export const MyGroupPage = () => {
             }}
           >
             <Edit size={14} />
-            <span>Edit Group</span>
+            <span>Edit Proposal</span>
           </button>
         )}
 
@@ -409,7 +411,7 @@ export const MyGroupPage = () => {
                 <b>Manager Feedback:</b> {group.rejection_reason || 'Please revise your project title and details.'}
               </div>
               <div style={{ fontSize: '12px', color: '#7f1d1d', marginTop: '6px' }}>
-                Note: {isLeader ? 'Click "Edit Proposal" to revise project details and resubmit for approval.' : 'The group leader can revise project details to resubmit for approval.'}
+                Note: {isLeader ? 'Click "Update Proposal & Resubmit" to revise project details and resubmit for approval.' : 'The group leader can revise project details to resubmit for approval.'}
               </div>
             </div>
           </div>
@@ -417,7 +419,7 @@ export const MyGroupPage = () => {
           {isLeader && (
             <button
               type="button"
-              onClick={handleOpenEditModal}
+              onClick={() => handleOpenEditModal('all')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -434,7 +436,7 @@ export const MyGroupPage = () => {
               }}
             >
               <Edit size={14} />
-              <span>Edit Proposal</span>
+              <span>Update Proposal & Resubmit</span>
             </button>
           )}
         </div>
@@ -737,113 +739,19 @@ export const MyGroupPage = () => {
         }}
       />
 
-      {/* Edit Group Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Group Proposal" maxWidth="500px">
-        <form onSubmit={handleSaveEditGroup} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {editError && (
-            <div
-              style={{
-                padding: '10px 12px',
-                backgroundColor: '#fee2e2',
-                border: '1px solid #fecaca',
-                borderRadius: '6px',
-                color: '#b91c1c',
-                fontSize: '13px',
-              }}
-            >
-              {editError}
-            </div>
-          )}
-
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-              Group Name *
-            </label>
-            <input
-              type="text"
-              value={editFormData.name}
-              onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-              required
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                fontSize: '13.5px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                outline: 'none',
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-              Project Title *
-            </label>
-            <input
-              type="text"
-              value={editFormData.project_title}
-              onChange={(e) => setEditFormData({ ...editFormData, project_title: e.target.value })}
-              required
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                fontSize: '13.5px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                outline: 'none',
-              }}
-            />
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: '10px',
-              marginTop: '10px',
-              paddingTop: '12px',
-              borderTop: '1px solid #e2e8f0',
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setIsEditModalOpen(false)}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                color: '#475569',
-                cursor: 'pointer',
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={editing}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 18px',
-                fontSize: '13px',
-                fontWeight: 600,
-                backgroundColor: 'var(--primary)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: editing ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {editing ? <Loader2 size={15} className="animate-spin" /> : <Edit size={15} />}
-              <span>{editing ? 'Saving...' : 'Save & Resubmit'}</span>
-            </button>
-          </div>
-        </form>
-      </Modal>
+      <EditGroupModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        group={group}
+        mode={editModalMode}
+        onSuccess={() => {
+          setToast({
+            message: editModalMode === 'name' ? 'Group name updated successfully!' : 'Group proposal updated successfully!',
+            type: 'success',
+          });
+          fetchGroup(true);
+        }}
+      />
 
       {/* Remove Member Confirmation Modal */}
       <Modal isOpen={!!memberToRemove} onClose={() => setMemberToRemove(null)} title="Confirm Member Removal" maxWidth="450px">

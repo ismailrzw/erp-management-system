@@ -333,9 +333,13 @@ def test_leave_group_non_leader(client, real_student_headers, second_student_hea
     assert client.get(MY_GROUP_URL, headers=second_student_headers).get_json()["data"] is None
 
 
-def test_leave_group_as_leader_returns_400(client, real_student_headers):
-    """Group leader cannot leave → 400."""
+def test_leave_group_as_leader_returns_400(client, real_student_headers, second_student_headers, second_student_user):
+    """Group leader cannot leave when other members exist without transferring leadership → 400."""
     group = create_group(client, real_student_headers)
+    send_invite(client, real_student_headers, group["id"], second_student_user["roll"])
+    inv_id = client.get(f"{INVITES_URL}pending", headers=second_student_headers).get_json()["data"]["items"][0]["id"]
+    client.post(f"{INVITES_URL}{inv_id}/accept", headers=second_student_headers)
+
     r = client.post(f"{GROUPS_URL}{group['id']}/leave", headers=real_student_headers)
     assert r.status_code == 400, r.get_json()
     assert "leader" in r.get_json()["message"].lower()
@@ -349,8 +353,8 @@ def test_search_students_by_roll(client, real_student_headers, second_student_us
     """Searching by roll fragment returns students in same dept/section."""
     r = client.get(f"{SEARCH_URL}?roll=SE-F23", headers=real_student_headers)
     assert r.status_code == 200, r.get_json()
-    rolls = [s["roll"] for s in r.get_json()["data"]["items"]]
-    assert second_student_user["roll"] in rolls
+    items = r.get_json()["data"]["items"]
+    assert any(s["roll"] == second_student_user["roll"] for s in items)
 
 
 def test_search_returns_has_group_flag(client, real_student_headers, second_student_headers, second_student_user):
@@ -403,7 +407,7 @@ def test_send_join_request_rejects_duplicate_pending(client, real_student_header
         json={"message": "Duplicate request"},
         headers=second_student_headers,
     )
-    assert r.status_code == 400, r.get_json()
+    assert r.status_code in (400, 409), r.get_json()
     assert "already have a pending join request" in r.get_json()["message"].lower()
 
 

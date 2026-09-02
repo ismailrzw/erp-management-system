@@ -14,6 +14,7 @@ import {
   RefreshCw,
   AlertCircle,
   Edit,
+  Edit2,
 } from 'lucide-react';
 import { studentDashboardApi } from '../../api/studentDashboardApi';
 import { studentAttachmentsApi } from '../../api/studentAttachmentsApi';
@@ -25,6 +26,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Toast } from '../../components/ui/Toast';
 import { Preloader } from '../../components/ui/Preloader';
+import { EditGroupModal } from '../../components/student/groups/EditGroupModal';
 import { formatFileSize } from '../../utils/fileUtils';
 
 export const StudentDashboard = () => {
@@ -33,6 +35,8 @@ export const StudentDashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
   const [activeTab, setActiveTab] = useState('announcements'); // 'announcements' | 'attachments'
+  const [isEditGroupModalOpen, setIsEditGroupModalOpen] = useState(false);
+  const [editGroupModalMode, setEditGroupModalMode] = useState('all'); // 'name' | 'all'
   const navigate = useNavigate();
 
   const fetchDashboard = useCallback(async (isRefresh = false) => {
@@ -122,6 +126,9 @@ export const StudentDashboard = () => {
 
   const student = data?.student || {};
   const group = data?.group;
+  const isLeader = group?.members?.find((m) => m.id === student?.id)?.is_leader || group?.is_leader;
+  const isApproved = group?.status === 'approved';
+  const isRejected = group?.status === 'rejected';
   const pendingInvitesCount = data?.pending_invitations_count || 0;
   const announcements = data?.announcements || [];
   const recentAnnouncementsCount = data?.recent_announcements_count ?? announcements.filter((a) => a.is_recent).length;
@@ -170,7 +177,7 @@ export const StudentDashboard = () => {
       </PageHeader>
 
       {/* Rejection Alert Banner if group was rejected */}
-      {group && group.status === 'rejected' && (
+      {group && isRejected && (
         <div
           style={{
             display: 'flex',
@@ -195,32 +202,61 @@ export const StudentDashboard = () => {
                 <b>Manager Feedback:</b> {group.rejection_reason || 'Please review your project proposal and resubmit.'}
               </div>
               <div style={{ fontSize: '12px', color: '#7f1d1d', marginTop: '4px' }}>
-                Group leaders can revise group name and project title on the group page to automatically resubmit for manager approval.
+                {isLeader
+                  ? 'Click "Update Proposal & Resubmit" to revise group name and project title.'
+                  : 'Your group leader can revise project details to automatically resubmit for manager approval.'}
               </div>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => navigate('/student/group/my')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '7px 14px',
-              fontSize: '12.5px',
-              fontWeight: 600,
-              backgroundColor: '#dc2626',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
-          >
-            <Edit size={14} />
-            <span>Update Proposal</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {isLeader && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditGroupModalMode('all');
+                  setIsEditGroupModalOpen(true);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 14px',
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+              >
+                <Edit size={14} />
+                <span>Update Proposal & Resubmit</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => navigate('/student/group/my')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 14px',
+                fontSize: '12.5px',
+                fontWeight: 500,
+                backgroundColor: '#ffffff',
+                border: '1px solid #fecaca',
+                borderRadius: '6px',
+                color: '#dc2626',
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              <span>View Group</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -305,8 +341,50 @@ export const StudentDashboard = () => {
                 <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginTop: '2px', wordBreak: 'break-word' }}>
                   {group.project_title || 'Untitled Project'}
                 </div>
-                <div style={{ fontSize: '13px', color: '#475569', marginTop: '6px' }}>
-                  Group Name: <b>{group.name}</b>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: '13px',
+                    color: '#475569',
+                    marginTop: '6px',
+                    flexWrap: 'wrap',
+                    gap: '6px',
+                  }}
+                >
+                  <div>
+                    Group Name: <b>{group.name}</b>
+                  </div>
+                  {isLeader && !isApproved && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditGroupModalMode('name');
+                        setIsEditGroupModalOpen(true);
+                      }}
+                      title="Change Group Name"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '2px 8px',
+                        fontSize: '11.5px',
+                        fontWeight: 500,
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '4px',
+                        color: '#0369a1',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f9ff')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+                    >
+                      <Edit2 size={12} />
+                      <span>Change Name</span>
+                    </button>
+                  )}
                 </div>
 
                 <div
@@ -716,6 +794,22 @@ export const StudentDashboard = () => {
           )}
         </div>
       </div>
+
+      {group && (
+        <EditGroupModal
+          isOpen={isEditGroupModalOpen}
+          onClose={() => setIsEditGroupModalOpen(false)}
+          group={group}
+          mode={editGroupModalMode}
+          onSuccess={() => {
+            setToast({
+              message: editGroupModalMode === 'name' ? 'Group name updated successfully!' : 'Group proposal updated successfully!',
+              type: 'success',
+            });
+            fetchDashboard();
+          }}
+        />
+      )}
     </div>
   );
 };

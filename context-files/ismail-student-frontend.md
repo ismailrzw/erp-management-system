@@ -43,19 +43,21 @@ frontend/src/
 │   │   └── Accordion.jsx              # Collapsible accordion item for announcements
 │   └── student/
 │       └── groups/
+│           ├── EditGroupModal.jsx     # Reusable modal for dedicated Group Name changes (mode='name') & Proposal updates (mode='all')
 │           ├── InviteModal.jsx        # Multi-select peer discovery search modal with cross-section & capacity guards
 │           ├── LeadershipTransferModal.jsx # Transfer leadership to successor or disband sole-member group
 │           └── GroupMemberList.jsx    # Standardized member list displaying roll, section, email, and leader tag
 ├── pages/
 │   ├── student/
-│   │   ├── StudentDashboard.jsx       # Aggregated student home (stat grid, group summary, announcements, attachments)
+│   │   ├── StudentDashboard.jsx       # Aggregated student home (stat grid, group summary, inline rename, proposal resubmit, announcements, attachments)
 │   │   ├── profile/
 │   │   │   └── StudentProfilePage.jsx # Student profile details, editable fields, and modal password change
 │   │   └── groups/
-│   │       ├── MyGroupPage.jsx        # Active group hub, capacity meter, member management, revision workflow, leader join requests card
+│   │       ├── MyGroupPage.jsx        # Active group hub, capacity meter, member management, inline rename, revision workflow, leader join requests card
 │   │       ├── BrowseGroupsPage.jsx   # 3 Tabs: Browse Groups, Sent Join Requests, and Pending Invitations
 │   │       └── CreateGroupPage.jsx    # Group creation wizard with academic context verification
 │   └── manager/
+│       ├── ManagerDashboard.jsx       # Aggregated manager overview (stats, announcements, attachments with upload/edit title/download/delete)
 │       └── groups/
 │           └── ManageGroupsPage.jsx   # Manager group oversight: live counter tabs, search, filters, approve/reject modals
 ├── App.jsx                            # React Router v6 tree with student and manager protected routes
@@ -74,7 +76,8 @@ frontend/src/
   4. **Announcements:** Total count of active PBL announcements and live unread counter badge.
 - **Revision Guidance Alert:** When a student's group is rejected, a prominent banner renders:
   - Manager's constructive feedback reason.
-  - Direct call-to-action button: `"Update Proposal"`.
+  - Direct call-to-action button: `"Update Proposal & Resubmit"` (opens `EditGroupModal` directly on the dashboard) + `"View Group"` shortcut.
+- **Group Name Modification:** Beside `Group Name: [Name]`, group leaders of editable groups (`pending` or `rejected`) have a direct `"Change Name"` button that opens `EditGroupModal` in `mode="name"` with 3–100 character validation.
 - **Dual Content Grid:**
   - **Left Panel:** Group overview summary or prompt to form/join a group.
   - **Right Panel:** Tabbed interface switching between:
@@ -85,13 +88,14 @@ frontend/src/
 
 ### 2. 👥 Active Group Hub (`MyGroupPage.jsx` — `/student/group/my`)
 - **Group Status Card:** Displays project title, group name, course, department, section, creation date, and status badge.
+- **Dedicated Change Group Name Action:** Right next to the group name in the header, leaders have a `"Change Name"` pencil button to rename their team anytime before approval.
 - **Capacity Meter:** Visual progress bar tracking `members.length / max_capacity` with capacity alert when full (`Invite Peer` button is hidden/disabled when full).
 - **Member Roster (`GroupMemberList`):** Lists all team members with name, roll number, section, email, and leader badge.
 - **Leader Actions:**
   - **Invite Members:** Opens `InviteModal` to search peers in the same course.
   - **Incoming Join Requests Card:** Displays list of pending applicants (Name, Roll, Section, Email, Date, Message) with **Accept** and **Decline** action buttons.
   - **Remove Member:** Leader can remove non-leader members with immediate roster update.
-  - **Edit Proposal:** Allows revising project title and group name. Resets status from `rejected` to `pending` for re-approval.
+  - **Edit Proposal & Resubmit:** Allows revising project title and group name via `EditGroupModal`. Automatically resets status from `rejected` to `pending` for re-approval.
 - **Leave Group / Transfer Leadership:** Non-leaders can leave directly; leaders are prompted to transfer leadership to a chosen successor or disband if sole member.
 
 ---
