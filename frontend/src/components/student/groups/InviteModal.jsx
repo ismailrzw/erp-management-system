@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Loader2, UserPlus, CheckCircle2, AlertCircle, X, Users } from 'lucide-react';
+import { Search, Loader2, UserPlus, AlertCircle, X } from 'lucide-react';
 import { studentGroupApi } from '../../../api/studentGroupApi';
 import { Modal } from '../../ui/Modal';
 

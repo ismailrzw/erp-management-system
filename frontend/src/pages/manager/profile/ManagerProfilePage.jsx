@@ -17,7 +17,7 @@ import { Toast } from '../../../components/ui/Toast';
 import { Preloader } from '../../../components/ui/Preloader';
 
 export const ManagerProfilePage = () => {
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ message: '', type: 'success' });

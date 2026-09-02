@@ -1,16 +1,11 @@
 import { useState, useEffect } from 'react';
 import {
   User,
-  Mail,
-  Lock,
-  Building2,
-  BookOpen,
   GraduationCap,
   CheckCircle2,
   AlertCircle,
   Loader2,
   KeyRound,
-  ShieldCheck,
 } from 'lucide-react';
 import { studentProfileApi } from '../../../api/studentProfileApi';
 import { useAuth } from '../../../context/useAuth';

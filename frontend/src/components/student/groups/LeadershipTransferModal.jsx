@@ -21,10 +21,11 @@ export const LeadershipTransferModal = ({
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedSuccessorId(otherMembers.length > 0 ? otherMembers[0].id : '');
+      const others = (group?.members || []).filter((m) => m.id !== currentUserId);
+      setSelectedSuccessorId(others.length > 0 ? others[0].id : '');
       setLeaveError('');
     }
-  }, [isOpen]);
+  }, [isOpen, group, currentUserId]);
 
   const handleConfirmLeave = async () => {
     try {

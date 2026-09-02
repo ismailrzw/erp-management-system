@@ -1,4 +1,4 @@
-import { Crown, Trash2, Mail } from 'lucide-react';
+import { Crown, Trash2 } from 'lucide-react';
 
 export const GroupMemberList = ({
   members = [],

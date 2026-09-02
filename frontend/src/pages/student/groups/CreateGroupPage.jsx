@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Users,
   PlusCircle,
   ArrowLeft,
   Info,
-  CheckCircle2,
   AlertCircle,
   Loader2,
 } from 'lucide-react';

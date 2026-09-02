@@ -7,14 +7,9 @@ import {
   Search,
   RefreshCw,
   Users,
-  BookOpen,
   ChevronLeft,
   ChevronRight,
   Loader2,
-  AlertCircle,
-  MessageSquare,
-  ShieldCheck,
-  Calendar,
 } from 'lucide-react';
 import { managerGroupsApi } from '../../../api/managerGroupsApi';
 import { departmentsApi } from '../../../api/departmentsApi';
