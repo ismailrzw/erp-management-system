@@ -1,5 +1,8 @@
-# backend/app/__init__.py
-from flask import Flask
+import json
+from datetime import datetime
+
+from bson import ObjectId
+from flask import Flask, make_response
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_restx import Api
@@ -54,6 +57,20 @@ def create_app(config_class=Config):
         security='Bearer Auth'
     )
 
+    @api.representation('application/json')
+    def output_json(data, code, headers=None):
+        def _default(obj):
+            if isinstance(obj, ObjectId):
+                return str(obj)
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+        dumped = json.dumps(data, default=_default) + "\n"
+        resp = make_response(dumped, code)
+        resp.headers.extend(headers or {})
+        return resp
+
     # ── Register Namespaces ──────────────────────────────
     from app.blueprints.auth.routes import auth_ns
     api.add_namespace(auth_ns, path='/api/auth')
@@ -83,5 +100,30 @@ def create_app(config_class=Config):
 
     from app.blueprints.manager.teachers import teachers_ns
     api.add_namespace(teachers_ns, path="/api/manager/teachers")
+
+    from app.blueprints.manager.groups import manager_groups_ns
+    api.add_namespace(manager_groups_ns, path="/api/manager/groups")
+
+    # ── Register Student Namespaces ──────────────────────────────
+    from app.blueprints.student.dashboard import student_dashboard_ns
+    api.add_namespace(student_dashboard_ns, path="/api/student/dashboard")
+
+    from app.blueprints.student.profile import student_profile_ns
+    api.add_namespace(student_profile_ns, path="/api/student/profile")
+
+    from app.blueprints.student.groups import (
+        student_groups_ns,
+        student_invitations_ns,
+        student_search_ns,
+    )
+    api.add_namespace(student_groups_ns,      path="/api/student/groups")
+    api.add_namespace(student_invitations_ns, path="/api/student/invitations")
+    api.add_namespace(student_search_ns,      path="/api/student/students/search")
+
+    from app.blueprints.student.announcements import student_announcements_ns
+    api.add_namespace(student_announcements_ns, path="/api/student/announcements")
+
+    from app.blueprints.student.attachments import student_attachments_ns
+    api.add_namespace(student_attachments_ns, path="/api/student/attachments")
 
     return app

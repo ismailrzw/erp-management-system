@@ -4,14 +4,35 @@ import { formatDate } from '../../utils/dateUtils';
 
 export const AccordionItem = ({
   announcement,
+  title,
+  content,
+  badge,
+  children,
   onEdit,
   onDelete,
   defaultOpen = false,
   isRecent = false,
+  onView,
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  const rawContent = (announcement.content || '').trim();
+  const handleToggle = () => {
+    const nextState = !isOpen;
+    setIsOpen(nextState);
+    if (nextState && onView && isRecent) {
+      onView(announcement);
+    }
+  };
+
+  const itemTitle = announcement?.title || title || 'Announcement';
+  const itemDate = announcement?.date || announcement?.created_at || badge;
+  const rawContent = (
+    announcement?.content ||
+    content ||
+    (typeof children === 'string' ? children : '') ||
+    ''
+  ).trim();
+
   // Short snippet preview for collapsed state (up to 120 chars)
   const snippet = rawContent.length > 120 ? `${rawContent.slice(0, 120)}...` : rawContent;
 
@@ -29,7 +50,7 @@ export const AccordionItem = ({
     >
       {/* Header / Clickable Area */}
       <div
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         style={{
           padding: '14px 16px',
           display: 'flex',
@@ -44,7 +65,7 @@ export const AccordionItem = ({
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <span style={{ fontWeight: 600, color: '#1e293b', fontSize: '14.5px' }}>
-              {announcement.title}
+              {itemTitle}
             </span>
             {isRecent && (
               <span
@@ -68,25 +89,27 @@ export const AccordionItem = ({
           </div>
 
           {/* Date & Metadata */}
-          <div
-            style={{
-              fontSize: '12px',
-              color: '#64748b',
-              marginTop: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
-          >
-            <Calendar size={12} color="#94a3b8" />
-            <span>{formatDate(announcement.date || announcement.created_at)}</span>
-            {announcement.posted_by && (
-              <>
-                <span style={{ margin: '0 4px', color: '#cbd5e1' }}>•</span>
-                <span style={{ color: '#64748b' }}>By Manager</span>
-              </>
-            )}
-          </div>
+          {itemDate && (
+            <div
+              style={{
+                fontSize: '12px',
+                color: '#64748b',
+                marginTop: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <Calendar size={12} color="#94a3b8" />
+              <span>{typeof itemDate === 'string' && itemDate.length > 20 ? formatDate(itemDate) : itemDate}</span>
+              {announcement?.posted_by && (
+                <>
+                  <span style={{ margin: '0 4px', color: '#cbd5e1' }}>•</span>
+                  <span style={{ color: '#64748b' }}>By Manager</span>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Collapsed Snippet Preview */}
           {!isOpen && snippet && (
@@ -130,26 +153,28 @@ export const AccordionItem = ({
             backgroundColor: '#ffffff',
           }}
         >
-          <div
-            style={{
-              fontSize: '14px',
-              color: '#334155',
-              lineHeight: 1.65,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              backgroundColor: '#f8fafc',
-              padding: '12px 14px',
-              borderRadius: '6px',
-              border: '1px solid #f1f5f9',
-              marginBottom: '14px',
-            }}
-          >
-            {rawContent || (
-              <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>
-                No description or content provided for this announcement.
-              </span>
-            )}
-          </div>
+          {children || (
+            <div
+              style={{
+                fontSize: '14px',
+                color: '#334155',
+                lineHeight: 1.65,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                backgroundColor: '#f8fafc',
+                padding: '12px 14px',
+                borderRadius: '6px',
+                border: '1px solid #f1f5f9',
+                marginBottom: (onEdit || onDelete) ? '14px' : '0px',
+              }}
+            >
+              {rawContent || (
+                <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>
+                  No description or content provided for this announcement.
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
