@@ -79,6 +79,8 @@ class Dashboard(Resource):
             try:
                 raw_announcements = list(mongo.db.announcements.find({}).sort("date", -1).limit(100))
                 announcements = [_serialize_doc(a) for a in raw_announcements]
+                for a in announcements:
+                    a["is_recent"] = False
             except Exception:  # noqa: BLE001 - deliberate catch-all, returns partial dashboard response to client
                 announcements = []
 

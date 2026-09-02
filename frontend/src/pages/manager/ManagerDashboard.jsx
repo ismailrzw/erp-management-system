@@ -9,6 +9,7 @@ import {
   Megaphone,
   Search,
   X,
+  Edit2,
 } from 'lucide-react';
 import { dashboardApi } from '../../api/dashboardApi';
 import { announcementsApi } from '../../api/announcementsApi';
@@ -41,6 +42,12 @@ export const ManagerDashboard = () => {
   const [isAttModalOpen, setIsAttModalOpen] = useState(false);
   const [attFormData, setAttFormData] = useState({ title: '', file: null });
   const [attLoading, setAttLoading] = useState(false);
+
+  // Edit Attachment Modal States
+  const [attToEdit, setAttToEdit] = useState(null);
+  const [attEditTitle, setAttEditTitle] = useState('');
+  const [attEditLoading, setAttEditLoading] = useState(false);
+  const [attEditError, setAttEditError] = useState('');
 
   // Delete Attachment Modal
   const [attToDelete, setAttToDelete] = useState(null);
@@ -194,6 +201,39 @@ export const ManagerDashboard = () => {
       });
     } finally {
       setAttLoading(false);
+    }
+  };
+
+  const handleOpenEditAttachment = (att) => {
+    setAttToEdit(att);
+    setAttEditTitle(att.title || att.filename || '');
+    setAttEditError('');
+  };
+
+  const handleSaveEditAttachment = async (e) => {
+    e.preventDefault();
+    if (!attToEdit) return;
+    const title = attEditTitle.trim();
+    if (!title || title.length < 2) {
+      setAttEditError('Attachment title must be at least 2 characters.');
+      return;
+    }
+    if (title.length > 200) {
+      setAttEditError('Attachment title cannot exceed 200 characters.');
+      return;
+    }
+
+    try {
+      setAttEditLoading(true);
+      setAttEditError('');
+      await attachmentsApi.update(attToEdit.id || attToEdit._id, title);
+      setToast({ message: 'Attachment title updated successfully!', type: 'success' });
+      setAttToEdit(null);
+      fetchDashboardData(true);
+    } catch (err) {
+      setAttEditError(err.response?.data?.message || 'Failed to update attachment');
+    } finally {
+      setAttEditLoading(false);
     }
   };
 
@@ -418,7 +458,7 @@ export const ManagerDashboard = () => {
                         transition: 'all 0.15s ease',
                       }}
                     >
-                      Recent ({Math.min(5, allAnnouncements.length)})
+                      Latest ({Math.min(5, allAnnouncements.length)})
                     </button>
                     <button
                       type="button"
@@ -556,7 +596,7 @@ export const ManagerDashboard = () => {
                       onEdit={handleOpenEditAnnouncement}
                       onDelete={() => setAnnToDelete(ann)}
                       defaultOpen={idx === 0 && !annSearch.trim()}
-                      isRecent={idx < 3}
+                      isRecent={false}
                     />
                   ))
                 )}
@@ -734,6 +774,22 @@ export const ManagerDashboard = () => {
                       title="Download File"
                     >
                       <Download size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditAttachment(att)}
+                      style={{
+                        border: 'none',
+                        background: 'none',
+                        color: '#0073aa',
+                        padding: '6px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                      }}
+                      title="Edit Attachment Title"
+                    >
+                      <Edit2 size={16} />
                     </button>
                     <button
                       type="button"
@@ -1058,6 +1114,102 @@ export const ManagerDashboard = () => {
             {attLoading ? 'Deleting...' : 'Delete'}
           </button>
         </div>
+      </Modal>
+
+      {/* Modal: Edit Attachment Title */}
+      <Modal
+        isOpen={!!attToEdit}
+        onClose={() => setAttToEdit(null)}
+        title="Edit Attachment Title"
+        maxWidth="450px"
+      >
+        <form onSubmit={handleSaveEditAttachment}>
+          {attEditError && (
+            <div
+              style={{
+                padding: '10px 12px',
+                backgroundColor: '#fee2e2',
+                border: '1px solid #fecaca',
+                borderRadius: '4px',
+                color: '#b91c1c',
+                fontSize: '13px',
+                marginBottom: '14px',
+              }}
+            >
+              {attEditError}
+            </div>
+          )}
+
+          <div style={{ marginBottom: '16px' }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: '#334155',
+                marginBottom: '6px',
+              }}
+            >
+              Attachment Title *
+            </label>
+            <input
+              type="text"
+              value={attEditTitle}
+              onChange={(e) => setAttEditTitle(e.target.value)}
+              placeholder="e.g. Project Proposal Guidelines"
+              required
+              maxLength={200}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                fontSize: '13.5px',
+                border: '1px solid #cbd5e1',
+                borderRadius: '4px',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+            <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+              Original filename: <strong>{attToEdit?.filename}</strong>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => setAttToEdit(null)}
+              style={{
+                padding: '8px 14px',
+                fontSize: '13px',
+                fontWeight: 500,
+                border: '1px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                color: '#475569',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={attEditLoading}
+              style={{
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: 600,
+                border: 'none',
+                backgroundColor: '#0073aa',
+                color: '#ffffff',
+                borderRadius: '4px',
+                cursor: attEditLoading ? 'not-allowed' : 'pointer',
+                opacity: attEditLoading ? 0.7 : 1,
+              }}
+            >
+              {attEditLoading ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

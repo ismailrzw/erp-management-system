@@ -42,7 +42,7 @@ total_pass = 0
 total_fail = 0
 
 
-def test_valid(schema_cls, payload, test_id, description):
+def check_valid(schema_cls, payload, test_id, description):
     """Test that a payload is ACCEPTED by the schema."""
     global total_pass, total_fail
     try:
@@ -54,7 +54,7 @@ def test_valid(schema_cls, payload, test_id, description):
         total_fail += 1
 
 
-def test_invalid(schema_cls, payload, test_id, description, expected_fields=None):
+def check_invalid(schema_cls, payload, test_id, description, expected_fields=None):
     """Test that a payload is REJECTED by the schema."""
     global total_pass, total_fail
     try:
@@ -84,27 +84,27 @@ def print_section(title):
 # ════════════════════════════════════════════════════════════
 print_section("1. LoginSchema")
 
-test_valid(LoginSchema,
+check_valid(LoginSchema,
     {"email": "zamanaziz@bnu.edu.pk", "password": "11223344"},
     "LOGIN-V1", "Valid email and password")
 
-test_valid(LoginSchema,
+check_valid(LoginSchema,
     {"email": "UPPER@BNU.EDU.PK", "password": "x"},
     "LOGIN-V2", "Uppercase email accepted (normalised by @validates)")
 
-test_invalid(LoginSchema,
+check_invalid(LoginSchema,
     {"email": "zamanaziz@bnu.edu.pk"},
     "LOGIN-I1", "Missing password", ["password"])
 
-test_invalid(LoginSchema,
+check_invalid(LoginSchema,
     {"password": "11223344"},
     "LOGIN-I2", "Missing email", ["email"])
 
-test_invalid(LoginSchema,
+check_invalid(LoginSchema,
     {"email": "not-an-email", "password": "x"},
     "LOGIN-I3", "Malformed email format", ["email"])
 
-test_invalid(LoginSchema,
+check_invalid(LoginSchema,
     {},
     "LOGIN-I4", "Empty payload", ["email", "password"])
 
@@ -114,19 +114,19 @@ test_invalid(LoginSchema,
 # ════════════════════════════════════════════════════════════
 print_section("2. ChangePasswordSchema")
 
-test_valid(ChangePasswordSchema,
+check_valid(ChangePasswordSchema,
     {"currentPassword": "old123", "newPassword": "newpass123"},
     "CHPWD-V1", "Valid password change")
 
-test_invalid(ChangePasswordSchema,
+check_invalid(ChangePasswordSchema,
     {"currentPassword": "old", "newPassword": "abc"},
     "CHPWD-I1", "newPassword too short (3 chars, min=6)", ["newPassword"])
 
-test_invalid(ChangePasswordSchema,
+check_invalid(ChangePasswordSchema,
     {"newPassword": "newpass123"},
     "CHPWD-I2", "Missing currentPassword", ["currentPassword"])
 
-test_invalid(ChangePasswordSchema,
+check_invalid(ChangePasswordSchema,
     {},
     "CHPWD-I3", "Empty payload", ["currentPassword", "newPassword"])
 
@@ -146,40 +146,40 @@ VALID_STUDENT = {
     "teacher": "Dr. Ahmed Khan",
 }
 
-test_valid(CreateStudentSchema,
+check_valid(CreateStudentSchema,
     VALID_STUDENT,
     "STU-V1", "All required fields present")
 
-test_valid(CreateStudentSchema,
+check_valid(CreateStudentSchema,
     {**VALID_STUDENT, "recovery_email": "personal@gmail.com"},
     "STU-V2", "Valid with optional recovery_email")
 
-test_valid(CreateStudentSchema,
+check_valid(CreateStudentSchema,
     {**VALID_STUDENT, "roll": "BSEF23F-552", "recovery_email": None},
     "STU-V3", "recovery_email explicitly null (allowed)")
 
-test_invalid(CreateStudentSchema,
+check_invalid(CreateStudentSchema,
     {**VALID_STUDENT, "name": "A"},
     "STU-I1", "Name too short (1 char, min=2)", ["name"])
 
-test_invalid(CreateStudentSchema,
+check_invalid(CreateStudentSchema,
     {**VALID_STUDENT, "roll": "BSE F23 551"},
     "STU-I2", "Roll with spaces", ["roll"])
 
-test_invalid(CreateStudentSchema,
+check_invalid(CreateStudentSchema,
     {**VALID_STUDENT, "section": "ABC"},
     "STU-I3", "Section too long (3 chars, max=2)", ["section"])
 
-test_invalid(CreateStudentSchema,
+check_invalid(CreateStudentSchema,
     {"name": "Incomplete Student"},
     "STU-I4", "Missing roll, dept, section, session, course, teacher",
     ["roll", "dept", "section", "session", "course", "teacher"])
 
-test_invalid(CreateStudentSchema,
+check_invalid(CreateStudentSchema,
     {**VALID_STUDENT, "recovery_email": "not-email"},
     "STU-I5", "Invalid recovery_email format", ["recovery_email"])
 
-test_invalid(CreateStudentSchema,
+check_invalid(CreateStudentSchema,
     {**VALID_STUDENT, "dept": "X"},
     "STU-I6", "Dept too short (1 char, min=2)", ["dept"])
 
@@ -189,19 +189,19 @@ test_invalid(CreateStudentSchema,
 # ════════════════════════════════════════════════════════════
 print_section("4. UpdateStudentSchema")
 
-test_valid(UpdateStudentSchema,
+check_valid(UpdateStudentSchema,
     {"name": "Updated Name", "section": "B"},
     "USTU-V1", "Valid partial update")
 
-test_valid(UpdateStudentSchema,
+check_valid(UpdateStudentSchema,
     {"recovery_email": "new@gmail.com"},
     "USTU-V2", "Update only recovery_email")
 
-test_invalid(UpdateStudentSchema,
+check_invalid(UpdateStudentSchema,
     {"name": "A"},
     "USTU-I1", "Name too short (1 char, min=2)", ["name"])
 
-test_invalid(UpdateStudentSchema,
+check_invalid(UpdateStudentSchema,
     {"recovery_email": "bad-email"},
     "USTU-I2", "Invalid email format", ["recovery_email"])
 
@@ -211,31 +211,31 @@ test_invalid(UpdateStudentSchema,
 # ════════════════════════════════════════════════════════════
 print_section("5. CreateDepartmentSchema")
 
-test_valid(CreateDepartmentSchema,
+check_valid(CreateDepartmentSchema,
     {"name": "Computer Science", "code": "CS"},
     "DEPT-V1", "Valid 2-char code")
 
-test_valid(CreateDepartmentSchema,
+check_valid(CreateDepartmentSchema,
     {"name": "Electrical Engineering", "code": "ELEC"},
     "DEPT-V2", "Valid 4-char code (max)")
 
-test_invalid(CreateDepartmentSchema,
+check_invalid(CreateDepartmentSchema,
     {"name": "Test", "code": "ee"},
     "DEPT-I1", "Lowercase code (regex: uppercase only)", ["code"])
 
-test_invalid(CreateDepartmentSchema,
+check_invalid(CreateDepartmentSchema,
     {"name": "Test", "code": "CIVIL"},
     "DEPT-I2", "Code 5 chars (regex: max 4)", ["code"])
 
-test_invalid(CreateDepartmentSchema,
+check_invalid(CreateDepartmentSchema,
     {"name": "Test", "code": "C"},
     "DEPT-I3", "Code 1 char (regex: min 2)", ["code"])
 
-test_invalid(CreateDepartmentSchema,
+check_invalid(CreateDepartmentSchema,
     {"code": "CS"},
     "DEPT-I4", "Missing name field", ["name"])
 
-test_invalid(CreateDepartmentSchema,
+check_invalid(CreateDepartmentSchema,
     {"name": "X", "code": "CS"},
     "DEPT-I5", "Name too short (1 char, min=2)", ["name"])
 
@@ -253,35 +253,35 @@ VALID_COURSE = {
     "deadline": "2026-12-15",
 }
 
-test_valid(CreateCourseSchema,
+check_valid(CreateCourseSchema,
     VALID_COURSE,
     "CRS-V1", "All fields valid")
 
-test_valid(CreateCourseSchema,
+check_valid(CreateCourseSchema,
     {**VALID_COURSE, "min_group": 1, "max_group": 1},
     "CRS-V2", "min_group == max_group (edge case, valid)")
 
-test_invalid(CreateCourseSchema,
+check_invalid(CreateCourseSchema,
     {**VALID_COURSE, "min_group": 5, "max_group": 2},
     "CRS-I1", "max_group < min_group")
 
-test_invalid(CreateCourseSchema,
+check_invalid(CreateCourseSchema,
     {**VALID_COURSE, "min_group": 0},
     "CRS-I2", "min_group = 0 (Range min=1)", ["min_group"])
 
-test_invalid(CreateCourseSchema,
+check_invalid(CreateCourseSchema,
     {**VALID_COURSE, "deadline": "15/12/2026"},
     "CRS-I3", "Non-ISO deadline format", ["deadline"])
 
-test_invalid(CreateCourseSchema,
+check_invalid(CreateCourseSchema,
     {"dept": "CS", "min_group": 2, "max_group": 4, "deadline": "2026-12-01"},
     "CRS-I4", "Missing name field", ["name"])
 
-test_invalid(CreateCourseSchema,
+check_invalid(CreateCourseSchema,
     {**VALID_COURSE, "deadline": "not-a-date"},
     "CRS-I5", "Completely invalid deadline string", ["deadline"])
 
-test_invalid(CreateCourseSchema,
+check_invalid(CreateCourseSchema,
     {**VALID_COURSE, "min_group": "three"},
     "CRS-I6", "min_group is a string instead of int", ["min_group"])
 
@@ -298,27 +298,27 @@ VALID_TEACHER = {
     "type": "Internal Faculty",
 }
 
-test_valid(CreateTeacherSchema,
+check_valid(CreateTeacherSchema,
     VALID_TEACHER,
     "TCH-V1", "Valid internal faculty")
 
-test_valid(CreateTeacherSchema,
+check_valid(CreateTeacherSchema,
     {**VALID_TEACHER, "type": "External Industry", "email": "ext@company.com"},
     "TCH-V2", "Valid external industry")
 
-test_invalid(CreateTeacherSchema,
+check_invalid(CreateTeacherSchema,
     {**VALID_TEACHER, "type": "Freelancer"},
     "TCH-I1", "Invalid type (not in OneOf)", ["type"])
 
-test_invalid(CreateTeacherSchema,
+check_invalid(CreateTeacherSchema,
     {"name": "No Email"},
     "TCH-I2", "Missing email, dept, type", ["email", "dept", "type"])
 
-test_invalid(CreateTeacherSchema,
+check_invalid(CreateTeacherSchema,
     {**VALID_TEACHER, "email": "not-an-email"},
     "TCH-I3", "Malformed email", ["email"])
 
-test_invalid(CreateTeacherSchema,
+check_invalid(CreateTeacherSchema,
     {**VALID_TEACHER, "name": ""},
     "TCH-I4", "Empty name (Length min=1)", ["name"])
 
@@ -328,16 +328,16 @@ test_invalid(CreateTeacherSchema,
 # ════════════════════════════════════════════════════════════
 print_section("8. UpdateTeacherSchema")
 
-test_valid(UpdateTeacherSchema,
+check_valid(UpdateTeacherSchema,
     {"name": "Updated Name", "dept": "SE"},
     "UTCH-V1", "Valid partial update")
 
 # email is NOT a declared field and default unknown=RAISE, so it is rejected
-test_invalid(UpdateTeacherSchema,
+check_invalid(UpdateTeacherSchema,
     {"email": "new@email.com"},
     "UTCH-V2", "Email field rejected (unknown field)", ["email"])
 
-test_invalid(UpdateTeacherSchema,
+check_invalid(UpdateTeacherSchema,
     {"type": "Freelancer"},
     "UTCH-I1", "Invalid type value", ["type"])
 
@@ -347,23 +347,23 @@ test_invalid(UpdateTeacherSchema,
 # ════════════════════════════════════════════════════════════
 print_section("9. CreateAnnouncementSchema")
 
-test_valid(CreateAnnouncementSchema,
+check_valid(CreateAnnouncementSchema,
     {"title": "Welcome to PBL", "content": "Hello everyone."},
     "ANN-V1", "Valid announcement")
 
-test_valid(CreateAnnouncementSchema,
+check_valid(CreateAnnouncementSchema,
     {"title": "With Date", "content": "Body text", "date": "2026-08-20"},
     "ANN-V2", "Valid with optional date")
 
-test_invalid(CreateAnnouncementSchema,
+check_invalid(CreateAnnouncementSchema,
     {"content": "No title here"},
     "ANN-I1", "Missing title", ["title"])
 
-test_invalid(CreateAnnouncementSchema,
+check_invalid(CreateAnnouncementSchema,
     {"title": "X", "content": "Body"},
     "ANN-I2", "Title too short (1 char, min=2)", ["title"])
 
-test_invalid(CreateAnnouncementSchema,
+check_invalid(CreateAnnouncementSchema,
     {},
     "ANN-I3", "Empty payload", ["title", "content"])
 
@@ -373,15 +373,15 @@ test_invalid(CreateAnnouncementSchema,
 # ════════════════════════════════════════════════════════════
 print_section("10. CreateAttachmentSchema")
 
-test_valid(CreateAttachmentSchema,
+check_valid(CreateAttachmentSchema,
     {"title": "Sprint 0 Document"},
     "ATT-V1", "Valid attachment title")
 
-test_invalid(CreateAttachmentSchema,
+check_invalid(CreateAttachmentSchema,
     {"title": ""},
     "ATT-I1", "Empty title (Length min=1)", ["title"])
 
-test_invalid(CreateAttachmentSchema,
+check_invalid(CreateAttachmentSchema,
     {},
     "ATT-I2", "Missing title field", ["title"])
 

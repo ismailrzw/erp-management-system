@@ -24,12 +24,24 @@ def generate_initial_password(roll: str) -> str:
     return f"BNU@{roll.upper()[:8]}{suffix}"
 
 
-def _serialize_datetimes(document: dict) -> dict:
-    """Convert any datetime fields in a document to ISO strings for JSON responses."""
-    for key, value in document.items():
-        if isinstance(value, datetime):
-            document[key] = value.isoformat()
-    return document
+def _serialize_doc(document: dict | None) -> dict | None:
+    """Convert any ObjectId and datetime fields in a document to JSON-safe types."""
+    if not document:
+        return document
+    result = dict(document)
+    if "_id" in result:
+        result["id"] = str(result.pop("_id"))
+    result.pop(UserFields.PASSWORD_HASH, None)
+    for key, value in list(result.items()):
+        if isinstance(value, ObjectId):
+            result[key] = str(value)
+        elif isinstance(value, datetime):
+            result[key] = value.isoformat()
+        elif isinstance(value, list):
+            result[key] = [str(v) if isinstance(v, ObjectId) else v for v in value]
+        elif isinstance(value, dict):
+            result[key] = _serialize_doc(value)
+    return result
 
 
 def create_student(data: dict) -> dict:
@@ -79,18 +91,14 @@ def create_student(data: dict) -> dict:
     }
 
 
-def get_student_by_id(student_id: str) -> dict:
+def get_student_by_id(student_id: str) -> dict | None:
     """Get a student by ID."""
     try:
         student = mongo.db.users.find_one({
             "_id": ObjectId(student_id),
             UserFields.ROLE: Role.STUDENT
         })
-        if student:
-            student["id"] = str(student.pop("_id"))
-            student.pop(UserFields.PASSWORD_HASH, None)
-            student = _serialize_datetimes(student)
-        return student
+        return _serialize_doc(student)
     except InvalidId:
         return None
 
@@ -126,12 +134,10 @@ def list_students(filters: dict | None = None, page: int = 1, limit: int = 20) -
         {UserFields.PASSWORD_HASH: 0}
     ).skip(skip).limit(limit))
     
-    for item in items:
-        item["id"] = str(item.pop("_id"))
-        _serialize_datetimes(item)
+    serialized_items = [_serialize_doc(item) for item in items]
     
     return {
-        "items": items,
+        "items": serialized_items,
         "total": total,
         "page": page,
         "limit": limit,

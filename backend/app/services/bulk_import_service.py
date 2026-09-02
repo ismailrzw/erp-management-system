@@ -87,7 +87,7 @@ def parse_excel(file: FileStorage) -> tuple[list[dict], list[dict]]:
     
     # Map raw headers to canonical column names using HEADER_ALIASES
     raw_header_map = {}
-    for key in rows[0].keys():
+    for key in rows[0]:
         if key is None:
             continue
         cleaned = str(key).strip().casefold()

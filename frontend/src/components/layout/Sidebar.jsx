@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -9,7 +9,13 @@ import {
   FolderGit2,
   ClipboardList,
   ChevronDown,
+  Compass,
+  PlusCircle,
+  User,
+  LogOut,
+  X,
 } from 'lucide-react';
+import { useAuth } from '../../context/useAuth';
 
 export const Sidebar = ({
   isCollapsed,
@@ -18,6 +24,14 @@ export const Sidebar = ({
   onCloseMobileDrawer,
 }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   const [openMenus, setOpenMenus] = useState({
     students: false,
     depts: false,
@@ -25,13 +39,16 @@ export const Sidebar = ({
     teachers: false,
     groups: false,
     survey: false,
+    studentGroup: false,
   });
 
   const toggleMenu = (key) => {
     setOpenMenus((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const navSections = [
+  const isStudent = user?.role === 'student';
+
+  const managerNavSections = [
     {
       section: 'Navigation',
       items: [
@@ -137,7 +154,82 @@ export const Sidebar = ({
         },
       ],
     },
+    {
+      section: 'Account',
+      items: [
+        {
+          type: 'link',
+          text: 'My Profile',
+          to: '/manager/profile',
+          icon: User,
+        },
+        {
+          type: 'action',
+          text: 'Logout',
+          onClick: handleLogout,
+          icon: LogOut,
+          danger: true,
+        },
+      ],
+    },
   ];
+
+  const studentNavSections = [
+    {
+      section: 'Navigation',
+      items: [
+        {
+          type: 'link',
+          text: 'Dashboard',
+          to: '/student/dashboard',
+          icon: LayoutDashboard,
+        },
+      ],
+    },
+    {
+      section: 'Project Group',
+      items: [
+        {
+          type: 'link',
+          text: 'My Group',
+          to: '/student/group/my',
+          icon: Users,
+        },
+        {
+          type: 'link',
+          text: 'Browse & Invites',
+          to: '/student/group/browse',
+          icon: Compass,
+        },
+        {
+          type: 'link',
+          text: 'Create Group',
+          to: '/student/group/create',
+          icon: PlusCircle,
+        },
+      ],
+    },
+    {
+      section: 'Account',
+      items: [
+        {
+          type: 'link',
+          text: 'My Profile',
+          to: '/student/profile',
+          icon: User,
+        },
+        {
+          type: 'action',
+          text: 'Logout',
+          onClick: handleLogout,
+          icon: LogOut,
+          danger: true,
+        },
+      ],
+    },
+  ];
+
+  const navSections = isStudent ? studentNavSections : managerNavSections;
 
   const sidebarStyle = isMobileView
     ? {
@@ -162,51 +254,52 @@ export const Sidebar = ({
         top: '60px',
         left: 0,
         bottom: 0,
-        width: isCollapsed ? '64px' : '235px',
+        width: isCollapsed ? '64px' : '240px',
         backgroundColor: '#ffffff',
         borderRight: '1px solid #e2e8f0',
         overflowY: 'auto',
         overflowX: 'hidden',
         zIndex: 400,
         transition: 'width 0.2s ease',
+        paddingTop: '12px',
         paddingBottom: '30px',
       };
 
   const isCollapsedView = !isMobileView && isCollapsed;
 
   return (
-    <aside style={sidebarStyle}>
-      {/* Mobile Drawer Header */}
+    <aside style={sidebarStyle} aria-label="Sidebar Navigation">
+      {/* Mobile Header in Drawer */}
       {isMobileView && (
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '4px 18px 16px',
-            borderBottom: '1px solid #f1f5f9',
-            marginBottom: '8px',
+            padding: '0 18px 16px',
+            borderBottom: '1px solid #e2e8f0',
+            marginBottom: '10px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div
               style={{
                 width: '32px',
                 height: '32px',
-                borderRadius: '8px',
+                borderRadius: '6px',
                 backgroundColor: '#0073aa',
                 color: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: 700,
-                fontSize: '13px',
+                fontSize: '14px',
               }}
             >
               PBL
             </div>
-            <span style={{ fontWeight: 700, fontSize: '15px', color: '#1e293b' }}>
-              Navigation Menu
+            <span style={{ fontWeight: 600, fontSize: '15px', color: '#1e293b' }}>
+              {isStudent ? 'Student Portal' : 'PBL Portal'}
             </span>
           </div>
           <button
@@ -214,31 +307,32 @@ export const Sidebar = ({
             onClick={onCloseMobileDrawer}
             style={{
               border: 'none',
-              background: 'none',
-              color: '#94a3b8',
+              background: 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#64748b',
               cursor: 'pointer',
-              padding: '6px',
-              borderRadius: '4px',
-              fontSize: '16px',
+              padding: '4px',
             }}
-            aria-label="Close navigation"
           >
-            ✕
+            <X size={18} />
           </button>
         </div>
       )}
 
-      {navSections.map((sec, idx) => (
-        <div key={idx} style={{ marginBottom: '4px' }}>
+      {/* Navigation Sections */}
+      {navSections.map((sec, secIdx) => (
+        <div key={secIdx} style={{ marginBottom: '14px' }}>
           {!isCollapsedView && (
             <div
               style={{
+                padding: '6px 18px',
                 fontSize: '11px',
-                fontWeight: 700,
+                fontWeight: 600,
                 color: '#94a3b8',
                 textTransform: 'uppercase',
                 letterSpacing: '0.6px',
-                padding: '14px 18px 6px',
               }}
             >
               {sec.section}
@@ -273,6 +367,45 @@ export const Sidebar = ({
                   <Icon size={18} strokeWidth={isActive ? 2.2 : 1.8} />
                   {!isCollapsedView && <span>{item.text}</span>}
                 </NavLink>
+              );
+            }
+
+            if (item.type === 'action') {
+              return (
+                <button
+                  key={itemIdx}
+                  type="button"
+                  onClick={() => {
+                    if (isMobileView) onCloseMobileDrawer();
+                    if (item.onClick) item.onClick();
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: isCollapsedView ? 'center' : 'flex-start',
+                    gap: isCollapsedView ? 0 : '10px',
+                    padding: isCollapsedView ? '12px 0' : '10px 18px',
+                    fontSize: '13.5px',
+                    color: item.danger ? '#dc2626' : '#334155',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    width: '100%',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    transition: 'background-color 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = item.danger ? '#fdecea' : '#f1f5f9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                  title={isCollapsedView ? item.text : undefined}
+                >
+                  <Icon size={18} strokeWidth={1.8} color={item.danger ? '#dc2626' : undefined} />
+                  {!isCollapsedView && <span>{item.text}</span>}
+                </button>
               );
             }
 
