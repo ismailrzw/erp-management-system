@@ -75,3 +75,29 @@ def test_dashboard_rejects_manager_token(client, manager_headers):
     """Manager JWT is rejected → 403."""
     r = client.get(DASHBOARD_URL, headers=manager_headers)
     assert r.status_code == 403
+
+
+def test_dashboard_with_recent_announcements_json_serialization(client, manager_headers, student_user):
+    """Ensure dashboard handles serialization properly when student has recent_announcements ObjectIds."""
+    # 1. Manager posts announcement
+    client.post(
+        "/api/manager/announcements/",
+        json={"title": "Notice 1", "content": "Notice content."},
+        headers=manager_headers,
+    )
+
+    # 2. Student logs in (which populates user.recent_announcements with ObjectIds)
+    login_res = client.post(
+        "/api/auth/login",
+        json={"email": student_user["email"], "password": student_user["password"]},
+    )
+    assert login_res.status_code == 200
+    token = login_res.get_json()["data"]["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 3. Request dashboard - must not fail with 500 or ObjectId serialization error
+    dash_res = client.get(DASHBOARD_URL, headers=headers)
+    assert dash_res.status_code == 200, dash_res.get_json()
+    data = dash_res.get_json()["data"]
+    assert data["student"]["roll"] == student_user["roll"]
+    assert data["recent_announcements_count"] >= 1

@@ -42,6 +42,9 @@ class UserFields:
     DELETED_AT    = "deleted_at"
     CREATED_AT    = "created_at"
     UPDATED_AT    = "updated_at"
+    LAST_LOGIN_AT = "last_login_at"
+    CURRENT_LOGIN_AT = "current_login_at"
+    RECENT_ANNOUNCEMENTS = "recent_announcements"
 
 
 # ==================== ROLE CONSTANTS ====================

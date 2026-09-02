@@ -64,4 +64,34 @@ export const studentGroupApi = {
     const response = await api.get('/student/groups/', { params });
     return response.data;
   },
+
+  sendJoinRequest: async (groupId, message = '') => {
+    const response = await api.post(`/student/groups/${groupId}/join-request`, { message });
+    return response.data;
+  },
+
+  cancelJoinRequest: async (requestId) => {
+    const response = await api.delete(`/student/groups/join-requests/${requestId}`);
+    return response.data;
+  },
+
+  getMySentRequests: async () => {
+    const response = await api.get('/student/groups/my/sent-requests');
+    return response.data;
+  },
+
+  getIncomingJoinRequests: async () => {
+    const response = await api.get('/student/groups/my/join-requests');
+    return response.data;
+  },
+
+  acceptJoinRequest: async (requestId) => {
+    const response = await api.post(`/student/groups/join-requests/${requestId}/accept`);
+    return response.data;
+  },
+
+  rejectJoinRequest: async (requestId) => {
+    const response = await api.post(`/student/groups/join-requests/${requestId}/reject`);
+    return response.data;
+  },
 };

@@ -16,6 +16,11 @@ import {
   Search,
   Compass,
   Crown,
+  Send,
+  UserPlus,
+  Clock,
+  Ban,
+  MessageSquare,
 } from 'lucide-react';
 import { studentGroupApi } from '../../../api/studentGroupApi';
 import { studentDashboardApi } from '../../../api/studentDashboardApi';
@@ -24,12 +29,14 @@ import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Toast } from '../../../components/ui/Toast';
 import { Preloader } from '../../../components/ui/Preloader';
+import { Modal } from '../../../components/ui/Modal';
 import { formatDate } from '../../../utils/dateUtils';
 
 export const BrowseGroupsPage = () => {
-  const [activeTab, setActiveTab] = useState('browse'); // 'browse' | 'invitations'
+  const [activeTab, setActiveTab] = useState('browse'); // 'browse' | 'sent_requests' | 'invitations'
   const [groups, setGroups] = useState([]);
   const [invitations, setInvitations] = useState([]);
+  const [sentRequests, setSentRequests] = useState([]);
   const [studentInfo, setStudentInfo] = useState(null);
   const [existingGroup, setExistingGroup] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -42,14 +49,20 @@ export const BrowseGroupsPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchingGroups, setSearchingGroups] = useState(false);
 
+  // Join Request Modal state
+  const [joinModalTarget, setJoinModalTarget] = useState(null); // group doc or null
+  const [joinMessage, setJoinMessage] = useState('');
+  const [submittingJoin, setSubmittingJoin] = useState(false);
+
   const navigate = useNavigate();
 
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-      const [dashRes, invitesRes, groupsRes] = await Promise.all([
+      const [dashRes, invitesRes, sentReqRes, groupsRes] = await Promise.all([
         studentDashboardApi.getDashboard(),
         studentGroupApi.getPendingInvitations(),
+        studentGroupApi.getMySentRequests(),
         studentGroupApi.browseGroups({ search: searchQuery, status: statusFilter }),
       ]);
 
@@ -59,6 +72,9 @@ export const BrowseGroupsPage = () => {
       }
       if (invitesRes.success && invitesRes.data) {
         setInvitations(invitesRes.data.items || invitesRes.data || []);
+      }
+      if (sentReqRes.success && sentReqRes.data) {
+        setSentRequests(sentReqRes.data.items || []);
       }
       if (groupsRes.success && groupsRes.data) {
         const rawGroups = groupsRes.data.items || [];
@@ -92,7 +108,7 @@ export const BrowseGroupsPage = () => {
           setGroups(rawGroups);
         }
       } catch {
-        // silent fail on type
+        // silent fail on search typing
       } finally {
         setSearchingGroups(false);
       }
@@ -101,6 +117,79 @@ export const BrowseGroupsPage = () => {
     return () => clearTimeout(timer);
   }, [searchQuery, statusFilter]);
 
+  // Handle opening Join Request Modal
+  const handleOpenJoinModal = (group) => {
+    if (existingGroup) {
+      setToast({
+        message: 'You already belong to a project group. You must leave your current group first.',
+        type: 'error',
+      });
+      return;
+    }
+    if (group.is_full) {
+      setToast({
+        message: 'This group is already full.',
+        type: 'error',
+      });
+      return;
+    }
+    if (group.status === 'rejected') {
+      setToast({
+        message: 'This group requires proposal revisions and is currently not accepting new join requests.',
+        type: 'error',
+      });
+      return;
+    }
+    setJoinModalTarget(group);
+    setJoinMessage('');
+  };
+
+  // Submit Join Request
+  const handleSubmitJoinRequest = async () => {
+    if (!joinModalTarget) return;
+
+    try {
+      setSubmittingJoin(true);
+      const res = await studentGroupApi.sendJoinRequest(joinModalTarget.id, joinMessage);
+      if (res.success) {
+        setToast({
+          message: `Join request sent to "${joinModalTarget.name}"! The group leader will review your request.`,
+          type: 'success',
+        });
+        setJoinModalTarget(null);
+        setJoinMessage('');
+        loadData();
+      }
+    } catch (err) {
+      setToast({
+        message: err.response?.data?.message || 'Failed to send join request',
+        type: 'error',
+      });
+    } finally {
+      setSubmittingJoin(false);
+    }
+  };
+
+  // Cancel Outgoing Join Request
+  const handleCancelJoinRequest = async (requestId) => {
+    try {
+      setProcessingId(requestId);
+      const res = await studentGroupApi.cancelJoinRequest(requestId);
+      if (res.success) {
+        setToast({ message: 'Join request cancelled successfully.', type: 'info' });
+        loadData();
+      }
+    } catch (err) {
+      setToast({
+        message: err.response?.data?.message || 'Failed to cancel join request',
+        type: 'error',
+      });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  // Handle Accept Invitation
   const handleAcceptInvite = async (invitationId) => {
     if (existingGroup) {
       setToast({
@@ -128,6 +217,7 @@ export const BrowseGroupsPage = () => {
     }
   };
 
+  // Handle Decline Invitation
   const handleDeclineInvite = async (invitationId) => {
     try {
       setProcessingId(invitationId);
@@ -147,12 +237,14 @@ export const BrowseGroupsPage = () => {
   };
 
   if (loading) {
-    return <Preloader text="Loading Groups & Invitations..." />;
+    return <Preloader text="Loading Groups, Requests & Invitations..." />;
   }
+
+  const pendingSentRequestsCount = sentRequests.filter((r) => r.status === 'pending').length;
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Toast */}
+      {/* Toast Notification */}
       {toast.message && (
         <Toast
           message={toast.message}
@@ -163,7 +255,7 @@ export const BrowseGroupsPage = () => {
 
       {/* Page Header */}
       <PageHeader
-        title="Group Discovery & Invitations"
+        title="Group Discovery & Collaboration"
         subtitle={`Course: ${studentInfo?.course || 'Not Assigned'} • Department: ${studentInfo?.dept || 'N/A'} (Section ${studentInfo?.section || 'N/A'})`}
       >
         <button
@@ -287,6 +379,42 @@ export const BrowseGroupsPage = () => {
         >
           <Compass size={16} />
           <span>Browse Course Groups ({groups.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('sent_requests')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 18px',
+            fontSize: '14px',
+            fontWeight: activeTab === 'sent_requests' ? 700 : 500,
+            color: activeTab === 'sent_requests' ? 'var(--primary)' : '#64748b',
+            border: 'none',
+            borderBottom: activeTab === 'sent_requests' ? '3px solid var(--primary)' : '3px solid transparent',
+            backgroundColor: 'transparent',
+            marginBottom: '-2px',
+            cursor: 'pointer',
+          }}
+        >
+          <Send size={16} />
+          <span>Sent Join Requests</span>
+          {pendingSentRequestsCount > 0 && (
+            <span
+              style={{
+                backgroundColor: '#f59e0b',
+                color: '#ffffff',
+                fontSize: '11px',
+                fontWeight: 700,
+                padding: '2px 7px',
+                borderRadius: '10px',
+              }}
+            >
+              {pendingSentRequestsCount}
+            </span>
+          )}
         </button>
 
         <button
@@ -418,117 +546,449 @@ export const BrowseGroupsPage = () => {
                 gap: '16px',
               }}
             >
-              {groups.map((g) => (
-                <div
-                  key={g.id}
-                  className="card-responsive"
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '14px',
-                    backgroundColor: g.is_my_group ? '#f0f9ff' : '#ffffff',
-                    border: g.is_my_group ? '2px solid #38bdf8' : '1px solid #e2e8f0',
-                    borderTop: g.is_my_group ? '4px solid #0284c7' : '3px solid #cbd5e1',
-                    boxShadow: g.is_my_group ? '0 4px 14px rgba(2, 132, 199, 0.12)' : '0 1px 3px rgba(0, 0, 0, 0.05)',
-                    position: 'relative',
-                  }}
-                >
-                  <div>
-                    {g.is_my_group && (
+              {groups.map((g) => {
+                const isProcessing = processingId === g.pending_request_id;
+                const isFull = g.is_full;
+                const isRejected = g.status === 'rejected';
+                const hasPendingReq = g.has_pending_request;
+                const isMyGroup = g.is_my_group;
+
+                return (
+                  <div
+                    key={g.id}
+                    className="card-responsive"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '14px',
+                      backgroundColor: isMyGroup ? '#f0f9ff' : '#ffffff',
+                      border: isMyGroup ? '2px solid #38bdf8' : '1px solid #e2e8f0',
+                      borderTop: isMyGroup ? '4px solid #0284c7' : isRejected ? '3px solid #f87171' : isFull ? '3px solid #94a3b8' : '3px solid #cbd5e1',
+                      boxShadow: isMyGroup ? '0 4px 14px rgba(2, 132, 199, 0.12)' : '0 1px 3px rgba(0, 0, 0, 0.05)',
+                      position: 'relative',
+                    }}
+                  >
+                    <div>
+                      {isMyGroup && (
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            backgroundColor: '#0284c7',
+                            color: '#ffffff',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '3px 9px',
+                            borderRadius: '12px',
+                            marginBottom: '10px',
+                            letterSpacing: '0.3px',
+                          }}
+                        >
+                          <Crown size={12} />
+                          <span>YOUR ENROLLED GROUP</span>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                        <div>
+                          <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', wordBreak: 'break-word' }}>
+                            {g.name}
+                          </div>
+                          <div style={{ fontSize: '13.5px', color: '#475569', marginTop: '3px', fontWeight: 500, wordBreak: 'break-word' }}>
+                            {g.project_title || 'Untitled Project'}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                          <StatusBadge status={g.status} size="small" />
+                          {isFull && (
+                            <span
+                              style={{
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                backgroundColor: '#fee2e2',
+                                color: '#b91c1c',
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                              }}
+                            >
+                              FULL
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
                       <div
                         style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px',
-                          backgroundColor: '#0284c7',
-                          color: '#ffffff',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          padding: '3px 9px',
-                          borderRadius: '12px',
-                          marginBottom: '10px',
-                          letterSpacing: '0.3px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px',
+                          marginTop: '12px',
+                          padding: '10px 12px',
+                          backgroundColor: isMyGroup ? '#e0f2fe' : '#f8fafc',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          color: isMyGroup ? '#0369a1' : '#64748b',
                         }}
                       >
-                        <Crown size={12} />
-                        <span>YOUR ENROLLED GROUP</span>
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-                      <div>
-                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', wordBreak: 'break-word' }}>
-                          {g.name}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Users size={13} />
+                          <span>
+                            Leader: <b>{g.leader_name || 'Group Leader'}</b> {g.leader_roll ? `(${g.leader_roll})` : ''}
+                          </span>
                         </div>
-                        <div style={{ fontSize: '13.5px', color: '#475569', marginTop: '3px', fontWeight: 500, wordBreak: 'break-word' }}>
-                          {g.project_title || 'Untitled Project'}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <BookOpen size={13} />
+                          <span>
+                            {g.course} • Section {g.section || 'N/A'} • {g.dept}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Layers size={13} />
+                          <span>
+                            Members: <b>{g.member_count || 1} / {g.max_group || 4}</b>
+                          </span>
                         </div>
                       </div>
-                      <StatusBadge status={g.status} size="small" />
                     </div>
 
+                    {/* Footer Actions */}
                     <div
                       style={{
                         display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px',
-                        marginTop: '12px',
-                        padding: '10px 12px',
-                        backgroundColor: g.is_my_group ? '#e0f2fe' : '#f8fafc',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        color: g.is_my_group ? '#0369a1' : '#64748b',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '8px',
+                        paddingTop: '10px',
+                        borderTop: '1px solid #f1f5f9',
+                        flexWrap: 'wrap',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Users size={13} />
-                        <span>
-                          Leader: <b>{g.leader_name || 'Group Leader'}</b> {g.leader_roll ? `(${g.leader_roll})` : ''}
-                        </span>
+                      <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                        {formatDate(g.created_at)}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <BookOpen size={13} />
-                        <span>
-                          {g.course} • Section {g.section || 'N/A'} • {g.dept}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Layers size={13} />
-                        <span>
-                          Members: <b>{g.member_count || 1} / {g.max_group || 4}</b>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                      Created: {formatDate(g.created_at)}
+                      {/* State Action Buttons */}
+                      {isMyGroup ? (
+                        <button
+                          type="button"
+                          onClick={() => navigate('/student/group/my')}
+                          style={{
+                            padding: '4px 10px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            backgroundColor: '#0284c7',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          View Group
+                        </button>
+                      ) : hasPendingReq ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              color: '#b45309',
+                              backgroundColor: '#fef3c7',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              border: '1px solid #fde68a',
+                            }}
+                          >
+                            <Clock size={12} />
+                            <span>Request Pending</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCancelJoinRequest(g.pending_request_id)}
+                            disabled={isProcessing}
+                            title="Cancel your pending join request"
+                            style={{
+                              padding: '3px 8px',
+                              fontSize: '11px',
+                              fontWeight: 500,
+                              backgroundColor: '#ffffff',
+                              color: '#dc2626',
+                              border: '1px solid #fecaca',
+                              borderRadius: '4px',
+                              cursor: isProcessing ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            {isProcessing ? <Loader2 size={11} className="animate-spin" /> : 'Cancel'}
+                          </button>
+                        </div>
+                      ) : isRejected ? (
+                        <span
+                          title="This group requires proposal revisions before accepting new members."
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            color: '#b91c1c',
+                            backgroundColor: '#fee2e2',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                          }}
+                        >
+                          <Ban size={12} />
+                          <span>Needs Revision</span>
+                        </span>
+                      ) : isFull ? (
+                        <span
+                          title="This group has reached maximum member capacity."
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            color: '#64748b',
+                            backgroundColor: '#f1f5f9',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                          }}
+                        >
+                          <Users size={12} />
+                          <span>Group Full</span>
+                        </span>
+                      ) : existingGroup ? (
+                        <span
+                          title="You must leave your current group to request to join another."
+                          style={{
+                            fontSize: '11px',
+                            color: '#94a3b8',
+                            fontStyle: 'italic',
+                          }}
+                        >
+                          In Another Group
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenJoinModal(g)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '5px 12px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            backgroundColor: 'var(--primary)',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <UserPlus size={13} />
+                          <span>Request to Join</span>
+                        </button>
+                      )}
                     </div>
-                    {g.is_my_group && (
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          color: '#0369a1',
-                          backgroundColor: '#bae6fd',
-                          padding: '2px 8px',
-                          borderRadius: '10px',
-                        }}
-                      >
-                        Your Group
-                      </span>
-                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       )}
 
-      {/* TAB 2: PENDING INVITATIONS */}
+      {/* TAB 2: SENT JOIN REQUESTS */}
+      {activeTab === 'sent_requests' && (
+        <div className="card-responsive" style={{ borderTop: '3px solid var(--primary)' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingBottom: '14px',
+              borderBottom: '1px solid #f1f5f9',
+              marginBottom: '18px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Send size={18} color="var(--primary)" />
+              <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--heading)' }}>
+                Your Sent Join Requests ({sentRequests.length})
+              </h2>
+            </div>
+          </div>
+
+          {sentRequests.length === 0 ? (
+            <EmptyState
+              icon={Send}
+              title="No Join Requests Sent"
+              description="When you request to join groups from the browse tab, your sent requests and their approval statuses will appear here."
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {sentRequests.map((req) => {
+                const isProcessing = processingId === req.id;
+                const isPending = req.status === 'pending';
+
+                return (
+                  <div
+                    key={req.id}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                      padding: '16px 18px',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', flex: '1 1 280px', minWidth: 0 }}>
+                        <div
+                          style={{
+                            width: '42px',
+                            height: '42px',
+                            borderRadius: '8px',
+                            backgroundColor: isPending ? '#fef3c7' : req.status === 'accepted' ? '#dcfce7' : '#f1f5f9',
+                            color: isPending ? '#b45309' : req.status === 'accepted' ? '#15803d' : '#64748b',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            marginTop: '2px',
+                          }}
+                        >
+                          <FolderGit2 size={20} />
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '15.5px', fontWeight: 700, color: '#0f172a', wordBreak: 'break-word' }}>
+                              {req.group_name || 'Project Group'}
+                            </span>
+                            <StatusBadge status={req.status} size="small" />
+                          </div>
+
+                          <div style={{ fontSize: '13px', color: '#334155', marginTop: '3px', fontWeight: 500, wordBreak: 'break-word' }}>
+                            Project: <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{req.project_title || 'Untitled Project'}</span>
+                          </div>
+
+                          {req.message && (
+                            <div
+                              style={{
+                                marginTop: '6px',
+                                padding: '6px 10px',
+                                backgroundColor: '#f8fafc',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                color: '#475569',
+                                fontStyle: 'italic',
+                              }}
+                            >
+                              "{req.message}"
+                            </div>
+                          )}
+
+                          {/* Metadata */}
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              alignItems: 'center',
+                              gap: '10px',
+                              marginTop: '8px',
+                              fontSize: '12px',
+                              color: '#64748b',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Users size={13} />
+                              <span>Leader: <b>{req.leader_name || 'Leader'}</b> {req.leader_roll ? `(${req.leader_roll})` : ''}</span>
+                            </div>
+
+                            <div>•</div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <BookOpen size={13} />
+                              <span>{req.course || studentInfo?.course} • Sec {req.section || studentInfo?.section}</span>
+                            </div>
+
+                            <div>•</div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Calendar size={13} />
+                              <span>Sent: {formatDate(req.created_at)}</span>
+                            </div>
+
+                            {req.responded_at && (
+                              <>
+                                <div>•</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <Clock size={13} />
+                                  <span>Updated: {formatDate(req.responded_at)}</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Cancel Action for Pending */}
+                      {isPending && (
+                        <button
+                          type="button"
+                          onClick={() => handleCancelJoinRequest(req.id)}
+                          disabled={isProcessing}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '7px 14px',
+                            backgroundColor: '#ffffff',
+                            color: '#dc2626',
+                            border: '1px solid #fecaca',
+                            borderRadius: '6px',
+                            fontSize: '12.5px',
+                            fontWeight: 500,
+                            cursor: isProcessing ? 'not-allowed' : 'pointer',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
+                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+                        >
+                          {isProcessing ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <XCircle size={14} />
+                          )}
+                          <span>Cancel Request</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 3: PENDING INVITATIONS */}
       {activeTab === 'invitations' && (
         <div className="card-responsive" style={{ borderTop: '3px solid var(--primary)' }}>
           <div
@@ -738,6 +1198,121 @@ export const BrowseGroupsPage = () => {
           )}
         </div>
       )}
+
+      {/* JOIN REQUEST CONFIRMATION MODAL */}
+      <Modal
+        isOpen={!!joinModalTarget}
+        onClose={() => setJoinModalTarget(null)}
+        title="Request to Join Group"
+      >
+        {joinModalTarget && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div
+              style={{
+                padding: '12px 14px',
+                backgroundColor: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '6px',
+                fontSize: '13px',
+                color: '#1e40af',
+              }}
+            >
+              <div>You are requesting to join: <b>{joinModalTarget.name}</b></div>
+              <div style={{ marginTop: '2px', color: '#3b82f6', fontSize: '12px' }}>
+                Project: {joinModalTarget.project_title || 'Untitled Project'} • Leader: {joinModalTarget.leader_name}
+              </div>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#334155',
+                  marginBottom: '6px',
+                }}
+              >
+                <MessageSquare size={14} />
+                <span>Note to Group Leader (Optional)</span>
+              </label>
+              <textarea
+                value={joinMessage}
+                onChange={(e) => setJoinMessage(e.target.value)}
+                placeholder="Introduce yourself, mention your skills, or state why you would like to join this group..."
+                rows={3}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: '13px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  outline: 'none',
+                  resize: 'vertical',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: '10px',
+                paddingTop: '10px',
+                borderTop: '1px solid #e2e8f0',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setJoinModalTarget(null)}
+                disabled={submittingJoin}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: '#64748b',
+                  backgroundColor: 'transparent',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  cursor: submittingJoin ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSubmitJoinRequest}
+                disabled={submittingJoin}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 18px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#ffffff',
+                  backgroundColor: 'var(--primary)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: submittingJoin ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {submittingJoin ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <Send size={15} />
+                )}
+                <span>Send Request</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

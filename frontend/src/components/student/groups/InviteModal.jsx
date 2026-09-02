@@ -122,10 +122,29 @@ export const InviteModal = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Invite Teammates to Project Group" maxWidth="560px">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <p style={{ margin: 0, fontSize: '13px', color: 'var(--body-text)', lineHeight: 1.5 }}>
-          Search for students in <b>{group?.course}</b> (cross-section allowed). You can invite up to{' '}
-          <b style={{ color: 'var(--primary)' }}>{remainingSlots}</b> more member(s) to reach maximum capacity ({maxCapacity}).
-        </p>
+        {remainingSlots === 0 ? (
+          <div
+            style={{
+              padding: '12px 14px',
+              backgroundColor: '#fee2e2',
+              border: '1px solid #fecaca',
+              borderRadius: '6px',
+              color: '#b91c1c',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <AlertCircle size={16} style={{ flexShrink: 0 }} />
+            <span>This group has reached maximum capacity ({maxCapacity} members). You cannot send additional invitations.</span>
+          </div>
+        ) : (
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--body-text)', lineHeight: 1.5 }}>
+            Search for students in <b>{group?.course}</b> (cross-section allowed). You can invite up to{' '}
+            <b style={{ color: 'var(--primary)' }}>{remainingSlots}</b> more member(s) to reach maximum capacity ({maxCapacity}).
+          </p>
+        )}
 
         {inviteError && (
           <div
@@ -160,7 +179,8 @@ export const InviteModal = ({
               type="text"
               value={inviteRollQuery}
               onChange={(e) => setInviteRollQuery(e.target.value)}
-              placeholder="e.g. 21K-3829 or Ali..."
+              disabled={remainingSlots === 0}
+              placeholder={remainingSlots === 0 ? 'Group is at max capacity' : 'e.g. 21K-3829 or Ali...'}
               style={{
                 width: '100%',
                 padding: '9px 12px 9px 36px',
@@ -168,6 +188,8 @@ export const InviteModal = ({
                 border: '1px solid #cbd5e1',
                 borderRadius: '6px',
                 outline: 'none',
+                backgroundColor: remainingSlots === 0 ? '#f1f5f9' : '#ffffff',
+                cursor: remainingSlots === 0 ? 'not-allowed' : 'text',
               }}
             />
             {searching && (

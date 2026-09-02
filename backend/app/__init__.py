@@ -1,5 +1,8 @@
-# backend/app/__init__.py
-from flask import Flask
+import json
+from datetime import datetime
+
+from bson import ObjectId
+from flask import Flask, make_response
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_restx import Api
@@ -53,6 +56,20 @@ def create_app(config_class=Config):
         },
         security='Bearer Auth'
     )
+
+    @api.representation('application/json')
+    def output_json(data, code, headers=None):
+        def _default(obj):
+            if isinstance(obj, ObjectId):
+                return str(obj)
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+        dumped = json.dumps(data, default=_default) + "\n"
+        resp = make_response(dumped, code)
+        resp.headers.extend(headers or {})
+        return resp
 
     # ── Register Namespaces ──────────────────────────────
     from app.blueprints.auth.routes import auth_ns

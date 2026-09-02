@@ -76,9 +76,16 @@ def _serialize_group(doc: dict) -> dict:
     if result.get(Field.REJECTED_BY):
         result[Field.REJECTED_BY] = str(result[Field.REJECTED_BY])
 
-    for key, value in result.items():
-        if isinstance(value, datetime):
+    for key, value in list(result.items()):
+        if isinstance(value, ObjectId):
+            result[key] = str(value)
+        elif isinstance(value, datetime):
             result[key] = value.isoformat()
+        elif isinstance(value, list):
+            result[key] = [
+                str(v) if isinstance(v, ObjectId) else v.isoformat() if isinstance(v, datetime) else v
+                for v in value
+            ]
     return result
 
 

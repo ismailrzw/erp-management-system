@@ -11,14 +11,15 @@ Both the auth blueprint and any future API consumers must delegate here
 rather than performing these operations inline.
 """
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from bson.objectid import ObjectId
 from flask import current_app
 from flask_jwt_extended import create_access_token
 
 from app.extensions import mongo
-from app.models.user import UserFields, verify_password
+from app.models.announcement import AnnouncementFields, AnnouncementViewFields
+from app.models.user import Role, UserFields, verify_password
 
 # Access-token lifetime — all tokens issued by this service expire in 8 hours.
 _TOKEN_EXPIRES = timedelta(hours=8)
@@ -74,6 +75,52 @@ class AuthService:
                 },
                 expires_delta=_TOKEN_EXPIRES,
             )
+
+            # Record login session history and update recent announcements for students
+            now = datetime.now(timezone.utc)
+            user_id = user["_id"]
+            user_role = user.get(UserFields.ROLE)
+
+            prev_login = user.get(UserFields.CURRENT_LOGIN_AT) or user.get(UserFields.LAST_LOGIN_AT)
+            update_fields = {
+                UserFields.LAST_LOGIN_AT: prev_login or now,
+                UserFields.CURRENT_LOGIN_AT: now,
+            }
+            update_op = {"$set": update_fields}
+
+            if user_role == Role.STUDENT:
+                threshold = prev_login if prev_login else (now - timedelta(days=7))
+                new_ann_cursor = mongo.db[AnnouncementFields.COLLECTION].find(
+                    {
+                        "$or": [
+                            {AnnouncementFields.CREATED_AT: {"$gt": threshold}},
+                            {AnnouncementFields.DATE: {"$gt": threshold.isoformat()}},
+                        ]
+                    },
+                    {AnnouncementFields.ID: 1}
+                )
+                candidate_ids = [doc[AnnouncementFields.ID] for doc in new_ann_cursor]
+
+                if candidate_ids:
+                    viewed_docs = mongo.db[AnnouncementViewFields.COLLECTION].find(
+                        {
+                            AnnouncementViewFields.USER_ID: user_id,
+                            AnnouncementViewFields.ANNOUNCEMENT_ID: {"$in": candidate_ids},
+                        },
+                        {AnnouncementViewFields.ANNOUNCEMENT_ID: 1}
+                    )
+                    viewed_ids = {v[AnnouncementViewFields.ANNOUNCEMENT_ID] for v in viewed_docs}
+                    unviewed_recent_ids = [cid for cid in candidate_ids if cid not in viewed_ids]
+
+                    if unviewed_recent_ids:
+                        update_op["$addToSet"] = {
+                            UserFields.RECENT_ANNOUNCEMENTS: {"$each": unviewed_recent_ids}
+                        }
+
+            try:
+                mongo.db.users.update_one({"_id": user_id}, update_op)
+            except Exception as update_err:  # noqa: BLE001
+                current_app.logger.warning("Failed to update user login state: %s", update_err)
 
             return {
                 "token": token,

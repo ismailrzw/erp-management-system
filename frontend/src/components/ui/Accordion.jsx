@@ -12,8 +12,17 @@ export const AccordionItem = ({
   onDelete,
   defaultOpen = false,
   isRecent = false,
+  onView,
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  const handleToggle = () => {
+    const nextState = !isOpen;
+    setIsOpen(nextState);
+    if (nextState && onView && isRecent) {
+      onView(announcement);
+    }
+  };
 
   const itemTitle = announcement?.title || title || 'Announcement';
   const itemDate = announcement?.date || announcement?.created_at || badge;
@@ -41,7 +50,7 @@ export const AccordionItem = ({
     >
       {/* Header / Clickable Area */}
       <div
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         style={{
           padding: '14px 16px',
           display: 'flex',

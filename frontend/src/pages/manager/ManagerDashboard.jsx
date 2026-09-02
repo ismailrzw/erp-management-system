@@ -418,7 +418,7 @@ export const ManagerDashboard = () => {
                         transition: 'all 0.15s ease',
                       }}
                     >
-                      Recent ({Math.min(5, allAnnouncements.length)})
+                      Latest ({Math.min(5, allAnnouncements.length)})
                     </button>
                     <button
                       type="button"
@@ -556,7 +556,7 @@ export const ManagerDashboard = () => {
                       onEdit={handleOpenEditAnnouncement}
                       onDelete={() => setAnnToDelete(ann)}
                       defaultOpen={idx === 0 && !annSearch.trim()}
-                      isRecent={idx < 3}
+                      isRecent={false}
                     />
                   ))
                 )}

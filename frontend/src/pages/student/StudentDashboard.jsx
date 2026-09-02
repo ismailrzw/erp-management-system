@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { studentDashboardApi } from '../../api/studentDashboardApi';
 import { studentAttachmentsApi } from '../../api/studentAttachmentsApi';
+import { studentAnnouncementsApi } from '../../api/studentAnnouncementsApi';
 import { StatCard } from '../../components/ui/StatCard';
 import { AccordionItem } from '../../components/ui/Accordion';
 import { StatusBadge } from '../../components/ui/StatusBadge';
@@ -68,6 +69,53 @@ export const StudentDashboard = () => {
     }
   };
 
+  const handleMarkViewed = async (annId) => {
+    if (!annId) return;
+    setData((prev) => {
+      if (!prev || !prev.announcements) return prev;
+      const updatedAnnouncements = prev.announcements.map((a) => {
+        if ((a.id === annId || a._id === annId) && a.is_recent) {
+          return { ...a, is_recent: false };
+        }
+        return a;
+      });
+      const newRecentCount = updatedAnnouncements.filter((a) => a.is_recent).length;
+      return {
+        ...prev,
+        announcements: updatedAnnouncements,
+        recent_announcements_count: newRecentCount,
+      };
+    });
+
+    try {
+      await studentAnnouncementsApi.markAsViewed(annId);
+    } catch {
+      // background sync
+    }
+  };
+
+  const handleMarkAllViewed = async () => {
+    setData((prev) => {
+      if (!prev || !prev.announcements) return prev;
+      const updatedAnnouncements = prev.announcements.map((a) => ({ ...a, is_recent: false }));
+      return {
+        ...prev,
+        announcements: updatedAnnouncements,
+        recent_announcements_count: 0,
+      };
+    });
+
+    try {
+      await studentAnnouncementsApi.markAllAsViewed();
+      setToast({ message: 'All announcements marked as read.', type: 'info' });
+    } catch (err) {
+      setToast({
+        message: err.response?.data?.message || 'Failed to mark all as read',
+        type: 'error',
+      });
+    }
+  };
+
   if (loading) {
     return <Preloader text="Loading Student Dashboard..." />;
   }
@@ -76,6 +124,7 @@ export const StudentDashboard = () => {
   const group = data?.group;
   const pendingInvitesCount = data?.pending_invitations_count || 0;
   const announcements = data?.announcements || [];
+  const recentAnnouncementsCount = data?.recent_announcements_count ?? announcements.filter((a) => a.is_recent).length;
   const attachments = data?.attachments || [];
 
   return (
@@ -205,8 +254,8 @@ export const StudentDashboard = () => {
           title="Announcements"
           value={announcements.length}
           icon={Megaphone}
-          color="primary"
-          subtext="Posted by PBL Manager"
+          color={recentAnnouncementsCount > 0 ? 'warning' : 'primary'}
+          subtext={recentAnnouncementsCount > 0 ? `${recentAnnouncementsCount} recent unread` : 'Posted by PBL Manager'}
         />
       </div>
 
@@ -465,47 +514,87 @@ export const StudentDashboard = () => {
               gap: '8px',
             }}
           >
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => setActiveTab('announcements')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 12px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  backgroundColor: activeTab === 'announcements' ? 'var(--primary-light)' : 'transparent',
-                  color: activeTab === 'announcements' ? 'var(--primary)' : '#64748b',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                }}
-              >
-                <Megaphone size={15} />
-                <span>Announcements ({announcements.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('attachments')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 12px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  backgroundColor: activeTab === 'attachments' ? 'var(--primary-light)' : 'transparent',
-                  color: activeTab === 'attachments' ? 'var(--primary)' : '#64748b',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                }}
-              >
-                <Download size={15} />
-                <span>Attachments ({attachments.length})</span>
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('announcements')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    backgroundColor: activeTab === 'announcements' ? 'var(--primary-light)' : 'transparent',
+                    color: activeTab === 'announcements' ? 'var(--primary)' : '#64748b',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Megaphone size={15} />
+                  <span>Announcements ({announcements.length})</span>
+                  {recentAnnouncementsCount > 0 && (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        fontSize: '10.5px',
+                        fontWeight: 700,
+                        backgroundColor: '#0284c7',
+                        color: '#ffffff',
+                        padding: '1px 6px',
+                        borderRadius: '10px',
+                      }}
+                    >
+                      {recentAnnouncementsCount} new
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('attachments')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    backgroundColor: activeTab === 'attachments' ? 'var(--primary-light)' : 'transparent',
+                    color: activeTab === 'attachments' ? 'var(--primary)' : '#64748b',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Download size={15} />
+                  <span>Attachments ({attachments.length})</span>
+                </button>
+              </div>
+
+              {activeTab === 'announcements' && recentAnnouncementsCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleMarkAllViewed}
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    color: '#0369a1',
+                    backgroundColor: '#f0f9ff',
+                    border: '1px solid #bae6fd',
+                    borderRadius: '4px',
+                    padding: '4px 10px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e0f2fe')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f0f9ff')}
+                >
+                  Mark all as read
+                </button>
+              )}
             </div>
           </div>
 
@@ -524,7 +613,9 @@ export const StudentDashboard = () => {
                     <AccordionItem
                       key={ann.id || ann._id || idx}
                       announcement={ann}
-                      defaultOpen={idx === 0}
+                      defaultOpen={false}
+                      isRecent={Boolean(ann.is_recent)}
+                      onView={() => handleMarkViewed(ann.id || ann._id)}
                     />
                   ))}
                 </div>

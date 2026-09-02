@@ -30,7 +30,7 @@ from flask_restx import Namespace, Resource
 from app.extensions import mongo
 from app.models.group import INVITATIONS_COLLECTION, InvitationField, InvitationStatus
 from app.models.user import Role
-from app.services.announcement_service import list_announcements
+from app.services.announcement_service import list_announcements_for_user
 from app.services.attachment_service import list_attachments
 from app.services.group_service import get_my_group
 from app.services.student_profile_service import get_profile
@@ -85,7 +85,7 @@ class StudentDashboard(Resource):
 
             # ── Announcements (newest 20) ──────────────────────────────────
             try:
-                announcements = list_announcements()[:20]
+                announcements = list_announcements_for_user(user_id=student_id, role=Role.STUDENT, limit=20)
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Error fetching announcements: %s", exc)
                 announcements = []
@@ -102,15 +102,18 @@ class StudentDashboard(Resource):
                 logger.warning("Error fetching attachments: %s", exc)
                 attachments = []
 
+            recent_ann_count = sum(1 for a in announcements if a.get("is_recent"))
+
             return {
                 "success": True,
                 "message": "Dashboard data retrieved.",
                 "data": {
-                    "student":                  profile,
-                    "group":                    group,
-                    "pending_invitations_count": pending_count,
-                    "announcements":            announcements,
-                    "attachments":              attachments,
+                    "student":                   profile,
+                    "group":                     group,
+                    "pending_invitations_count":  pending_count,
+                    "announcements":             announcements,
+                    "recent_announcements_count": recent_ann_count,
+                    "attachments":               attachments,
                 },
             }, 200
 

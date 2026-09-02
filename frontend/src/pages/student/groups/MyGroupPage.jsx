@@ -14,8 +14,12 @@ import {
   RefreshCw,
   BookOpen,
   Layers,
-  ShieldCheck,
+  CheckCircle2,
+  XCircle,
   Loader2,
+  UserCheck,
+  Calendar,
+  MessageSquare,
 } from 'lucide-react';
 import { studentGroupApi } from '../../../api/studentGroupApi';
 import { useAuth } from '../../../context/useAuth';
@@ -33,8 +37,10 @@ import { formatDate } from '../../../utils/dateUtils';
 export const MyGroupPage = () => {
   const { user } = useAuth();
   const [group, setGroup] = useState(null);
+  const [incomingRequests, setIncomingRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [processingReqId, setProcessingReqId] = useState(null);
   const [toast, setToast] = useState({ message: '', type: 'success' });
   const navigate = useNavigate();
 
@@ -56,10 +62,22 @@ export const MyGroupPage = () => {
     if (isRefresh) setRefreshing(true);
     try {
       const res = await studentGroupApi.getMyGroup();
-      if (res.success) {
+      if (res.success && res.data) {
         setGroup(res.data);
+        const leaderFlag = res.data.members?.find((m) => m.id === user?.id)?.is_leader || res.data.is_leader;
+        if (leaderFlag) {
+          try {
+            const reqRes = await studentGroupApi.getIncomingJoinRequests();
+            if (reqRes.success && reqRes.data) {
+              setIncomingRequests(reqRes.data.items || []);
+            }
+          } catch {
+            setIncomingRequests([]);
+          }
+        }
       } else {
         setGroup(null);
+        setIncomingRequests([]);
       }
     } catch (err) {
       setToast({
@@ -70,7 +88,7 @@ export const MyGroupPage = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchGroup();
@@ -106,7 +124,7 @@ export const MyGroupPage = () => {
       setEditError('');
       const res = await studentGroupApi.updateGroup(group.id, { name, project_title });
       if (res.success) {
-        setToast({ message: 'Group details updated successfully! Proposal submitted.', type: 'success' });
+        setToast({ message: 'Group details updated successfully! Proposal submitted for review.', type: 'success' });
         setIsEditModalOpen(false);
         fetchGroup(true);
       }
@@ -135,6 +153,44 @@ export const MyGroupPage = () => {
       });
     } finally {
       setRemoving(false);
+    }
+  };
+
+  // Accept Join Request Handler
+  const handleAcceptJoinRequest = async (requestId) => {
+    try {
+      setProcessingReqId(requestId);
+      const res = await studentGroupApi.acceptJoinRequest(requestId);
+      if (res.success) {
+        setToast({ message: res.message || 'Applicant added to group!', type: 'success' });
+        fetchGroup(true);
+      }
+    } catch (err) {
+      setToast({
+        message: err.response?.data?.message || 'Failed to accept join request',
+        type: 'error',
+      });
+    } finally {
+      setProcessingReqId(null);
+    }
+  };
+
+  // Reject Join Request Handler
+  const handleRejectJoinRequest = async (requestId) => {
+    try {
+      setProcessingReqId(requestId);
+      const res = await studentGroupApi.rejectJoinRequest(requestId);
+      if (res.success) {
+        setToast({ message: 'Join request declined.', type: 'info' });
+        fetchGroup(true);
+      }
+    } catch (err) {
+      setToast({
+        message: err.response?.data?.message || 'Failed to decline join request',
+        type: 'error',
+      });
+    } finally {
+      setProcessingReqId(null);
     }
   };
 
@@ -182,7 +238,7 @@ export const MyGroupPage = () => {
           <EmptyState
             icon={Users}
             title="No Active Project Group"
-            description="You are currently not part of any project group. Create a new group to become a team leader or browse invitations from peers."
+            description="You are currently not part of any project group. Create a new group to become a team leader or browse invitations and available groups."
             action={
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
                 <button
@@ -518,11 +574,146 @@ export const MyGroupPage = () => {
                 fontWeight: 500,
               }}
             >
-              Your group has reached maximum capacity ({maxCapacity} members).
+              Your group has reached maximum capacity ({maxCapacity} members). No more members can be invited or joined.
             </div>
           )}
         </div>
       </div>
+
+      {/* Card 3: Incoming Join Requests (Leader Only) */}
+      {isLeader && incomingRequests.length > 0 && (
+        <div className="card-responsive" style={{ marginTop: '20px', borderTop: '3px solid #f59e0b' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingBottom: '12px',
+              borderBottom: '1px solid #f1f5f9',
+              marginBottom: '16px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <UserCheck size={18} color="#d97706" />
+              <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--heading)' }}>
+                Incoming Join Requests ({incomingRequests.length})
+              </h2>
+            </div>
+            {isFull && (
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  backgroundColor: '#fee2e2',
+                  color: '#b91c1c',
+                  padding: '2px 8px',
+                  borderRadius: '10px',
+                }}
+              >
+                Group Full
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {incomingRequests.map((req) => {
+              const isProcessing = processingReqId === req.id;
+
+              return (
+                <div
+                  key={req.id}
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    padding: '12px 14px',
+                    backgroundColor: '#fffbeb',
+                    border: '1px solid #fde68a',
+                    borderRadius: '6px',
+                  }}
+                >
+                  <div style={{ flex: '1 1 240px', minWidth: 0 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b' }}>
+                      {req.applicant_name} <span style={{ fontSize: '12px', color: '#64748b' }}>({req.applicant_roll})</span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                      Section {req.applicant_section || 'N/A'} • {req.applicant_email} • Applied: {formatDate(req.created_at)}
+                    </div>
+                    {req.message && (
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: '#475569',
+                          marginTop: '4px',
+                          fontStyle: 'italic',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <MessageSquare size={12} />
+                        <span>"{req.message}"</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleAcceptJoinRequest(req.id)}
+                      disabled={isProcessing || isFull}
+                      title={isFull ? 'Group is at max capacity' : 'Accept candidate into group'}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '6px 14px',
+                        fontSize: '12.5px',
+                        fontWeight: 600,
+                        backgroundColor: isFull ? '#94a3b8' : 'var(--success)',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: isFull || isProcessing ? 'not-allowed' : 'pointer',
+                        opacity: isFull ? 0.7 : 1,
+                      }}
+                    >
+                      {isProcessing ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                      <span>Accept</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleRejectJoinRequest(req.id)}
+                      disabled={isProcessing}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '6px 12px',
+                        fontSize: '12.5px',
+                        fontWeight: 500,
+                        backgroundColor: '#ffffff',
+                        color: '#dc2626',
+                        border: '1px solid #fecaca',
+                        borderRadius: '5px',
+                        cursor: isProcessing ? 'not-allowed' : 'pointer',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+                    >
+                      <XCircle size={13} />
+                      <span>Decline</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Sub-Modals */}
       <InviteModal
