@@ -176,7 +176,7 @@ export const StudentDashboard = () => {
       )}
 
       {/* 4 Metric Cards */}
-      <div className="stat-grid-responsive" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+      <div className="stat-grid-4">
         <StatCard
           title="Project Group"
           value={group ? group.name : 'No Group'}
@@ -190,7 +190,7 @@ export const StudentDashboard = () => {
           value={group ? `${group.member_count || group.members?.length || 1} / ${group.max_group || 4}` : '0'}
           icon={FolderGit2}
           color={group ? 'success' : 'muted'}
-          subtext={group?.is_leader ? '👑 Group Leader' : group ? 'Team Member' : 'Join a group to collaborate'}
+          subtext={group?.is_leader ? 'Group Leader' : group ? 'Team Member' : 'Join a group to collaborate'}
           onClick={() => group && navigate('/student/group/my')}
         />
         <StatCard

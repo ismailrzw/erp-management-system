@@ -353,7 +353,7 @@ export const MyGroupPage = () => {
                 <b>Manager Feedback:</b> {group.rejection_reason || 'Please revise your project title and details.'}
               </div>
               <div style={{ fontSize: '12px', color: '#7f1d1d', marginTop: '6px' }}>
-                💡 {isLeader ? 'Click "Edit Proposal" to revise project details and resubmit for approval.' : 'The group leader can revise project details to resubmit for approval.'}
+                Note: {isLeader ? 'Click "Edit Proposal" to revise project details and resubmit for approval.' : 'The group leader can revise project details to resubmit for approval.'}
               </div>
             </div>
           </div>
@@ -507,17 +507,18 @@ export const MyGroupPage = () => {
           {isLeader && isFull && (
             <div
               style={{
-                fontSize: '12px',
-                color: '#15803d',
-                backgroundColor: '#dcfce7',
-                padding: '8px 12px',
+                padding: '10px 14px',
+                backgroundColor: '#eff6ff',
+                border: '1px solid #bfdbfe',
                 borderRadius: '6px',
+                fontSize: '12.5px',
+                color: '#1e40af',
                 marginTop: '12px',
                 textAlign: 'center',
                 fontWeight: 500,
               }}
             >
-              🎉 Your group has reached maximum capacity ({maxCapacity} members)!
+              Your group has reached maximum capacity ({maxCapacity} members).
             </div>
           )}
         </div>

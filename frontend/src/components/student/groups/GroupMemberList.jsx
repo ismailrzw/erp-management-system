@@ -64,7 +64,7 @@ export const GroupMemberList = ({
                         color: '#1e40af',
                       }}
                     >
-                      👑 Leader
+                      Leader
                     </span>
                   )}
                 </div>

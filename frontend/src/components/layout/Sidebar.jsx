@@ -13,6 +13,7 @@ import {
   PlusCircle,
   User,
   LogOut,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 
@@ -307,13 +308,15 @@ export const Sidebar = ({
             style={{
               border: 'none',
               background: 'transparent',
-              fontSize: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               color: '#64748b',
               cursor: 'pointer',
               padding: '4px',
             }}
           >
-            ✕
+            <X size={18} />
           </button>
         </div>
       )}

@@ -143,24 +143,37 @@ input, select, textarea {
   grid-template-columns: repeat(5, 1fr);
 }
 
+.stat-grid-4 {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+  grid-template-columns: repeat(4, 1fr);
+}
+
 @media (max-width: 1280px) {
   .stat-grid-responsive {
     grid-template-columns: repeat(3, 1fr);
   }
+  .stat-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 900px) {
-  .stat-grid-responsive {
+  .stat-grid-responsive,
+  .stat-grid-4 {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
     margin-bottom: 18px;
   }
 }
 
-@media (max-width: 540px) {
-  .stat-grid-responsive {
+@media (max-width: 580px) {
+  .stat-grid-responsive,
+  .stat-grid-4 {
     grid-template-columns: 1fr;
     gap: 10px;
+    margin-bottom: 16px;
   }
 }
 

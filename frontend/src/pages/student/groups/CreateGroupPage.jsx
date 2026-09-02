@@ -226,7 +226,7 @@ export const CreateGroupPage = () => {
             You are creating a group for <b>{studentInfo?.course || 'Course'}</b> (Department of <b>{studentInfo?.dept}</b>, Section <b>{studentInfo?.section}</b>).
           </div>
           <div style={{ marginTop: '4px', fontSize: '12px', color: '#3b82f6' }}>
-            👑 As group creator, you will be assigned as <b>Group Leader</b> with permission to invite peers, manage members, and submit project work.
+            As group creator, you will be assigned as <b>Group Leader</b> with permission to invite peers, manage members, and submit project work.
           </div>
         </div>
       </div>

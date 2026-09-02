@@ -246,18 +246,26 @@ def get_my_group(student_id: str) -> dict | None:
     student = _get_active_student(student_id)
     group_oid_on_user = student.get(Field.GROUP_ID)
 
+    group = None
     # Primary lookup: use the denormalized group_id on the user doc
     if group_oid_on_user:
-        group = mongo.db[COLLECTION].find_one({
-            Field.ID:     group_oid_on_user,
-            Field.STATUS: {"$ne": Status.DELETED},
-        })
-    else:
+        try:
+            group = mongo.db[COLLECTION].find_one({
+                Field.ID: _oid(str(group_oid_on_user)),
+                Field.STATUS: {"$ne": Status.DELETED},
+            })
+        except Exception:
+            group = None
+
+    if group is None:
         # Fallback: search by member_ids (handles stale/missing group_id)
-        group = mongo.db[COLLECTION].find_one({
-            Field.MEMBER_IDS: _oid(student_id),
-            Field.STATUS:     {"$ne": Status.DELETED},
-        })
+        try:
+            group = mongo.db[COLLECTION].find_one({
+                Field.MEMBER_IDS: {"$in": [_oid(student_id), str(student_id)]},
+                Field.STATUS: {"$ne": Status.DELETED},
+            })
+        except Exception:
+            group = None
 
     if group is None:
         return None
@@ -269,7 +277,7 @@ def get_my_group(student_id: str) -> dict | None:
     leader_oid  = group.get(Field.LEADER_ID)
     member_docs = list(mongo.db[UserFields.COLLECTION].find(
         {UserFields.ID: {"$in": member_oids}},
-        {UserFields.NAME: 1, UserFields.ROLL: 1, UserFields.EMAIL: 1},
+        {UserFields.NAME: 1, UserFields.ROLL: 1, UserFields.EMAIL: 1, UserFields.SECTION: 1},
     ))
     serialized["members"] = [
         {
@@ -277,7 +285,8 @@ def get_my_group(student_id: str) -> dict | None:
             "name":      m.get(UserFields.NAME, ""),
             "roll":      m.get(UserFields.ROLL, ""),
             "email":     m.get(UserFields.EMAIL, ""),
-            "is_leader": m[UserFields.ID] == leader_oid,
+            "section":   m.get(UserFields.SECTION, ""),
+            "is_leader": str(m[UserFields.ID]) == str(leader_oid),
         }
         for m in member_docs
     ]
@@ -288,6 +297,7 @@ def get_my_group(student_id: str) -> dict | None:
     serialized["member_count"] = len(member_oids)
     serialized["min_group"]    = constraints["min_group"]
     serialized["max_group"]    = constraints["max_group"]
+    serialized["is_leader"]    = str(leader_oid) == str(student_id)
     return serialized
 
 
@@ -631,7 +641,7 @@ def get_pending_invitations(student_id: str) -> list[dict]:
         Sorted newest-first.
     """
     invites = list(mongo.db[INVITATIONS_COLLECTION].find({
-        InvitationField.INVITED_USER: _oid(student_id),
+        InvitationField.INVITED_USER: {"$in": [_oid(student_id), str(student_id)]},
         InvitationField.STATUS:       InvitationStatus.PENDING,
     }).sort(InvitationField.CREATED_AT, -1))
 
@@ -934,5 +944,8 @@ def list_groups_for_student(student_id: str, search: str = "", status_filter: st
         serialized["is_my_group"]  = student_oid in member_oids
 
         results.append(serialized)
+
+    # Sort so that the student's own group always appears first at the top
+    results.sort(key=lambda x: (not x.get("is_my_group", False)))
 
     return results

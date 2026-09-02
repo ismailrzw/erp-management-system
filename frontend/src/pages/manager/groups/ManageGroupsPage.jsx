@@ -99,8 +99,8 @@ export const ManageGroupsPage = () => {
     const loadFilters = async () => {
       try {
         const [deptRes, courseRes] = await Promise.all([
-          departmentsApi.getDepartments({ limit: 100, deleted: false }),
-          coursesApi.getCourses({ limit: 100, deleted: false }),
+          departmentsApi.list({ limit: 100, deleted: false }),
+          coursesApi.list({ limit: 100, deleted: false }),
         ]);
         if (deptRes.success && deptRes.data?.items) {
           setDepartments(deptRes.data.items);
@@ -413,11 +413,15 @@ export const ManageGroupsPage = () => {
             }}
           >
             <option value="">All Departments</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.name}>
-                {d.name}
-              </option>
-            ))}
+            {departments.map((d) => {
+              const val = d.name || d.code || '';
+              const label = d.name && d.code ? `${d.name} (${d.code})` : (d.name || d.code);
+              return (
+                <option key={d.id || d._id || val} value={val}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
 
           <select
@@ -434,11 +438,15 @@ export const ManageGroupsPage = () => {
             }}
           >
             <option value="">All Courses</option>
-            {courses.map((c) => (
-              <option key={c.id} value={c.name}>
-                {c.name}
-              </option>
-            ))}
+            {courses.map((c) => {
+              const val = c.name || '';
+              const label = c.dept ? `${c.name} (${c.dept})` : c.name;
+              return (
+                <option key={c.id || c._id || val} value={val}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>
@@ -553,56 +561,56 @@ export const ManageGroupsPage = () => {
                           <span>View</span>
                         </button>
 
-                        {g.status !== 'approved' && (
-                          <button
-                            type="button"
-                            onClick={() => setGroupToApprove(g)}
-                            style={{
-                              padding: '6px 10px',
-                              backgroundColor: 'var(--success)',
-                              color: '#ffffff',
-                              border: 'none',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                            title="Approve this group"
-                          >
-                            <CheckCircle2 size={13} />
-                            <span>Approve</span>
-                          </button>
-                        )}
+                        {g.status === 'pending' && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setGroupToApprove(g)}
+                              style={{
+                                padding: '6px 10px',
+                                backgroundColor: 'var(--success)',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                              title="Approve this group"
+                            >
+                              <CheckCircle2 size={13} />
+                              <span>Approve</span>
+                            </button>
 
-                        {g.status !== 'rejected' && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setGroupToReject(g);
-                              setRejectionReason('');
-                              setRejectError('');
-                            }}
-                            style={{
-                              padding: '6px 10px',
-                              backgroundColor: '#ffffff',
-                              color: '#dc2626',
-                              border: '1px solid #fecaca',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                            title="Reject group with feedback"
-                          >
-                            <XCircle size={13} />
-                            <span>Reject</span>
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setGroupToReject(g);
+                                setRejectionReason('');
+                                setRejectError('');
+                              }}
+                              style={{
+                                padding: '6px 10px',
+                                backgroundColor: '#ffffff',
+                                color: '#dc2626',
+                                border: '1px solid #fecaca',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                              title="Reject group with feedback"
+                            >
+                              <XCircle size={13} />
+                              <span>Reject</span>
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -931,7 +939,7 @@ export const ManageGroupsPage = () => {
                   >
                     <div>
                       <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
-                        {m.name} {m.is_leader ? '👑 (Leader)' : ''}
+                        {m.name} {m.is_leader ? '(Leader)' : ''}
                       </div>
                       <div style={{ fontSize: '11.5px', color: '#64748b' }}>
                         Roll: <b>{m.roll}</b> {m.section ? `• Sec ${m.section}` : ''} {m.email ? `• ${m.email}` : ''}

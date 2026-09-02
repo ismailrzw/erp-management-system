@@ -76,7 +76,7 @@ class StudentDashboard(Resource):
             try:
                 student_oid = ObjectId(student_id)
                 pending_count = mongo.db[INVITATIONS_COLLECTION].count_documents({
-                    InvitationField.INVITED_USER: student_oid,
+                    InvitationField.INVITED_USER: {"$in": [student_oid, str(student_id)]},
                     InvitationField.STATUS: InvitationStatus.PENDING,
                 })
             except Exception as exc:  # noqa: BLE001

@@ -161,7 +161,12 @@ export const LeadershipTransferModal = ({
               color: '#b91c1c',
             }}
           >
-            ⚠️ You are the only member in this group. Leaving will permanently <b>disband and delete</b> this project group and cancel any pending invitations.
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                You are the only member in this group. Leaving will permanently <b>disband and delete</b> this project group and cancel any pending invitations.
+              </div>
+            </div>
           </div>
         ) : (
           <p style={{ margin: 0, fontSize: '13.5px', color: '#334155' }}>

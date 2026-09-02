@@ -15,6 +15,7 @@ import {
   Layers,
   Search,
   Compass,
+  Crown,
 } from 'lucide-react';
 import { studentGroupApi } from '../../../api/studentGroupApi';
 import { studentDashboardApi } from '../../../api/studentDashboardApi';
@@ -60,7 +61,9 @@ export const BrowseGroupsPage = () => {
         setInvitations(invitesRes.data.items || invitesRes.data || []);
       }
       if (groupsRes.success && groupsRes.data) {
-        setGroups(groupsRes.data.items || []);
+        const rawGroups = groupsRes.data.items || [];
+        rawGroups.sort((a, b) => (b.is_my_group ? 1 : 0) - (a.is_my_group ? 1 : 0));
+        setGroups(rawGroups);
       }
     } catch (err) {
       setToast({
@@ -84,7 +87,9 @@ export const BrowseGroupsPage = () => {
         setSearchingGroups(true);
         const res = await studentGroupApi.browseGroups({ search: searchQuery, status: statusFilter });
         if (res.success && res.data) {
-          setGroups(res.data.items || []);
+          const rawGroups = res.data.items || [];
+          rawGroups.sort((a, b) => (b.is_my_group ? 1 : 0) - (a.is_my_group ? 1 : 0));
+          setGroups(rawGroups);
         }
       } catch {
         // silent fail on type
@@ -422,10 +427,35 @@ export const BrowseGroupsPage = () => {
                     flexDirection: 'column',
                     justifyContent: 'space-between',
                     gap: '14px',
-                    borderTop: g.is_my_group ? '3px solid var(--primary)' : '3px solid #cbd5e1',
+                    backgroundColor: g.is_my_group ? '#f0f9ff' : '#ffffff',
+                    border: g.is_my_group ? '2px solid #38bdf8' : '1px solid #e2e8f0',
+                    borderTop: g.is_my_group ? '4px solid #0284c7' : '3px solid #cbd5e1',
+                    boxShadow: g.is_my_group ? '0 4px 14px rgba(2, 132, 199, 0.12)' : '0 1px 3px rgba(0, 0, 0, 0.05)',
+                    position: 'relative',
                   }}
                 >
                   <div>
+                    {g.is_my_group && (
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          backgroundColor: '#0284c7',
+                          color: '#ffffff',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          padding: '3px 9px',
+                          borderRadius: '12px',
+                          marginBottom: '10px',
+                          letterSpacing: '0.3px',
+                        }}
+                      >
+                        <Crown size={12} />
+                        <span>YOUR ENROLLED GROUP</span>
+                      </div>
+                    )}
+
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
                       <div>
                         <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', wordBreak: 'break-word' }}>
@@ -445,10 +475,10 @@ export const BrowseGroupsPage = () => {
                         gap: '6px',
                         marginTop: '12px',
                         padding: '10px 12px',
-                        backgroundColor: '#f8fafc',
+                        backgroundColor: g.is_my_group ? '#e0f2fe' : '#f8fafc',
                         borderRadius: '6px',
                         fontSize: '12px',
-                        color: '#64748b',
+                        color: g.is_my_group ? '#0369a1' : '#64748b',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -482,7 +512,7 @@ export const BrowseGroupsPage = () => {
                           fontSize: '11px',
                           fontWeight: 700,
                           color: '#0369a1',
-                          backgroundColor: '#e0f2fe',
+                          backgroundColor: '#bae6fd',
                           padding: '2px 8px',
                           borderRadius: '10px',
                         }}
@@ -686,6 +716,9 @@ export const BrowseGroupsPage = () => {
                     {hasGroupBlocked && (
                       <div
                         style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
                           fontSize: '12px',
                           color: '#b45309',
                           backgroundColor: '#fffbeb',
@@ -694,7 +727,8 @@ export const BrowseGroupsPage = () => {
                           border: '1px solid #fde68a',
                         }}
                       >
-                        ⚠️ You cannot accept this invitation while you are a member of <b>{existingGroup.name}</b>.
+                        <AlertCircle size={13} style={{ flexShrink: 0 }} />
+                        <span>You cannot accept this invitation while you are a member of <b>{existingGroup.name}</b>.</span>
                       </div>
                     )}
                   </div>

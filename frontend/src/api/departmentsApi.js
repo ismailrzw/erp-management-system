@@ -6,6 +6,11 @@ export const departmentsApi = {
     return response.data;
   },
 
+  getDepartments: async (params = {}) => {
+    const response = await api.get('/manager/departments/', { params });
+    return response.data;
+  },
+
   getById: async (id) => {
     const response = await api.get(`/manager/departments/${id}`);
     return response.data;
