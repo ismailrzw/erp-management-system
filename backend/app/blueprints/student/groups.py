@@ -39,15 +39,21 @@ from app.schemas.group_schema import (
     UpdateGroupSchema,
 )
 from app.services.group_service import (
+    accept_join_request,
+    cancel_join_request,
     create_group,
     get_my_group,
     get_pending_invitations,
     invite_member,
     leave_group,
     list_groups_for_student,
+    list_incoming_join_requests,
+    list_my_sent_join_requests,
+    reject_join_request,
     remove_member,
     respond_to_invitation,
     search_students,
+    send_join_request,
     transfer_leadership,
     update_group,
 )
@@ -82,6 +88,10 @@ invite_model = student_groups_ns.model("InviteMember", {
 
 transfer_leadership_model = student_groups_ns.model("TransferLeadership", {
     "new_leader_id": fields.String(required=True, description="User ID of the new group leader"),
+})
+
+join_request_model = student_groups_ns.model("SendJoinRequest", {
+    "message": fields.String(description="Optional note to the group leader"),
 })
 
 
@@ -302,6 +312,129 @@ class GroupRemoveMember(Resource):
             target_id=group_id, new_value={"removed_member_id": member_id},
         )
         return {"success": True, "message": "Member removed from group.", "data": result}, 200
+
+
+@student_groups_ns.route("/<string:group_id>/join-request")
+class SendJoinRequest(Resource):
+
+    @student_groups_ns.doc(security="Bearer Auth")
+    @student_groups_ns.expect(join_request_model, validate=False)
+    @role_required(Role.STUDENT)
+    def post(self, group_id):
+        """Send a request to join an available project group."""
+        student_id = get_jwt_identity()
+        body = request.get_json(silent=True) or {}
+        message = body.get("message", "")
+        try:
+            result = send_join_request(student_id, group_id, message)
+        except ValueError as exc:
+            msg = str(exc)
+            code = 409 if ("already" in msg.lower() or "member" in msg.lower()) else 400
+            return {"success": False, "message": msg}, code
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
+
+        log_audit(mongo.db, student_id, Role.STUDENT, "join_requests", "create", target_id=group_id)
+        return {"success": True, "message": "Join request submitted successfully.", "data": result}, 201
+
+
+@student_groups_ns.route("/join-requests/<string:request_id>")
+class CancelJoinRequest(Resource):
+
+    @student_groups_ns.doc(security="Bearer Auth")
+    @role_required(Role.STUDENT)
+    def delete(self, request_id):
+        """Cancel an outgoing pending join request."""
+        student_id = get_jwt_identity()
+        try:
+            result = cancel_join_request(student_id, request_id)
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, 400
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
+
+        log_audit(mongo.db, student_id, Role.STUDENT, "join_requests", "cancel", target_id=request_id)
+        return {"success": True, "message": "Join request cancelled.", "data": result}, 200
+
+
+@student_groups_ns.route("/my/sent-requests")
+class MySentJoinRequests(Resource):
+
+    @student_groups_ns.doc(security="Bearer Auth")
+    @role_required(Role.STUDENT)
+    def get(self):
+        """List all join requests sent by the authenticated student."""
+        student_id = get_jwt_identity()
+        try:
+            results = list_my_sent_join_requests(student_id)
+            return {
+                "success": True,
+                "message": "Sent join requests retrieved.",
+                "data": {"items": results, "total": len(results)},
+            }, 200
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
+
+
+@student_groups_ns.route("/my/join-requests")
+class GroupIncomingJoinRequests(Resource):
+
+    @student_groups_ns.doc(security="Bearer Auth")
+    @role_required(Role.STUDENT)
+    def get(self):
+        """Get all pending join requests targeting the leader's group."""
+        leader_id = get_jwt_identity()
+        try:
+            results = list_incoming_join_requests(leader_id)
+            return {
+                "success": True,
+                "message": "Incoming join requests retrieved.",
+                "data": {"items": results, "total": len(results)},
+            }, 200
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, 400
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
+
+
+@student_groups_ns.route("/join-requests/<string:request_id>/accept")
+class AcceptJoinRequest(Resource):
+
+    @student_groups_ns.doc(security="Bearer Auth")
+    @role_required(Role.STUDENT)
+    def post(self, request_id):
+        """Accept an incoming join request (Group Leader only)."""
+        leader_id = get_jwt_identity()
+        try:
+            result = accept_join_request(leader_id, request_id)
+        except ValueError as exc:
+            msg = str(exc)
+            code = 409 if ("already" in msg.lower() or "modified" in msg.lower() or "capacity" in msg.lower() or "full" in msg.lower()) else 400
+            return {"success": False, "message": msg}, code
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
+
+        log_audit(mongo.db, leader_id, Role.STUDENT, "join_requests", "accept", target_id=request_id)
+        return {"success": True, "message": result["message"], "data": result.get("group")}, 200
+
+
+@student_groups_ns.route("/join-requests/<string:request_id>/reject")
+class RejectJoinRequest(Resource):
+
+    @student_groups_ns.doc(security="Bearer Auth")
+    @role_required(Role.STUDENT)
+    def post(self, request_id):
+        """Reject an incoming join request (Group Leader only)."""
+        leader_id = get_jwt_identity()
+        try:
+            result = reject_join_request(leader_id, request_id)
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, 400
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
+
+        log_audit(mongo.db, leader_id, Role.STUDENT, "join_requests", "reject", target_id=request_id)
+        return {"success": True, "message": result["message"]}, 200
 
 
 # ══════════════════════════════════════════════════════════════════════════════

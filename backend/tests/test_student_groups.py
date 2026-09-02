@@ -367,3 +367,114 @@ def test_search_requires_roll_param(client, real_student_headers):
     """Missing roll query param → 400."""
     r = client.get(SEARCH_URL, headers=real_student_headers)
     assert r.status_code == 400, r.get_json()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Join Requests workflow
+# ══════════════════════════════════════════════════════════════════════════════
+
+def test_send_join_request_success(client, real_student_headers, second_student_headers):
+    """Unaffiliated student can send a join request to an existing group."""
+    group = create_group(client, real_student_headers)
+
+    r = client.post(
+        f"{GROUPS_URL}{group['id']}/join-request",
+        json={"message": "Hi, I would love to join your team!"},
+        headers=second_student_headers,
+    )
+    assert r.status_code == 201, r.get_json()
+    data = r.get_json()["data"]
+    assert data["group_id"] == group["id"]
+    assert data["status"] == "pending"
+
+
+def test_send_join_request_rejects_duplicate_pending(client, real_student_headers, second_student_headers):
+    """Cannot send two pending join requests to the same group."""
+    group = create_group(client, real_student_headers)
+
+    client.post(
+        f"{GROUPS_URL}{group['id']}/join-request",
+        json={"message": "First request"},
+        headers=second_student_headers,
+    )
+
+    r = client.post(
+        f"{GROUPS_URL}{group['id']}/join-request",
+        json={"message": "Duplicate request"},
+        headers=second_student_headers,
+    )
+    assert r.status_code == 400, r.get_json()
+    assert "already have a pending join request" in r.get_json()["message"].lower()
+
+
+def test_cancel_join_request(client, real_student_headers, second_student_headers):
+    """Student can cancel their own pending join request."""
+    group = create_group(client, real_student_headers)
+
+    r1 = client.post(
+        f"{GROUPS_URL}{group['id']}/join-request",
+        headers=second_student_headers,
+    )
+    req_id = r1.get_json()["data"]["id"]
+
+    r2 = client.delete(f"{GROUPS_URL}join-requests/{req_id}", headers=second_student_headers)
+    assert r2.status_code == 200, r2.get_json()
+
+
+def test_list_my_sent_join_requests(client, real_student_headers, second_student_headers):
+    """Student can retrieve all join requests they have sent."""
+    group = create_group(client, real_student_headers)
+
+    client.post(
+        f"{GROUPS_URL}{group['id']}/join-request",
+        json={"message": "Please accept me!"},
+        headers=second_student_headers,
+    )
+
+    r = client.get(f"{GROUPS_URL}my/sent-requests", headers=second_student_headers)
+    assert r.status_code == 200, r.get_json()
+    items = r.get_json()["data"]["items"]
+    assert len(items) >= 1
+    assert items[0]["group_name"] == "Team Alpha"
+    assert items[0]["status"] == "pending"
+
+
+def test_leader_accept_join_request(client, real_student_headers, second_student_headers, second_student_user):
+    """Group leader accepts join request → student is added to group and other requests are cancelled."""
+    group = create_group(client, real_student_headers)
+
+    r1 = client.post(
+        f"{GROUPS_URL}{group['id']}/join-request",
+        headers=second_student_headers,
+    )
+    req_id = r1.get_json()["data"]["id"]
+
+    # Leader accepts
+    r2 = client.post(f"{GROUPS_URL}join-requests/{req_id}/accept", headers=real_student_headers)
+    assert r2.status_code == 200, r2.get_json()
+
+    # Verify second student is now in group
+    my_group = client.get(MY_GROUP_URL, headers=second_student_headers).get_json()["data"]
+    assert my_group is not None
+    assert my_group["id"] == group["id"]
+    assert my_group["member_count"] == 2
+
+
+def test_leader_reject_join_request(client, real_student_headers, second_student_headers):
+    """Group leader declines join request → request marked rejected."""
+    group = create_group(client, real_student_headers)
+
+    r1 = client.post(
+        f"{GROUPS_URL}{group['id']}/join-request",
+        headers=second_student_headers,
+    )
+    req_id = r1.get_json()["data"]["id"]
+
+    r2 = client.post(f"{GROUPS_URL}join-requests/{req_id}/reject", headers=real_student_headers)
+    assert r2.status_code == 200, r2.get_json()
+
+    # Verify request status in sent requests
+    r3 = client.get(f"{GROUPS_URL}my/sent-requests", headers=second_student_headers)
+    items = r3.get_json()["data"]["items"]
+    assert items[0]["status"] == "rejected"
+

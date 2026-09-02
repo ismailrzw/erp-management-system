@@ -33,9 +33,12 @@ from app.extensions import mongo
 from app.models.group import (
     COLLECTION,
     INVITATIONS_COLLECTION,
+    JOIN_REQUESTS_COLLECTION,
     Field,
     InvitationField,
     InvitationStatus,
+    JoinRequestField,
+    JoinRequestStatus,
     Status,
 )
 from app.models.user import Role, UserFields
@@ -94,6 +97,21 @@ def _serialize_invitation(doc: dict) -> dict:
     return result
 
 
+def _serialize_join_request(doc: dict) -> dict:
+    """Convert a raw join request document to a JSON-safe dict."""
+    if doc is None:
+        return None
+    result = dict(doc)
+    result["id"] = str(result.pop(JoinRequestField.ID))
+    for field in (JoinRequestField.GROUP_ID, JoinRequestField.STUDENT_ID):
+        if field in result and isinstance(result[field], ObjectId):
+            result[field] = str(result[field])
+    for key, value in result.items():
+        if isinstance(value, datetime):
+            result[key] = value.isoformat()
+    return result
+
+
 def _get_active_student(student_id: str) -> dict:
     """Return the user doc for a non-deleted student, raise ValueError otherwise."""
     doc = mongo.db[UserFields.COLLECTION].find_one({
@@ -142,6 +160,12 @@ def _ensure_indexes() -> None:
         [(InvitationField.INVITED_USER, ASCENDING), (InvitationField.STATUS, ASCENDING)]
     )
     db[INVITATIONS_COLLECTION].create_index(InvitationField.GROUP_ID)
+    db[JOIN_REQUESTS_COLLECTION].create_index(
+        [(JoinRequestField.STUDENT_ID, ASCENDING), (JoinRequestField.STATUS, ASCENDING)]
+    )
+    db[JOIN_REQUESTS_COLLECTION].create_index(
+        [(JoinRequestField.GROUP_ID, ASCENDING), (JoinRequestField.STATUS, ASCENDING)]
+    )
     # Partial unique index: no two *pending* invites to the same person for the same group
     try:
         db[INVITATIONS_COLLECTION].create_index(
@@ -152,6 +176,17 @@ def _ensure_indexes() -> None:
         )
     except PyMongoError as exc:
         logging.getLogger(__name__).debug("Pending invitation index already exists or creation skipped: %s", exc)
+
+    # Partial unique index: no two *pending* join requests from the same student to the same group
+    try:
+        db[JOIN_REQUESTS_COLLECTION].create_index(
+            [(JoinRequestField.GROUP_ID, ASCENDING), (JoinRequestField.STUDENT_ID, ASCENDING)],
+            unique=True,
+            partialFilterExpression={JoinRequestField.STATUS: JoinRequestStatus.PENDING},
+            name="unique_pending_join_request",
+        )
+    except PyMongoError as exc:
+        logging.getLogger(__name__).debug("Pending join request index creation skipped: %s", exc)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -254,7 +289,7 @@ def get_my_group(student_id: str) -> dict | None:
                 Field.ID: _oid(str(group_oid_on_user)),
                 Field.STATUS: {"$ne": Status.DELETED},
             })
-        except Exception:
+        except (PyMongoError, ValueError):
             group = None
 
     if group is None:
@@ -264,7 +299,7 @@ def get_my_group(student_id: str) -> dict | None:
                 Field.MEMBER_IDS: {"$in": [_oid(student_id), str(student_id)]},
                 Field.STATUS: {"$ne": Status.DELETED},
             })
-        except Exception:
+        except (PyMongoError, ValueError):
             group = None
 
     if group is None:
@@ -543,10 +578,10 @@ def invite_member(group_id: str, leader_id: str, roll: str) -> dict:
 
     group = mongo.db[COLLECTION].find_one({
         Field.ID:     _oid(group_id),
-        Field.STATUS: Status.PENDING,
+        Field.STATUS: {"$in": [Status.PENDING, Status.APPROVED]},
     })
     if group is None:
-        raise ValueError("Group not found or is not in pending status.")
+        raise ValueError("Group not found, has been deleted, or requires proposal revisions before inviting members.")
     if str(group.get(Field.LEADER_ID)) != leader_id:
         raise ValueError("Only the group leader can send invitations.")
 
@@ -556,7 +591,7 @@ def invite_member(group_id: str, leader_id: str, roll: str) -> dict:
     current_count = len(group.get(Field.MEMBER_IDS, []))
     if current_count >= constraints["max_group"]:
         raise ValueError(
-            f"Group is already at maximum capacity ({constraints['max_group']} members)."
+            f"Group has reached maximum capacity ({constraints['max_group']} members). Cannot send invitations."
         )
 
     # Find target student by roll number
@@ -883,6 +918,27 @@ def list_groups_for_student(student_id: str, search: str = "", status_filter: st
     course_name = student.get(UserFields.COURSE, "").strip()
     student_oid = _oid(student_id)
 
+    # Check if student is in any group
+    student_in_group = bool(
+        student.get(Field.GROUP_ID)
+        or mongo.db[COLLECTION].find_one({
+            Field.MEMBER_IDS: student_oid,
+            Field.STATUS: {"$ne": Status.DELETED},
+        })
+    )
+
+    # Retrieve all pending join requests sent by this student
+    pending_reqs = list(
+        mongo.db[JOIN_REQUESTS_COLLECTION].find({
+            JoinRequestField.STUDENT_ID: student_oid,
+            JoinRequestField.STATUS: JoinRequestStatus.PENDING,
+        })
+    )
+    pending_req_map = {
+        str(pr[JoinRequestField.GROUP_ID]): str(pr[JoinRequestField.ID])
+        for pr in pending_reqs
+    }
+
     query = {
         Field.STATUS: {"$ne": Status.DELETED},
     }
@@ -905,6 +961,7 @@ def list_groups_for_student(student_id: str, search: str = "", status_filter: st
     results = []
     for g in groups:
         serialized = _serialize_group(g)
+        gid_str = str(g[Field.ID])
         member_oids = g.get(Field.MEMBER_IDS, [])
         leader_oid  = g.get(Field.LEADER_ID)
 
@@ -940,8 +997,22 @@ def list_groups_for_student(student_id: str, search: str = "", status_filter: st
         serialized["member_count"] = len(member_oids)
         serialized["min_group"]    = constraints["min_group"]
         serialized["max_group"]    = constraints["max_group"]
-        serialized["is_full"]      = len(member_oids) >= constraints["max_group"]
-        serialized["is_my_group"]  = student_oid in member_oids
+        is_full = len(member_oids) >= constraints["max_group"]
+        is_my_group = student_oid in member_oids
+        is_rejected = (g.get(Field.STATUS) == Status.REJECTED)
+        has_pending_req = gid_str in pending_req_map
+
+        serialized["is_full"]             = is_full
+        serialized["is_my_group"]         = is_my_group
+        serialized["has_pending_request"] = has_pending_req
+        serialized["pending_request_id"]  = pending_req_map.get(gid_str)
+        serialized["can_request_to_join"] = (
+            (not student_in_group)
+            and (not is_full)
+            and (not is_rejected)
+            and (not has_pending_req)
+            and (not is_my_group)
+        )
 
         results.append(serialized)
 
@@ -949,3 +1020,358 @@ def list_groups_for_student(student_id: str, search: str = "", status_filter: st
     results.sort(key=lambda x: (not x.get("is_my_group", False)))
 
     return results
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Join Requests (Student ➔ Group)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def send_join_request(student_id: str, group_id: str, message: str = "") -> dict:
+    """
+    Submit a request by an unaffiliated student to join an existing group.
+
+    Rules
+    -----
+    1. Student must exist, be active, and not already belong to any group.
+    2. Group must exist, not be deleted, and not be in 'rejected' status.
+    3. Group must belong to the same course as the student.
+    4. Group must not have reached maximum capacity (max_group).
+    5. Student cannot have an active 'pending' join request to this specific group.
+    """
+    _ensure_indexes()
+    student = _get_active_student(student_id)
+    student_oid = student[UserFields.ID]
+
+    # Rule 1 — Student must not already belong to a group
+    if student.get(Field.GROUP_ID):
+        raise ValueError("You are already a member of a group. You must leave your current group before requesting to join another.")
+
+    in_group = mongo.db[COLLECTION].find_one({
+        Field.MEMBER_IDS: student_oid,
+        Field.STATUS: {"$ne": Status.DELETED},
+    })
+    if in_group:
+        raise ValueError("You are already a member of a group. You must leave your current group before requesting to join another.")
+
+    # Rule 2 — Group existence & status check
+    group = mongo.db[COLLECTION].find_one({
+        Field.ID: _oid(group_id),
+        Field.STATUS: {"$ne": Status.DELETED},
+    })
+    if group is None:
+        raise ValueError("Group not found or has been deleted.")
+
+    if group.get(Field.STATUS) == Status.REJECTED:
+        raise ValueError("Cannot send a join request to a group that requires revision. The group leader must update and resubmit the proposal first.")
+
+    # Rule 3 — Course matching
+    student_course = (student.get(UserFields.COURSE) or "").strip().upper()
+    group_course = (group.get(Field.COURSE) or "").strip().upper()
+    if student_course != group_course:
+        raise ValueError(f"You can only request to join groups in your enrolled course ('{student.get(UserFields.COURSE)}').")
+
+    # Rule 4 — Capacity guard
+    constraints = _get_course_constraints(
+        group.get(Field.COURSE, ""), group.get(Field.DEPT, "")
+    )
+    current_count = len(group.get(Field.MEMBER_IDS, []))
+    if current_count >= constraints["max_group"]:
+        raise ValueError(f"Group '{group.get(Field.NAME)}' is already at maximum capacity ({constraints['max_group']} members).")
+
+    # Rule 5 — Duplicate pending request check
+    existing_req = mongo.db[JOIN_REQUESTS_COLLECTION].find_one({
+        JoinRequestField.GROUP_ID: _oid(group_id),
+        JoinRequestField.STUDENT_ID: student_oid,
+        JoinRequestField.STATUS: JoinRequestStatus.PENDING,
+    })
+    if existing_req:
+        raise ValueError("You already have a pending join request submitted to this group.")
+
+    now = _now()
+    doc = {
+        JoinRequestField.GROUP_ID: _oid(group_id),
+        JoinRequestField.STUDENT_ID: student_oid,
+        JoinRequestField.STATUS: JoinRequestStatus.PENDING,
+        JoinRequestField.MESSAGE: (message or "").strip(),
+        JoinRequestField.CREATED_AT: now,
+        JoinRequestField.RESPONDED_AT: None,
+    }
+    result = mongo.db[JOIN_REQUESTS_COLLECTION].insert_one(doc)
+    return {
+        "id": str(result.inserted_id),
+        "group_id": group_id,
+        "group_name": group.get(Field.NAME, ""),
+        "status": JoinRequestStatus.PENDING,
+        "created_at": now.isoformat(),
+    }
+
+
+def cancel_join_request(student_id: str, request_id: str) -> dict:
+    """
+    Cancel an outgoing pending join request previously sent by the student.
+    """
+    student = _get_active_student(student_id)
+    student_oid = student[UserFields.ID]
+    req_oid = _oid(request_id)
+
+    req = mongo.db[JOIN_REQUESTS_COLLECTION].find_one({
+        JoinRequestField.ID: req_oid,
+        JoinRequestField.STUDENT_ID: student_oid,
+        JoinRequestField.STATUS: JoinRequestStatus.PENDING,
+    })
+    if req is None:
+        raise ValueError("Pending join request not found or has already been processed.")
+
+    now = _now()
+    mongo.db[JOIN_REQUESTS_COLLECTION].update_one(
+        {JoinRequestField.ID: req_oid},
+        {"$set": {
+            JoinRequestField.STATUS: JoinRequestStatus.CANCELLED,
+            JoinRequestField.RESPONDED_AT: now,
+        }}
+    )
+    return {"message": "Join request cancelled successfully."}
+
+
+def list_my_sent_join_requests(student_id: str) -> list[dict]:
+    """
+    List all join requests sent by this student, enriched with group details.
+    """
+    student = _get_active_student(student_id)
+    student_oid = student[UserFields.ID]
+
+    docs = list(
+        mongo.db[JOIN_REQUESTS_COLLECTION]
+        .find({JoinRequestField.STUDENT_ID: student_oid})
+        .sort(JoinRequestField.CREATED_AT, -1)
+    )
+
+    results = []
+    for d in docs:
+        serialized = _serialize_join_request(d)
+        group = mongo.db[COLLECTION].find_one(
+            {Field.ID: d.get(JoinRequestField.GROUP_ID)},
+            {Field.NAME: 1, Field.PROJECT_TITLE: 1, Field.COURSE: 1, Field.DEPT: 1,
+             Field.SECTION: 1, Field.LEADER_ID: 1, Field.MEMBER_IDS: 1, Field.STATUS: 1}
+        )
+        if group:
+            serialized["group_name"] = group.get(Field.NAME, "")
+            serialized["project_title"] = group.get(Field.PROJECT_TITLE, "")
+            serialized["course"] = group.get(Field.COURSE, "")
+            serialized["dept"] = group.get(Field.DEPT, "")
+            serialized["section"] = group.get(Field.SECTION, "")
+            serialized["group_status"] = group.get(Field.STATUS, "")
+            member_ids = group.get(Field.MEMBER_IDS, [])
+            constraints = _get_course_constraints(group.get(Field.COURSE, ""), group.get(Field.DEPT, ""))
+            serialized["member_count"] = len(member_ids)
+            serialized["max_group"] = constraints["max_group"]
+            serialized["is_full"] = len(member_ids) >= constraints["max_group"]
+
+            leader = mongo.db[UserFields.COLLECTION].find_one(
+                {UserFields.ID: group.get(Field.LEADER_ID)},
+                {UserFields.NAME: 1, UserFields.ROLL: 1}
+            )
+            if leader:
+                serialized["leader_name"] = leader.get(UserFields.NAME, "")
+                serialized["leader_roll"] = leader.get(UserFields.ROLL, "")
+        results.append(serialized)
+    return results
+
+
+def list_incoming_join_requests(leader_id: str, group_id: str | None = None) -> list[dict]:
+    """
+    List all pending join requests targeting the leader's group.
+    """
+    leader = _get_active_student(leader_id)
+    leader_oid = leader[UserFields.ID]
+
+    # Look up group where caller is leader
+    query = {Field.LEADER_ID: leader_oid, Field.STATUS: {"$ne": Status.DELETED}}
+    if group_id:
+        query[Field.ID] = _oid(group_id)
+
+    group = mongo.db[COLLECTION].find_one(query)
+    if group is None:
+        raise ValueError("You are not the leader of any active project group.")
+
+    reqs = list(
+        mongo.db[JOIN_REQUESTS_COLLECTION]
+        .find({
+            JoinRequestField.GROUP_ID: group[Field.ID],
+            JoinRequestField.STATUS: JoinRequestStatus.PENDING,
+        })
+        .sort(JoinRequestField.CREATED_AT, -1)
+    )
+
+    results = []
+    for r in reqs:
+        serialized = _serialize_join_request(r)
+        student_doc = mongo.db[UserFields.COLLECTION].find_one(
+            {UserFields.ID: r[JoinRequestField.STUDENT_ID]},
+            {UserFields.NAME: 1, UserFields.ROLL: 1, UserFields.EMAIL: 1, UserFields.SECTION: 1, UserFields.COURSE: 1}
+        )
+        if student_doc:
+            serialized["applicant_name"] = student_doc.get(UserFields.NAME, "")
+            serialized["applicant_roll"] = student_doc.get(UserFields.ROLL, "")
+            serialized["applicant_email"] = student_doc.get(UserFields.EMAIL, "")
+            serialized["applicant_section"] = student_doc.get(UserFields.SECTION, "")
+            serialized["applicant_course"] = student_doc.get(UserFields.COURSE, "")
+        results.append(serialized)
+    return results
+
+
+def accept_join_request(leader_id: str, request_id: str) -> dict:
+    """
+    Leader accepts an incoming join request.
+
+    Atomically joins applicant to group using optimistic locking, sets group_id on user,
+    marks this request accepted, and auto-cancels all other pending join requests and
+    invitations for that student.
+    """
+    from pymongo import ReturnDocument
+
+    _ensure_indexes()
+    leader = _get_active_student(leader_id)
+    leader_oid = leader[UserFields.ID]
+    req_oid = _oid(request_id)
+
+    req = mongo.db[JOIN_REQUESTS_COLLECTION].find_one({
+        JoinRequestField.ID: req_oid,
+        JoinRequestField.STATUS: JoinRequestStatus.PENDING,
+    })
+    if req is None:
+        raise ValueError("Join request not found or has already been processed.")
+
+    group_oid = req[JoinRequestField.GROUP_ID]
+    group = mongo.db[COLLECTION].find_one({
+        Field.ID: group_oid,
+        Field.STATUS: {"$ne": Status.DELETED},
+    })
+    if group is None:
+        raise ValueError("Group not found or has been deleted.")
+
+    if group.get(Field.LEADER_ID) != leader_oid:
+        raise ValueError("Only the group leader can accept join requests.")
+
+    constraints = _get_course_constraints(group.get(Field.COURSE, ""), group.get(Field.DEPT, ""))
+    max_group = constraints["max_group"]
+    current_members = group.get(Field.MEMBER_IDS, [])
+    if len(current_members) >= max_group:
+        raise ValueError(f"Group is full (max {max_group} members). Cannot accept new applicants.")
+
+    target_student_oid = req[JoinRequestField.STUDENT_ID]
+    target_student = mongo.db[UserFields.COLLECTION].find_one({
+        UserFields.ID: target_student_oid,
+        UserFields.ROLE: Role.STUDENT,
+        UserFields.DELETED: {"$ne": True},
+    })
+    if target_student is None:
+        raise ValueError("Applicant student account no longer exists or is inactive.")
+
+    # Check if student joined another group in the meantime
+    if target_student.get(Field.GROUP_ID):
+        mongo.db[JOIN_REQUESTS_COLLECTION].update_one(
+            {JoinRequestField.ID: req_oid},
+            {"$set": {JoinRequestField.STATUS: JoinRequestStatus.CANCELLED, JoinRequestField.RESPONDED_AT: _now()}}
+        )
+        raise ValueError(f"Applicant {target_student.get(UserFields.NAME, 'Student')} has already joined another group.")
+
+    in_any = mongo.db[COLLECTION].find_one({
+        Field.MEMBER_IDS: target_student_oid,
+        Field.STATUS: {"$ne": Status.DELETED},
+    })
+    if in_any:
+        mongo.db[JOIN_REQUESTS_COLLECTION].update_one(
+            {JoinRequestField.ID: req_oid},
+            {"$set": {JoinRequestField.STATUS: JoinRequestStatus.CANCELLED, JoinRequestField.RESPONDED_AT: _now()}}
+        )
+        raise ValueError(f"Applicant {target_student.get(UserFields.NAME, 'Student')} has already joined another group.")
+
+    now = _now()
+    current_version = group.get(Field.VERSION, 1)
+
+    # Atomic optimistic lock update
+    updated_group = mongo.db[COLLECTION].find_one_and_update(
+        {
+            Field.ID: group_oid,
+            Field.VERSION: current_version,
+            "$expr": {"$lt": [{"$size": f"${Field.MEMBER_IDS}"}, max_group]},
+        },
+        {
+            "$push": {Field.MEMBER_IDS: target_student_oid},
+            "$inc":  {Field.VERSION: 1},
+            "$set":  {Field.UPDATED_AT: now},
+        },
+        return_document=ReturnDocument.AFTER,
+    )
+
+    if updated_group is None:
+        raise ValueError("Group was modified simultaneously by another action or has reached capacity. Please refresh.")
+
+    # Update student's user doc with group_id
+    mongo.db[UserFields.COLLECTION].update_one(
+        {UserFields.ID: target_student_oid},
+        {"$set": {Field.GROUP_ID: group_oid, UserFields.UPDATED_AT: now}},
+    )
+
+    # Mark this join request as accepted
+    mongo.db[JOIN_REQUESTS_COLLECTION].update_one(
+        {JoinRequestField.ID: req_oid},
+        {"$set": {JoinRequestField.STATUS: JoinRequestStatus.ACCEPTED, JoinRequestField.RESPONDED_AT: now}},
+    )
+
+    # Auto-cancel ALL other pending join requests sent by this student
+    mongo.db[JOIN_REQUESTS_COLLECTION].update_many(
+        {
+            JoinRequestField.STUDENT_ID: target_student_oid,
+            JoinRequestField.STATUS: JoinRequestStatus.PENDING,
+            JoinRequestField.ID: {"$ne": req_oid},
+        },
+        {"$set": {JoinRequestField.STATUS: JoinRequestStatus.CANCELLED, JoinRequestField.RESPONDED_AT: now}},
+    )
+
+    # Auto-cancel ALL pending invitations addressed to this student
+    mongo.db[INVITATIONS_COLLECTION].update_many(
+        {
+            InvitationField.INVITED_USER: target_student_oid,
+            InvitationField.STATUS: InvitationStatus.PENDING,
+        },
+        {"$set": {InvitationField.STATUS: InvitationStatus.CANCELLED, InvitationField.RESPONDED_AT: now}},
+    )
+
+    return {
+        "success": True,
+        "message": f"Join request accepted. {target_student.get(UserFields.NAME, 'Student')} has been added to your group.",
+        "group": _serialize_group(updated_group),
+    }
+
+
+def reject_join_request(leader_id: str, request_id: str) -> dict:
+    """
+    Leader declines an incoming join request.
+    """
+    leader = _get_active_student(leader_id)
+    leader_oid = leader[UserFields.ID]
+    req_oid = _oid(request_id)
+
+    req = mongo.db[JOIN_REQUESTS_COLLECTION].find_one({
+        JoinRequestField.ID: req_oid,
+        JoinRequestField.STATUS: JoinRequestStatus.PENDING,
+    })
+    if req is None:
+        raise ValueError("Join request not found or has already been processed.")
+
+    group = mongo.db[COLLECTION].find_one({
+        Field.ID: req[JoinRequestField.GROUP_ID],
+        Field.STATUS: {"$ne": Status.DELETED},
+    })
+    if group is None or group.get(Field.LEADER_ID) != leader_oid:
+        raise ValueError("Only the group leader can reject join requests.")
+
+    now = _now()
+    mongo.db[JOIN_REQUESTS_COLLECTION].update_one(
+        {JoinRequestField.ID: req_oid},
+        {"$set": {JoinRequestField.STATUS: JoinRequestStatus.REJECTED, JoinRequestField.RESPONDED_AT: now}},
+    )
+    return {"message": "Join request declined."}
+

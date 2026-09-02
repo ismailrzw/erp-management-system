@@ -20,8 +20,9 @@ Required MongoDB indexes (created by the seed script):
     )  # prevents duplicate pending invitations for the same student
 """
 
-COLLECTION             = "groups"
-INVITATIONS_COLLECTION = "group_invitations"
+COLLECTION               = "groups"
+INVITATIONS_COLLECTION   = "group_invitations"
+JOIN_REQUESTS_COLLECTION = "join_requests"
 
 
 # ── Group status constants ────────────────────────────────────────────────
@@ -37,9 +38,19 @@ class Status:
 # ── Invitation status constants ───────────────────────────────────────────
 class InvitationStatus:
     """Allowed values for group_invitations.status."""
-    PENDING  = "pending"
-    ACCEPTED = "accepted"
-    DECLINED = "declined"
+    PENDING   = "pending"
+    ACCEPTED  = "accepted"
+    DECLINED  = "declined"
+    CANCELLED = "cancelled"
+
+
+# ── Join Request status constants ─────────────────────────────────────────
+class JoinRequestStatus:
+    """Allowed values for join_requests.status."""
+    PENDING   = "pending"
+    ACCEPTED  = "accepted"
+    REJECTED  = "rejected"
+    CANCELLED = "cancelled"
 
 
 # ── Group document field constants ────────────────────────────────────────
@@ -78,3 +89,16 @@ class InvitationField:
     STATUS       = "status"
     CREATED_AT   = "created_at"
     RESPONDED_AT = "responded_at"
+
+
+# ── Join Request document field constants ────────────────────────────────
+class JoinRequestField:
+    """MongoDB field-name constants for the join_requests collection."""
+    ID           = "_id"
+    GROUP_ID     = "group_id"
+    STUDENT_ID   = "student_id"
+    STATUS       = "status"
+    MESSAGE      = "message"
+    CREATED_AT   = "created_at"
+    RESPONDED_AT = "responded_at"
+
