@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -18,6 +16,8 @@ services:
       - /app/__pycache__
     depends_on:
       - mongo
+    networks:
+      - pbl_network
 
   frontend:
     build:
@@ -31,15 +31,29 @@ services:
       - ./frontend:/app
       - /app/node_modules
     command: npm run dev -- --host
+    depends_on:
+      - backend
+    networks:
+      - pbl_network
 
   mongo:
     image: mongo:7
     container_name: pbl_mongo
     restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: adminpass
+      MONGO_INITDB_DATABASE: pbl_system
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    networks:
+      - pbl_network
 
 volumes:
   mongo_data:
+
+networks:
+  pbl_network:
+    driver: bridge
