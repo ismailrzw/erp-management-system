@@ -247,3 +247,93 @@ class SingleRubricDeleteResource(Resource):
             {"$set": {"rubrics": updated_rubrics, "updatedAt": datetime.now(timezone.utc)}}
         )
         return success_response("Rubric criterion removed.", data={"rubrics": updated_rubrics})
+
+
+@iterations_ns.route('/<string:iteration_id>/submissions')
+class IterationSubmissionsResource(Resource):
+    @jwt_required()
+    @role_required(Role.MANAGER)
+    @iterations_ns.doc(security='Bearer Auth')
+    def get(self, iteration_id):
+        """Get all group submissions for a specific iteration (group-wise view)."""
+        try:
+            oid = ObjectId(iteration_id)
+        except Exception:
+            return error_response("Invalid iteration ID.", 400)
+
+        iteration = mongo.db.iterations.find_one({"_id": oid})
+        if not iteration:
+            return error_response("Iteration not found.", 404)
+
+        course = iteration.get("course")
+
+        # Fetch all approved groups for this course
+        all_groups = list(mongo.db.groups.find({
+            "status": "approved",
+            "course": course
+        }))
+
+        # Fetch all submissions for this iteration
+        submissions = list(mongo.db.submissions.find({"iteration_id": oid}))
+        # Index submissions by group_id for fast lookup
+        subs_by_group = {str(s["group_id"]): s for s in submissions}
+
+        result = []
+        for group in all_groups:
+            group_id_str = str(group["_id"])
+            group_name = group.get("name", "Unnamed Group")
+            sub = subs_by_group.get(group_id_str)
+
+            if sub:
+                # Resolve submitter name
+                submitter_name = "Unknown"
+                submitter_id = sub.get("submitted_by")
+                if submitter_id:
+                    user = mongo.db.users.find_one({"_id": ObjectId(submitter_id)})
+                    if user:
+                        submitter_name = (
+                            user.get("full_name") or
+                            user.get("name") or
+                            user.get("email", "Unknown")
+                        )
+
+                submitted_at = sub.get("submitted_at")
+                result.append({
+                    "group_id": group_id_str,
+                    "group_name": group_name,
+                    "submitted": True,
+                    "is_late": sub.get("is_late", False),
+                    "submitted_by": submitter_name,
+                    "submitted_at": submitted_at.isoformat() if submitted_at else None,
+                    "file_name": sub.get("file_name"),
+                    "file_url": sub.get("file_url"),
+                    "file_size": sub.get("file_size"),
+                    "note": sub.get("note", ""),
+                })
+            else:
+                result.append({
+                    "group_id": group_id_str,
+                    "group_name": group_name,
+                    "submitted": False,
+                    "is_late": False,
+                    "submitted_by": None,
+                    "submitted_at": None,
+                    "file_name": None,
+                    "file_url": None,
+                    "file_size": None,
+                    "note": None,
+                })
+
+        summary = {
+            "total_groups": len(all_groups),
+            "submitted_count": sum(1 for r in result if r["submitted"]),
+            "late_count": sum(1 for r in result if r.get("is_late")),
+            "iteration_title": iteration.get("title"),
+            "iteration_deadline": iteration.get("deadline"),
+            "course": course,
+        }
+
+        return success_response(
+            "Submissions retrieved successfully.",
+            data={"summary": summary, "submissions": result}
+        )

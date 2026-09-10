@@ -11,14 +11,24 @@ from app.extensions import mongo
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from urllib.parse import urlsplit, urlunsplit
+
+def _test_mongo_uri(uri: str) -> str:
+    p = urlsplit(uri)
+    return urlunsplit((p.scheme, p.netloc, "/pbl_system_test", p.query, p.fragment))
+
+class TestConfig:
+    TESTING = True
+    MONGO_URI = _test_mongo_uri(os.getenv("MONGO_URI", "mongodb://mongo:27017/pbl_system"))
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "pytest-only-jwt-secret")
+
 @pytest.fixture
 def client():
-    app = create_app()
-    app.config["TESTING"] = True
-    app.config["MONGO_URI"] = "mongodb://localhost:27017/pbl_test"
+    app = create_app(TestConfig)
 
     with app.test_client() as client:
         with app.app_context():
+            assert mongo.db.name == "pbl_system_test", "Must only use test db"
             for collection in mongo.db.list_collection_names():
                 mongo.db[collection].drop()
 

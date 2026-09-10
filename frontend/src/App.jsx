@@ -38,6 +38,7 @@ import { ManagerProfilePage } from './pages/manager/profile/ManagerProfilePage';
 
 // Manager Iterations (Sprint 3)
 import { IterationsManagePage } from './pages/manager/iterations/IterationsManagePage';
+import { IterationSubmissionsPage } from './pages/manager/iterations/IterationSubmissionsPage';
 
 // Student Pages
 import { StudentDashboard } from './pages/student/StudentDashboard';
@@ -126,6 +127,7 @@ export default function App() {
 
             {/* Iterations Management (Manager) */}
             <Route path="iterations" element={<IterationsManagePage />} />
+            <Route path="iterations/:id/submissions" element={<IterationSubmissionsPage />} />
 
             {/* Profile & Security */}
             <Route path="profile" element={<ManagerProfilePage />} />

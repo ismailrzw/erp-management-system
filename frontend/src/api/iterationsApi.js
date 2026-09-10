@@ -35,4 +35,9 @@ export const iterationsApi = {
     const response = await api.delete(`/manager/iterations/${iterationId}/rubrics/${rubricId}`);
     return response.data;
   },
+
+  getSubmissions: async (iterationId) => {
+    const response = await api.get(`/manager/iterations/${iterationId}/submissions`);
+    return response.data;
+  },
 };

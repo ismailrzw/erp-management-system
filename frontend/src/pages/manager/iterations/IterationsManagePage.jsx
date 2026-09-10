@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Preloader } from '../../../components/ui/Preloader';
@@ -7,9 +8,10 @@ import { iterationsApi } from '../../../api/iterationsApi';
 import { coursesApi } from '../../../api/coursesApi';
 import { IterationFormModal } from './IterationFormModal';
 import { RubricBuilderModal } from './RubricBuilderModal';
-import { Plus, Edit2, Sliders, Trash2, Calendar, FileText } from 'lucide-react';
+import { Plus, Edit2, Sliders, Trash2, Calendar, FileText, Eye } from 'lucide-react';
 
 export const IterationsManagePage = () => {
+  const navigate = useNavigate();
   const [iterations, setIterations] = useState([]);
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState('');
@@ -211,6 +213,28 @@ export const IterationsManagePage = () => {
 
                     <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/manager/iterations/${item._id}/submissions`)}
+                          title="View Submissions"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '6px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1',
+                            backgroundColor: '#f8fafc',
+                            color: '#334155',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Eye size={14} />
+                          Submissions
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => handleOpenRubrics(item)}
