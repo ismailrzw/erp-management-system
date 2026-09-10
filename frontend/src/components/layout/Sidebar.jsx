@@ -14,6 +14,7 @@ import {
   User,
   LogOut,
   X,
+  Layers,
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 
@@ -38,6 +39,7 @@ export const Sidebar = ({
     courses: false,
     teachers: false,
     groups: false,
+    iterations: false,
     survey: false,
     studentGroup: false,
   });
@@ -139,6 +141,20 @@ export const Sidebar = ({
       ],
     },
     {
+      section: 'Iterations',
+      items: [
+        {
+          type: 'menu',
+          key: 'iterations',
+          text: 'Manage Iterations',
+          icon: Layers,
+          subitems: [
+            { text: 'All Iterations & Rubrics', to: '/manager/iterations' },
+          ],
+        },
+      ],
+    },
+    {
       section: 'Survey',
       items: [
         {
@@ -206,6 +222,17 @@ export const Sidebar = ({
           text: 'Create Group',
           to: '/student/group/create',
           icon: PlusCircle,
+        },
+      ],
+    },
+    {
+      section: 'Milestones',
+      items: [
+        {
+          type: 'link',
+          text: 'Iterations & Submissions',
+          to: '/student/iterations',
+          icon: Layers,
         },
       ],
     },

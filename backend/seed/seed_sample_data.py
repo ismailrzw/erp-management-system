@@ -62,9 +62,70 @@ def seed_teachers():
             }},
             upsert=True
         )
-    print("✅ Seeded Teachers / Evaluators")
+def seed_students():
+    default_pass = "11223344"
+    hashed = bcrypt.hashpw(default_pass.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+    # Student 1 in approved group
+    student1_res = db.users.find_one_and_update(
+        {"email": "student1@bnu.edu.pk"},
+        {"$setOnInsert": {
+            "name": "Muhammad Ismail",
+            "email": "student1@bnu.edu.pk",
+            "role": Role.STUDENT,
+            "course": "Final Year Project - Fall 2025",
+            "section": "A",
+            "dept": "SE",
+            "roll": "BCSM-F23-551",
+            "password_hash": hashed,
+            "deleted": False,
+            "created_at": datetime.now(timezone.utc)
+        }},
+        upsert=True,
+        return_document=True
+    )
+
+    # Student 2 (unaffiliated)
+    db.users.update_one(
+        {"email": "student2@bnu.edu.pk"},
+        {"$setOnInsert": {
+            "name": "No Group Student",
+            "email": "student2@bnu.edu.pk",
+            "role": Role.STUDENT,
+            "course": "Final Year Project - Fall 2025",
+            "section": "A",
+            "dept": "SE",
+            "roll": "BCSM-F23-552",
+            "password_hash": hashed,
+            "deleted": False,
+            "created_at": datetime.now(timezone.utc)
+        }},
+        upsert=True
+    )
+
+    # Create approved group for student1 if not exists
+    student1_id = student1_res["_id"]
+    db.groups.update_one(
+        {"name": "Alpha Team"},
+        {"$setOnInsert": {
+            "name": "Alpha Team",
+            "course": "Final Year Project - Fall 2025",
+            "section": "A",
+            "dept": "SE",
+            "leader_id": student1_id,
+            "member_ids": [student1_id],
+            "status": "approved",
+            "version": 1,
+            "createdAt": datetime.now(timezone.utc),
+            "updatedAt": datetime.now(timezone.utc)
+        }},
+        upsert=True
+    )
+    print("✅ Seeded Sample Students (student1@bnu.edu.pk & student2@bnu.edu.pk with password '11223344')")
 
 if __name__ == "__main__":
     seed_departments()
     seed_courses()
     seed_teachers()
+    seed_students()
+

@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 from bson import ObjectId
 from flask import request
 from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
-from flask_restx import Namespace, Resource
+from werkzeug.datastructures import FileStorage
+from flask_restx import Namespace, Resource, reqparse
 
 from app.extensions import mongo
 from app.models.user import Role
@@ -12,6 +13,10 @@ from app.utils.decorators import role_required
 from app.utils.responses import error_response, success_response
 
 student_iterations_ns = Namespace('student_iterations', description='Student Iterations and Submissions')
+
+upload_parser = student_iterations_ns.parser()
+upload_parser.add_argument('file', location='files', type=FileStorage, required=True, help='Project file (.pdf, .docx, .xlsx, .zip)')
+upload_parser.add_argument('note', location='form', type=str, required=False, help='Optional submission note')
 
 
 def is_submission_late(deadline_str: str) -> bool:
@@ -132,6 +137,7 @@ class StudentIterationSubmitResource(Resource):
     @jwt_required()
     @role_required(Role.STUDENT)
     @student_iterations_ns.doc(security='Bearer Auth')
+    @student_iterations_ns.expect(upload_parser)
     def post(self, iteration_id):
         """Submit project file for an iteration (multipart/form-data)."""
         student_id = get_jwt_identity()
@@ -198,3 +204,4 @@ class StudentIterationSubmitResource(Resource):
 
         msg = f"Submission received {'(LATE)' if is_late else 'on time'}."
         return success_response(msg, data=sub_doc, status=201)
+

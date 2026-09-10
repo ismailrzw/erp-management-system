@@ -36,12 +36,19 @@ import { ManageGroupsPage } from './pages/manager/groups/ManageGroupsPage';
 // Manager Profile
 import { ManagerProfilePage } from './pages/manager/profile/ManagerProfilePage';
 
+// Manager Iterations (Sprint 3)
+import { IterationsManagePage } from './pages/manager/iterations/IterationsManagePage';
+
 // Student Pages
 import { StudentDashboard } from './pages/student/StudentDashboard';
 import { MyGroupPage } from './pages/student/groups/MyGroupPage';
 import { CreateGroupPage } from './pages/student/groups/CreateGroupPage';
 import { BrowseGroupsPage } from './pages/student/groups/BrowseGroupsPage';
 import { StudentProfilePage } from './pages/student/profile/StudentProfilePage';
+
+// Student Iterations (Sprint 3)
+import { StudentIterationsPage } from './pages/student/iterations/StudentIterationsPage';
+import { IterationDetailPage } from './pages/student/iterations/IterationDetailPage';
 
 // Fallback
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -117,6 +124,9 @@ export default function App() {
             <Route path="groups" element={<ManageGroupsPage />} />
             <Route path="groups/manage" element={<ManageGroupsPage />} />
 
+            {/* Iterations Management (Manager) */}
+            <Route path="iterations" element={<IterationsManagePage />} />
+
             {/* Profile & Security */}
             <Route path="profile" element={<ManagerProfilePage />} />
 
@@ -138,6 +148,10 @@ export default function App() {
             <Route path="group/create" element={<CreateGroupPage />} />
             <Route path="group/browse" element={<BrowseGroupsPage />} />
             <Route path="profile" element={<StudentProfilePage />} />
+
+            {/* Iterations (Student) */}
+            <Route path="iterations" element={<StudentIterationsPage />} />
+            <Route path="iterations/:id" element={<IterationDetailPage />} />
 
             {/* Fallback for other subpages */}
             <Route path="*" element={<NotFoundPage />} />
