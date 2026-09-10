@@ -89,29 +89,28 @@ export const IterationsManagePage = () => {
       <PageHeader
         title="Iteration Milestones"
         subtitle="Configure FYP iteration deadlines and weighted evaluation rubrics."
-        action={
-          <button
-            type="button"
-            onClick={handleCreateNew}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: '#2563eb',
-              color: '#ffffff',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              fontSize: '13.5px',
-              fontWeight: 600,
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            <Plus size={16} />
-            Add Iteration
-          </button>
-        }
-      />
+      >
+        <button
+          type="button"
+          onClick={handleCreateNew}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            backgroundColor: '#2563eb',
+            color: '#ffffff',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            fontSize: '13.5px',
+            fontWeight: 600,
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <Plus size={16} />
+          Add Iteration
+        </button>
+      </PageHeader>
 
       {/* Filter Toolbar */}
       <div
