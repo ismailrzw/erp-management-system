@@ -48,4 +48,10 @@ def create_app(config_class=Config):
     from app.blueprints.auth.routes import auth_ns
     api.add_namespace(auth_ns, path='/api/auth')
 
+    from app.blueprints.manager.iterations import iterations_ns
+    api.add_namespace(iterations_ns, path='/api/manager/iterations')
+
+    from app.blueprints.student.iterations import student_iterations_ns
+    api.add_namespace(student_iterations_ns, path='/api/student/iterations')
+
     return app
