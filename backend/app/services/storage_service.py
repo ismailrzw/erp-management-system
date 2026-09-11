@@ -1,6 +1,7 @@
 import os
+from datetime import datetime, timezone
+
 from werkzeug.utils import secure_filename
-from datetime import datetime
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "uploads")
 ALLOWED_EXTENSIONS = {"pdf", "docx", "xlsx", "zip"}
@@ -25,7 +26,7 @@ def upload_file(file, subfolder: str = "submissions") -> str:
         raise ValueError(f"File size exceeds 10 MB limit ({len(file_bytes) / 1024 / 1024:.1f} MB).")
     file.stream.seek(0)  # Reset stream so we can save it
 
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     safe_name = secure_filename(file.filename)
     filename = f"{timestamp}_{safe_name}"
 

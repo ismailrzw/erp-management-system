@@ -1,6 +1,7 @@
 # backend/tests/test_iterations.py
 import os
 import sys
+
 import bcrypt
 import pytest
 
@@ -10,6 +11,7 @@ from app.extensions import mongo
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from urllib.parse import urlsplit, urlunsplit
+
 
 def _test_mongo_uri(uri: str) -> str:
     p = urlsplit(uri)

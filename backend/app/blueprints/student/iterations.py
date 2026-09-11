@@ -1,10 +1,12 @@
 # backend/app/blueprints/student/iterations.py
 from datetime import datetime, timezone
+
 from bson import ObjectId
+from bson.errors import InvalidId
 from flask import request
 from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
+from flask_restx import Namespace, Resource
 from werkzeug.datastructures import FileStorage
-from flask_restx import Namespace, Resource, reqparse
 
 from app.extensions import mongo
 from app.models.user import Role
@@ -26,7 +28,7 @@ def is_submission_late(deadline_str: str) -> bool:
     try:
         deadline = datetime.strptime(deadline_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
         return datetime.now(timezone.utc) > deadline
-    except Exception:
+    except (ValueError, TypeError):
         return False
 
 
@@ -96,7 +98,7 @@ class StudentIterationDetailResource(Resource):
         student_id = get_jwt_identity()
         try:
             oid = ObjectId(iteration_id)
-        except Exception:
+        except (InvalidId, TypeError, ValueError):
             return error_response("Invalid iteration ID.", 400)
 
         iteration = mongo.db.iterations.find_one({"_id": oid})
@@ -141,12 +143,10 @@ class StudentIterationSubmitResource(Resource):
     def post(self, iteration_id):
         """Submit project file for an iteration (multipart/form-data)."""
         student_id = get_jwt_identity()
-        claims = get_jwt()
-        course = claims.get('course')
 
         try:
             oid = ObjectId(iteration_id)
-        except Exception:
+        except (InvalidId, TypeError, ValueError):
             return error_response("Invalid iteration ID.", 400)
 
         # 1. Verify student is in an approved group

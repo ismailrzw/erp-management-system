@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { EmptyState } from '../../../components/ui/EmptyState';
@@ -24,7 +24,7 @@ export const IterationsManagePage = () => {
   const [isRubricOpen, setIsRubricOpen] = useState(false);
   const [rubricIteration, setRubricIteration] = useState(null);
 
-  const fetchCourses = async () => {
+  const fetchCourses = useCallback(async () => {
     try {
       const res = await coursesApi.list();
       const courseList = res.data?.items || res.data || [];
@@ -35,9 +35,9 @@ export const IterationsManagePage = () => {
     } catch (err) {
       console.error('Failed to load courses:', err);
     }
-  };
+  }, [selectedCourse]);
 
-  const fetchIterations = async () => {
+  const fetchIterations = useCallback(async () => {
     setLoading(true);
     try {
       const res = await iterationsApi.getAll({ course: selectedCourse });
@@ -47,15 +47,15 @@ export const IterationsManagePage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCourse]);
 
   useEffect(() => {
     fetchCourses();
-  }, []);
+  }, [fetchCourses]);
 
   useEffect(() => {
     fetchIterations();
-  }, [selectedCourse]);
+  }, [fetchIterations]);
 
   const handleCreateNew = () => {
     setEditingIteration(null);

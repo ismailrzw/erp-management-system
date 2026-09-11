@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { PageHeader } from '../../../components/ui/PageHeader';
 import { Preloader } from '../../../components/ui/Preloader';
 import { Toast } from '../../../components/ui/Toast';
 import { DeadlineCountdown } from '../../../components/ui/DeadlineCountdown';
 import { FileDropzone } from '../../../components/ui/FileDropzone';
 import { studentIterationsApi } from '../../../api/studentIterationsApi';
-import { ArrowLeft, Calendar, FileText, Upload, CheckCircle2, Clock, AlertTriangle, Download } from 'lucide-react';
+import { ArrowLeft, Calendar, FileText, Upload, CheckCircle2, Clock, Download } from 'lucide-react';
 
 export const IterationDetailPage = () => {
   const { id } = useParams();
@@ -19,7 +18,7 @@ export const IterationDetailPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const fetchDetail = async () => {
+  const fetchDetail = useCallback(async () => {
     setLoading(true);
     try {
       const res = await studentIterationsApi.getById(id);
@@ -33,11 +32,11 @@ export const IterationDetailPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchDetail();
-  }, [id]);
+  }, [fetchDetail]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

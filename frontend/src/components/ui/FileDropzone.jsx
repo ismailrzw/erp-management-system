@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { UploadCloud, FileText, X, AlertCircle } from 'lucide-react';
 
 const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'xlsx', 'zip'];

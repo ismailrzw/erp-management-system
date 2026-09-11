@@ -1,5 +1,6 @@
-﻿import os, sys
+﻿import os
 from datetime import datetime, timezone
+
 import bcrypt
 from pymongo import MongoClient
 
@@ -10,7 +11,7 @@ db = client.get_default_database()
 print("Connected to database:", db.name)
 
 # 1. Manager
-mgr_pass = bcrypt.hashpw("11223344".encode(), bcrypt.gensalt()).decode()
+mgr_pass = bcrypt.hashpw(b"11223344", bcrypt.gensalt()).decode()
 db.users.update_one(
     {"email": "zamanaziz@bnu.edu.pk"},
     {"$set": {
@@ -33,7 +34,7 @@ for cname in ["Final Year Project - Fall 2025", "Final Year Project", "Software 
     db.courses.update_one({"name": cname}, {"$set": {"name": cname, "dept": "SE", "min_group": 1, "max_group": 4, "deadline": "2026-12-31", "deleted": False}}, upsert=True)
 
 # 4. Students
-std_pass = bcrypt.hashpw("11223344".encode(), bcrypt.gensalt()).decode()
+std_pass = bcrypt.hashpw(b"11223344", bcrypt.gensalt()).decode()
 s1 = db.users.find_one_and_update(
     {"email": "student1@bnu.edu.pk"},
     {"$set": {

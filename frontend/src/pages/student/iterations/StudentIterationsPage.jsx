@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { EmptyState } from '../../../components/ui/EmptyState';
@@ -6,7 +6,7 @@ import { Preloader } from '../../../components/ui/Preloader';
 import { Toast } from '../../../components/ui/Toast';
 import { DeadlineCountdown } from '../../../components/ui/DeadlineCountdown';
 import { studentIterationsApi } from '../../../api/studentIterationsApi';
-import { Calendar, CheckCircle2, AlertCircle, Clock, ChevronRight, FileText } from 'lucide-react';
+import { Calendar, CheckCircle2, Clock, ChevronRight, FileText } from 'lucide-react';
 
 export const StudentIterationsPage = () => {
   const [iterations, setIterations] = useState([]);

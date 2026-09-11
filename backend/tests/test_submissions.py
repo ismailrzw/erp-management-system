@@ -2,9 +2,9 @@
 import io
 import os
 import sys
+
 import bcrypt
 import pytest
-from bson import ObjectId
 
 from app import create_app
 from app.extensions import mongo
@@ -12,6 +12,7 @@ from app.extensions import mongo
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from urllib.parse import urlsplit, urlunsplit
+
 
 def _test_mongo_uri(uri: str) -> str:
     p = urlsplit(uri)
@@ -60,7 +61,7 @@ def client():
             })
 
             # 3. Create Approved Group
-            group_id = mongo.db.groups.insert_one({
+            mongo.db.groups.insert_one({
                 "name": "Alpha Team",
                 "course": "Final Year Project - Fall 2025",
                 "section": "A",
@@ -68,7 +69,7 @@ def client():
                 "leader_id": student_id,
                 "member_ids": [student_id],
                 "status": "approved"
-            }).inserted_id
+            })
 
             # 4. Create Iterations (one upcoming, one past deadline)
             mongo.db.iterations.insert_one({

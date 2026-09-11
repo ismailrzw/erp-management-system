@@ -1,8 +1,10 @@
 # backend/app/blueprints/manager/iterations.py
 from datetime import datetime, timezone
+
 from bson import ObjectId
+from bson.errors import InvalidId
 from flask import request
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource, fields
 
 from app.extensions import mongo
@@ -123,7 +125,7 @@ class IterationDetailResource(Resource):
         """Get single iteration details."""
         try:
             item = mongo.db.iterations.find_one({"_id": ObjectId(iteration_id)})
-        except Exception:
+        except (InvalidId, TypeError, ValueError):
             return error_response("Invalid iteration ID.", 400)
 
         if not item:
@@ -140,18 +142,18 @@ class IterationDetailResource(Resource):
         """Update iteration title, details, and/or deadline."""
         try:
             oid = ObjectId(iteration_id)
-        except Exception:
+        except (InvalidId, TypeError, ValueError):
             return error_response("Invalid iteration ID.", 400)
 
         data = request.get_json() or {}
         update_fields = {}
-        if 'title' in data and data['title']:
+        if data.get('title'):
             update_fields['title'] = data['title'].strip()
         if 'details' in data:
             update_fields['details'] = data['details'].strip()
-        if 'deadline' in data and data['deadline']:
+        if data.get('deadline'):
             update_fields['deadline'] = data['deadline'].strip()
-        if 'course' in data and data['course']:
+        if data.get('course'):
             update_fields['course'] = data['course'].strip()
 
         update_fields['updatedAt'] = datetime.now(timezone.utc)
@@ -174,7 +176,7 @@ class IterationDetailResource(Resource):
         """Delete iteration (blocked if submissions exist)."""
         try:
             oid = ObjectId(iteration_id)
-        except Exception:
+        except (InvalidId, TypeError, ValueError):
             return error_response("Invalid iteration ID.", 400)
 
         sub_count = mongo.db.submissions.count_documents({"iteration_id": oid})
@@ -198,7 +200,7 @@ class IterationRubricsResource(Resource):
         """Replace the entire rubric set for an iteration. Weights must sum to 100."""
         try:
             oid = ObjectId(iteration_id)
-        except Exception:
+        except (InvalidId, TypeError, ValueError):
             return error_response("Invalid iteration ID.", 400)
 
         data = request.get_json() or {}
@@ -232,7 +234,7 @@ class SingleRubricDeleteResource(Resource):
         """Remove one rubric criterion from an iteration."""
         try:
             oid = ObjectId(iteration_id)
-        except Exception:
+        except (InvalidId, TypeError, ValueError):
             return error_response("Invalid iteration ID.", 400)
 
         iteration = mongo.db.iterations.find_one({"_id": oid})
@@ -258,7 +260,7 @@ class IterationSubmissionsResource(Resource):
         """Get all group submissions for a specific iteration (group-wise view)."""
         try:
             oid = ObjectId(iteration_id)
-        except Exception:
+        except (InvalidId, TypeError, ValueError):
             return error_response("Invalid iteration ID.", 400)
 
         iteration = mongo.db.iterations.find_one({"_id": oid})
