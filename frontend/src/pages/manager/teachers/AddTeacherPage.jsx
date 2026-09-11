@@ -258,14 +258,14 @@ export const AddTeacherPage = () => {
 
             <div style={{ display: 'flex', gap: '14px', marginBottom: '24px' }}>
               <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
                   Department *
                 </label>
                 <select
                   value={formData.dept}
                   onChange={(e) => setFormData({ ...formData, dept: e.target.value })}
                   required
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 34px 9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
                 >
                   {departments.length === 0 ? (
                     <option value="CS">CS - Computer Science</option>
@@ -280,14 +280,14 @@ export const AddTeacherPage = () => {
               </div>
 
               <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
                   Faculty Type *
                 </label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   required
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 34px 9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
                 >
                   <option value="Internal Faculty">Internal Faculty</option>
                   <option value="External Industry">External Industry</option>

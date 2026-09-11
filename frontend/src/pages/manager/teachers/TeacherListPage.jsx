@@ -268,10 +268,11 @@ export const TeacherListPage = () => {
               onChange={(e) => setSelectedDept(e.target.value)}
               style={{
                 width: '100%',
-                padding: '8px 10px',
+                padding: '8px 32px 8px 11px',
                 border: '1px solid #cbd5e1',
-                borderRadius: '4px',
+                borderRadius: '8px',
                 fontSize: '13px',
+                fontWeight: 500,
                 color: '#334155',
                 outline: 'none',
                 backgroundColor: '#ffffff',
@@ -292,10 +293,11 @@ export const TeacherListPage = () => {
               onChange={(e) => setSelectedType(e.target.value)}
               style={{
                 width: '100%',
-                padding: '8px 10px',
+                padding: '8px 32px 8px 11px',
                 border: '1px solid #cbd5e1',
-                borderRadius: '4px',
+                borderRadius: '8px',
                 fontSize: '13px',
+                fontWeight: 500,
                 color: '#334155',
                 outline: 'none',
                 backgroundColor: '#ffffff',
@@ -489,14 +491,14 @@ export const TeacherListPage = () => {
           </div>
 
           <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '5px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
               Department *
             </label>
             <select
               value={editFormData.dept}
               onChange={(e) => setEditFormData({ ...editFormData, dept: e.target.value })}
               required
-              style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '8px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
+              style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 34px 8px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
             >
               {departments.map((d) => (
                 <option key={d.id || d._id || d.code} value={d.code}>
@@ -507,14 +509,14 @@ export const TeacherListPage = () => {
           </div>
 
           <div style={{ marginBottom: '18px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '5px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
               Faculty Type *
             </label>
             <select
               value={editFormData.type}
               onChange={(e) => setEditFormData({ ...editFormData, type: e.target.value })}
               required
-              style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '8px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
+              style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 34px 8px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
             >
               <option value="Internal Faculty">Internal Faculty</option>
               <option value="External Industry">External Industry</option>

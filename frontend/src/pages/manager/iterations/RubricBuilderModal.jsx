@@ -173,7 +173,7 @@ export const RubricBuilderModal = ({
               <select
                 value={templateCourse}
                 onChange={(e) => setTemplateCourse(e.target.value)}
-                style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                style={{ width: '100%', padding: '7px 32px 7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
               >
                 <option value="All Courses">All Courses</option>
                 {courses.map((c) => (
@@ -205,7 +205,7 @@ export const RubricBuilderModal = ({
             </span>
             <select
               onChange={(e) => e.target.value && handleLoadTemplate(e.target.value)}
-              style={{ flex: 1, padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}
+              style={{ flex: 1, padding: '6px 32px 6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}
               defaultValue=""
             >
               <option value="">— Select a template —</option>

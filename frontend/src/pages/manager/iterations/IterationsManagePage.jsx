@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Preloader } from '../../../components/ui/Preloader';
@@ -10,7 +11,6 @@ import { coursesApi } from '../../../api/coursesApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { IterationFormModal } from './IterationFormModal';
 import { RubricBuilderModal } from './RubricBuilderModal';
-import { IterationSubmissionsModal } from './IterationSubmissionsModal';
 import {
   Plus,
   Edit2,
@@ -52,6 +52,7 @@ const pillStyle = (active) => ({
 });
 
 export const IterationsManagePage = () => {
+  const navigate = useNavigate();
   const [iterations, setIterations] = useState([]);
   const [courses, setCourses] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -72,7 +73,6 @@ export const IterationsManagePage = () => {
   const [editingIteration, setEditingIteration] = useState(null);
   const [isRubricOpen, setIsRubricOpen] = useState(false);
   const [rubricIteration, setRubricIteration] = useState(null);
-  const [selectedIterationForSubmissions, setSelectedIterationForSubmissions] = useState(null);
 
   // Delete Confirmation Modal
   const [iterationToDelete, setIterationToDelete] = useState(null);
@@ -628,10 +628,11 @@ export const IterationsManagePage = () => {
               value={selectedCourse}
               onChange={(e) => setSelectedCourse(e.target.value)}
               style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
+                padding: '7px 32px 7px 11px',
+                borderRadius: '8px',
                 border: '1px solid #cbd5e1',
                 fontSize: '12.5px',
+                fontWeight: 500,
                 color: '#1e293b',
                 backgroundColor: '#ffffff',
                 minWidth: '160px',
@@ -653,13 +654,14 @@ export const IterationsManagePage = () => {
               value={selectedDept}
               onChange={(e) => setSelectedDept(e.target.value)}
               style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
+                padding: '7px 32px 7px 11px',
+                borderRadius: '8px',
                 border: '1px solid #cbd5e1',
                 fontSize: '12.5px',
+                fontWeight: 500,
                 color: '#1e293b',
                 backgroundColor: '#ffffff',
-                minWidth: '140px',
+                minWidth: '150px',
               }}
             >
               <option value="">All Departments</option>
@@ -679,10 +681,11 @@ export const IterationsManagePage = () => {
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
+                padding: '7px 32px 7px 11px',
+                borderRadius: '8px',
                 border: '1px solid #cbd5e1',
                 fontSize: '12.5px',
+                fontWeight: 500,
                 color: '#1e293b',
                 backgroundColor: '#ffffff',
               }}
@@ -777,7 +780,7 @@ export const IterationsManagePage = () => {
                 return (
                   <tr
                     key={item._id}
-                    onClick={() => setSelectedIterationForSubmissions(item)}
+                    onClick={() => navigate(`/manager/iterations/${item._id}/submissions`)}
                     style={{
                       borderBottom: '1px solid #f1f5f9',
                       cursor: 'pointer',
@@ -909,7 +912,7 @@ export const IterationsManagePage = () => {
                       >
                         <button
                           type="button"
-                          onClick={() => setSelectedIterationForSubmissions(item)}
+                          onClick={() => navigate(`/manager/iterations/${item._id}/submissions`)}
                           title="View Submissions Drill-Down"
                           style={{
                             display: 'inline-flex',
@@ -997,13 +1000,6 @@ export const IterationsManagePage = () => {
           </table>
         </div>
       )}
-
-      {/* Submissions Detail Modal (Opened on click) */}
-      <IterationSubmissionsModal
-        isOpen={!!selectedIterationForSubmissions}
-        onClose={() => setSelectedIterationForSubmissions(null)}
-        iteration={selectedIterationForSubmissions}
-      />
 
       {/* Iteration Form Modal (Add / Edit) */}
       <IterationFormModal

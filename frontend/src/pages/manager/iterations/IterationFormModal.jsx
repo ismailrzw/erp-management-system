@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '../../../components/ui/Modal';
+import { Select } from '../../../components/ui/Select';
+import { DateTimePicker } from '../../../components/ui/DateTimePicker';
 import { iterationsApi } from '../../../api/iterationsApi';
 import { rubricTemplatesApi } from '../../../api/rubricTemplatesApi';
-import { FileText } from 'lucide-react';
+import { FileText, GraduationCap } from 'lucide-react';
 
 export const IterationFormModal = ({ isOpen, onClose, initialData = null, courses = [], onSave }) => {
   const [formData, setFormData] = useState({
@@ -101,20 +103,18 @@ export const IterationFormModal = ({ isOpen, onClose, initialData = null, course
             placeholder="e.g. Project Proposal Submission"
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
             required
           />
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-            Target Course <span style={{ color: '#dc2626' }}>*</span>
-          </label>
-          <select
+          <Select
+            label="Target Course"
+            required
+            icon={GraduationCap}
             value={formData.course}
             onChange={(e) => setFormData({ ...formData, course: e.target.value })}
-            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
-            required
           >
             <option value="">— Select Course —</option>
             <option value="All Courses" style={{ fontWeight: 600, color: '#7c3aed' }}>
@@ -125,23 +125,17 @@ export const IterationFormModal = ({ isOpen, onClose, initialData = null, course
                 {c.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-            Submission Deadline <span style={{ color: '#dc2626' }}>*</span>
-          </label>
-          <input
-            type="datetime-local"
-            value={formData.deadline}
-            onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+          <DateTimePicker
+            label="Submission Deadline"
             required
+            value={formData.deadline}
+            onChange={(val) => setFormData({ ...formData, deadline: val })}
+            helperText="Set exact date & time for the milestone submission deadline."
           />
-          <p style={{ margin: '4px 0 0', fontSize: '11.5px', color: '#94a3b8' }}>
-            Set exact date & time for the submission deadline.
-          </p>
         </div>
 
         <div>
@@ -153,24 +147,19 @@ export const IterationFormModal = ({ isOpen, onClose, initialData = null, course
             placeholder="Instructions for students regarding deliverables..."
             value={formData.details}
             onChange={(e) => setFormData({ ...formData, details: e.target.value })}
-            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13.5px', resize: 'vertical' }}
+            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', resize: 'vertical' }}
           />
         </div>
 
         {/* Rubric Template Selector (only for creation) */}
         {!initialData && (
           <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <FileText size={14} style={{ color: '#2563eb' }} />
-                Link Rubric Template
-              </span>
-              <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: '6px' }}>(Optional)</span>
-            </label>
-            <select
+            <Select
+              label="Link Rubric Template (Optional)"
+              icon={FileText}
               value={formData.rubric_template_id}
               onChange={(e) => setFormData({ ...formData, rubric_template_id: e.target.value })}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+              helperText="Pre-populates rubric criteria from a saved template. You can customize them later."
             >
               <option value="">— No Template (Add Rubrics Later) —</option>
               {relevantTemplates.map((t) => (
@@ -178,10 +167,7 @@ export const IterationFormModal = ({ isOpen, onClose, initialData = null, course
                   {t.name} ({t.criteria?.length || 0} criteria) — {t.course}
                 </option>
               ))}
-            </select>
-            <p style={{ margin: '4px 0 0', fontSize: '11.5px', color: '#94a3b8' }}>
-              Pre-populates rubric criteria from a saved template. You can customize them later.
-            </p>
+            </Select>
           </div>
         )}
 
