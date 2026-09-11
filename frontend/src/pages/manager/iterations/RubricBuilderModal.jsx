@@ -18,6 +18,7 @@ export const RubricBuilderModal = ({
   templateMode = false,   // If true + no template, creates a new template
   courses = [],           // Available courses for template scoping
   onSave,
+  onSuccess,
 }) => {
   const [rubrics, setRubrics] = useState([EMPTY_RUBRIC()]);
   const [templateName, setTemplateName] = useState('');
@@ -132,7 +133,10 @@ export const RubricBuilderModal = ({
         // Iteration mode — save rubrics to the iteration
         await iterationsApi.setRubrics(iteration._id, rubrics);
       }
-      onSave();
+      const callback = onSave || onSuccess;
+      if (typeof callback === 'function') {
+        callback();
+      }
       onClose();
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to save rubrics.';

@@ -1009,6 +1009,14 @@ export const IterationsManagePage = () => {
           setEditingIteration(null);
         }}
         iteration={editingIteration}
+        initialData={editingIteration}
+        onSave={() => {
+          fetchIterations();
+          setToast({
+            type: 'success',
+            message: editingIteration ? 'Iteration updated successfully.' : 'Iteration created successfully.',
+          });
+        }}
         onSuccess={() => {
           fetchIterations();
           setToast({
@@ -1027,6 +1035,10 @@ export const IterationsManagePage = () => {
           setRubricIteration(null);
         }}
         iteration={rubricIteration}
+        onSave={() => {
+          fetchIterations();
+          setToast({ type: 'success', message: 'Evaluation rubrics saved successfully.' });
+        }}
         onSuccess={() => {
           fetchIterations();
           setToast({ type: 'success', message: 'Evaluation rubrics saved successfully.' });

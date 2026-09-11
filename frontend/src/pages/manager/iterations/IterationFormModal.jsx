@@ -6,7 +6,17 @@ import { iterationsApi } from '../../../api/iterationsApi';
 import { rubricTemplatesApi } from '../../../api/rubricTemplatesApi';
 import { FileText, GraduationCap } from 'lucide-react';
 
-export const IterationFormModal = ({ isOpen, onClose, initialData = null, courses = [], onSave }) => {
+export const IterationFormModal = ({
+  isOpen,
+  onClose,
+  iteration = null,
+  initialData = null,
+  courses = [],
+  onSave,
+  onSuccess,
+}) => {
+  const currentIteration = iteration || initialData;
+
   const [formData, setFormData] = useState({
     title: '',
     course: '',
@@ -27,13 +37,13 @@ export const IterationFormModal = ({ isOpen, onClose, initialData = null, course
   }, [isOpen]);
 
   useEffect(() => {
-    if (initialData) {
+    if (currentIteration) {
       setFormData({
-        title: initialData.title || '',
-        course: initialData.course || '',
-        deadline: initialData.deadline || '',
-        details: initialData.details || '',
-        rubric_template_id: initialData.rubric_template_id || '',
+        title: currentIteration.title || '',
+        course: currentIteration.course || '',
+        deadline: currentIteration.deadline || '',
+        details: currentIteration.details || '',
+        rubric_template_id: currentIteration.rubric_template_id || '',
       });
     } else {
       // BUG FIX: default course to '' so manager must explicitly choose
@@ -46,7 +56,7 @@ export const IterationFormModal = ({ isOpen, onClose, initialData = null, course
       });
     }
     setError('');
-  }, [initialData, isOpen]);
+  }, [currentIteration, isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -64,13 +74,17 @@ export const IterationFormModal = ({ isOpen, onClose, initialData = null, course
       if (!payload.rubric_template_id) {
         delete payload.rubric_template_id;
       }
-      if (initialData) {
+      if (currentIteration) {
         delete payload.rubric_template_id; // Don't change template on edit
-        await iterationsApi.update(initialData._id, payload);
+        await iterationsApi.update(currentIteration._id, payload);
       } else {
         await iterationsApi.create(payload);
       }
-      onSave();
+
+      const callback = onSave || onSuccess;
+      if (typeof callback === 'function') {
+        callback();
+      }
       onClose();
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to save iteration.';
@@ -86,7 +100,7 @@ export const IterationFormModal = ({ isOpen, onClose, initialData = null, course
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={initialData ? 'Edit Iteration Milestone' : 'Add Iteration Milestone'}>
+    <Modal isOpen={isOpen} onClose={onClose} title={currentIteration ? 'Edit Iteration Milestone' : 'Add Iteration Milestone'}>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         {error && (
           <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '10px 12px', borderRadius: '6px', fontSize: '13px' }}>
