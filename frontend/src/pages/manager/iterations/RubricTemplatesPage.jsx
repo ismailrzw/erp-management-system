@@ -3,10 +3,11 @@ import { PageHeader } from '../../../components/ui/PageHeader';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Preloader } from '../../../components/ui/Preloader';
 import { Toast } from '../../../components/ui/Toast';
+import { Modal } from '../../../components/ui/Modal';
 import { rubricTemplatesApi } from '../../../api/rubricTemplatesApi';
 import { coursesApi } from '../../../api/coursesApi';
 import { RubricBuilderModal } from './RubricBuilderModal';
-import { Plus, Edit2, Trash2, FileText, ChevronDown, ChevronUp, Layers } from 'lucide-react';
+import { Plus, Edit2, Trash2, FileText, ChevronDown, ChevronUp, Layers, AlertTriangle } from 'lucide-react';
 
 export const RubricTemplatesPage = () => {
   const [templates, setTemplates] = useState([]);
@@ -19,13 +20,17 @@ export const RubricTemplatesPage = () => {
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
 
+  // Delete modal state
+  const [templateToDelete, setTemplateToDelete] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const fetchTemplates = useCallback(async () => {
     setLoading(true);
     try {
       const res = await rubricTemplatesApi.getAll();
       setTemplates(res.data || []);
     } catch (err) {
-      setToast({ type: 'error', message: err.message || 'Failed to load templates.' });
+      setToast({ type: 'error', message: err.message || 'Failed to fetch templates.' });
     } finally {
       setLoading(false);
     }
@@ -34,9 +39,10 @@ export const RubricTemplatesPage = () => {
   const fetchCourses = useCallback(async () => {
     try {
       const res = await coursesApi.list();
-      setCourses(res.data?.items || res.data || []);
-    } catch {
-      // non-critical
+      const courseList = res.data?.items || res.data || [];
+      setCourses(courseList);
+    } catch (err) {
+      console.error('Failed to load courses:', err);
     }
   }, []);
 
@@ -55,15 +61,19 @@ export const RubricTemplatesPage = () => {
     setIsBuilderOpen(true);
   };
 
-  const handleDelete = async (tpl) => {
-    if (!window.confirm(`Delete rubric template "${tpl.name}"?`)) return;
+  const handleConfirmDelete = async () => {
+    if (!templateToDelete) return;
+    setDeleteLoading(true);
     try {
-      await rubricTemplatesApi.delete(tpl._id);
+      await rubricTemplatesApi.delete(templateToDelete._id);
       setToast({ type: 'success', message: 'Template deleted.' });
+      setTemplateToDelete(null);
       fetchTemplates();
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to delete template.';
       setToast({ type: 'error', message: msg });
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -209,7 +219,7 @@ export const RubricTemplatesPage = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); handleDelete(tpl); }}
+                      onClick={(e) => { e.stopPropagation(); setTemplateToDelete(tpl); }}
                       title="Delete Template"
                       style={{
                         padding: '6px',
@@ -295,6 +305,119 @@ export const RubricTemplatesPage = () => {
           fetchTemplates();
         }}
       />
+
+      {/* Modal: Delete Confirmation */}
+      <Modal
+        isOpen={!!templateToDelete}
+        onClose={() => !deleteLoading && setTemplateToDelete(null)}
+        title="Delete Rubric Template"
+        maxWidth="440px"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '8px',
+                backgroundColor: '#fee2e2',
+                color: '#dc2626',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <AlertTriangle size={22} />
+            </div>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>
+                Are you sure you want to delete this template?
+              </div>
+              <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
+                This template will be permanently removed.
+              </div>
+            </div>
+          </div>
+
+          {templateToDelete && (
+            <div
+              style={{
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                padding: '12px 14px',
+                fontSize: '13px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+              }}
+            >
+              <div style={{ fontWeight: 600, color: '#1e293b' }}>
+                {templateToDelete.name}
+              </div>
+              <div style={{ display: 'flex', gap: '12px', color: '#64748b', fontSize: '12px' }}>
+                <span>Scope: <strong>{templateToDelete.course || 'All Courses'}</strong></span>
+                <span>Criteria: <strong>{templateToDelete.criteria?.length || 0}</strong></span>
+              </div>
+            </div>
+          )}
+
+          <div
+            style={{
+              backgroundColor: '#eff6ff',
+              border: '1px solid #dbeafe',
+              borderRadius: '6px',
+              padding: '8px 12px',
+              fontSize: '11.5px',
+              color: '#1e40af',
+            }}
+          >
+            ℹ️ Note: If any iteration is currently linked to this template, deletion will be blocked by the system to preserve rubric integrity.
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>
+            <button
+              type="button"
+              disabled={deleteLoading}
+              onClick={() => setTemplateToDelete(null)}
+              style={{
+                padding: '8px 14px',
+                fontSize: '13px',
+                fontWeight: 500,
+                border: '1px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                color: '#475569',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={deleteLoading}
+              onClick={handleConfirmDelete}
+              style={{
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: 600,
+                border: 'none',
+                backgroundColor: '#dc2626',
+                color: '#ffffff',
+                borderRadius: '4px',
+                cursor: deleteLoading ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Trash2 size={14} />
+              <span>{deleteLoading ? 'Deleting...' : 'Delete Template'}</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

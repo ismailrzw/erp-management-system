@@ -79,6 +79,8 @@ export const IterationSubmissionsPage = () => {
       result = result.filter(
         (r) =>
           r.group_name?.toLowerCase().includes(q) ||
+          r.project_title?.toLowerCase().includes(q) ||
+          r.course?.toLowerCase().includes(q) ||
           r.submitted_by?.toLowerCase().includes(q)
       );
     }
@@ -89,9 +91,12 @@ export const IterationSubmissionsPage = () => {
   // CSV export
   const handleExportCSV = () => {
     if (!submissions.length) return;
-    const header = ['Group Name', 'Status', 'Submitted By', 'Submitted At', 'Late', 'File Name', 'Note'];
-    const rows = submissions.map((r) => [
+    const header = ['Group Name', 'Project Title', 'Course', 'Department', 'Status', 'Submitted By', 'Submitted At', 'Late', 'File Name', 'Note'];
+    const rows = filtered.map((r) => [
       r.group_name || '',
+      r.project_title || '',
+      r.course || '',
+      r.dept || '',
       r.submitted ? 'Submitted' : 'Not Submitted',
       r.submitted_by || '',
       r.submitted_at ? fmt(r.submitted_at) : '',
@@ -99,7 +104,7 @@ export const IterationSubmissionsPage = () => {
       r.file_name || '',
       r.note || '',
     ]);
-    const csvContent = [header, ...rows].map((row) => row.map((c) => `"${c}"`).join(',')).join('\n');
+    const csvContent = [header, ...rows].map((row) => row.map((c) => `"${(c || '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -195,6 +200,40 @@ export const IterationSubmissionsPage = () => {
                   </div>
                 ))}
               </div>
+
+              {/* Cross-Course & Department Breakdown */}
+              {summary.by_course && summary.by_course.length > 0 && (
+                <div style={{ marginBottom: '24px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.04em' }}>
+                    Cross-Course & Department Completion
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
+                    {summary.by_course.map((bc, idx) => {
+                      const pct = bc.total_groups > 0 ? Math.round((bc.submitted_count / bc.total_groups) * 100) : 0;
+                      const color = pct === 100 ? '#16a34a' : pct >= 50 ? '#2563eb' : '#dc2626';
+                      return (
+                        <div key={idx} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px 12px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={bc.course}>
+                              {bc.course}
+                            </span>
+                            <span style={{ fontSize: '11px', fontWeight: 700, padding: '1px 6px', borderRadius: '6px', backgroundColor: '#f1f5f9', color: '#475569' }}>
+                              {bc.dept}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#64748b', marginBottom: '4px' }}>
+                            <span>{bc.submitted_count}/{bc.total_groups} submitted</span>
+                            <span style={{ fontWeight: 600, color }}>{pct}%</span>
+                          </div>
+                          <div style={{ width: '100%', height: '4px', backgroundColor: '#f1f5f9', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', backgroundColor: color, borderRadius: '2px' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -212,7 +251,7 @@ export const IterationSubmissionsPage = () => {
               <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 type="text"
-                placeholder="Search by group or student name..."
+                placeholder="Search by group, course, or student name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
@@ -251,6 +290,7 @@ export const IterationSubmissionsPage = () => {
                 <thead>
                   <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                     <th style={thS}><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Users size={13} />Group</span></th>
+                    <th style={thS}>Course / Dept</th>
                     <th style={thS}>Status</th>
                     <th style={thS}><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FileText size={13} />File</span></th>
                     <th style={thS}>Submitted By</th>
@@ -261,7 +301,18 @@ export const IterationSubmissionsPage = () => {
                 <tbody>
                   {filtered.map((row) => (
                     <tr key={row.group_id} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: row.submitted ? '#ffffff' : '#fafafa' }}>
-                      <td style={tdS}><span style={{ fontWeight: 600, color: '#0f172a', fontSize: '13.5px' }}>{row.group_name}</span></td>
+                      <td style={tdS}>
+                        <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '13.5px' }}>{row.group_name}</div>
+                        {row.project_title && (
+                          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '1px' }}>{row.project_title}</div>
+                        )}
+                      </td>
+                      <td style={tdS}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{row.course || '-'}</span>
+                          <span style={{ fontSize: '11px', color: '#64748b' }}>Dept: <strong>{row.dept || '-'}</strong></span>
+                        </div>
+                      </td>
                       <td style={tdS}>
                         {row.submitted
                           ? row.is_late

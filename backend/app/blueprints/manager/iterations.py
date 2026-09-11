@@ -83,25 +83,53 @@ class IterationListResource(Resource):
         for item in iterations:
             format_dates(item)
 
-            # Enrich with submission stats
+            # Enrich with submission stats and cross-course/department breakdown
             iter_course = item.get('course')
-            if iter_course == 'All Courses':
-                total_groups = mongo.db.groups.count_documents({"status": "approved"})
-            else:
-                total_groups = mongo.db.groups.count_documents({
-                    "status": "approved",
-                    "course": iter_course,
-                })
+            group_query = {"status": "approved"}
+            if iter_course and iter_course != 'All Courses':
+                group_query["course"] = iter_course
+
+            approved_groups = list(mongo.db.groups.find(group_query))
+            total_groups = len(approved_groups)
 
             iter_oid = ObjectId(item['_id']) if isinstance(item['_id'], str) else item['_id']
             subs = list(mongo.db.submissions.find({"iteration_id": iter_oid}))
+            submitted_group_ids = {str(s.get("group_id")): s for s in subs}
             submitted_count = len(subs)
             late_count = sum(1 for s in subs if s.get("is_late"))
+            pending_count = max(0, total_groups - submitted_count)
+
+            # Compute by_course breakdown
+            by_course_map = {}
+            for g in approved_groups:
+                c_name = g.get("course", "Unassigned")
+                d_name = g.get("dept", "General")
+                key = (c_name, d_name)
+                if key not in by_course_map:
+                    by_course_map[key] = {
+                        "course": c_name,
+                        "dept": d_name,
+                        "total_groups": 0,
+                        "submitted_count": 0,
+                        "late_count": 0,
+                        "pending_count": 0,
+                    }
+                row = by_course_map[key]
+                row["total_groups"] += 1
+                gid_str = str(g["_id"])
+                if gid_str in submitted_group_ids:
+                    row["submitted_count"] += 1
+                    if submitted_group_ids[gid_str].get("is_late"):
+                        row["late_count"] += 1
+                else:
+                    row["pending_count"] += 1
 
             item['submission_stats'] = {
                 'total_groups': total_groups,
                 'submitted_count': submitted_count,
                 'late_count': late_count,
+                'pending_count': pending_count,
+                'by_course': list(by_course_map.values()),
             }
 
         return success_response("Iterations retrieved successfully.", data=iterations)
@@ -321,10 +349,38 @@ class IterationSubmissionsResource(Resource):
         subs_by_group = {str(s["group_id"]): s for s in submissions}
 
         result = []
+        course_breakdown = {}
+
         for group in all_groups:
             group_id_str = str(group["_id"])
             group_name = group.get("name", "Unnamed Group")
+            project_title = group.get("project_title", "")
+            group_course = group.get("course", course or "General")
+            group_dept = group.get("dept", "General")
+
             sub = subs_by_group.get(group_id_str)
+            is_sub = bool(sub)
+            is_late = bool(sub.get("is_late")) if sub else False
+
+            # Track cross-course and department statistics
+            key = (group_course, group_dept)
+            if key not in course_breakdown:
+                course_breakdown[key] = {
+                    "course": group_course,
+                    "dept": group_dept,
+                    "total_groups": 0,
+                    "submitted_count": 0,
+                    "late_count": 0,
+                    "pending_count": 0,
+                }
+            cb = course_breakdown[key]
+            cb["total_groups"] += 1
+            if is_sub:
+                cb["submitted_count"] += 1
+                if is_late:
+                    cb["late_count"] += 1
+            else:
+                cb["pending_count"] += 1
 
             if sub:
                 # Resolve submitter name
@@ -343,8 +399,11 @@ class IterationSubmissionsResource(Resource):
                 result.append({
                     "group_id": group_id_str,
                     "group_name": group_name,
+                    "project_title": project_title,
+                    "course": group_course,
+                    "dept": group_dept,
                     "submitted": True,
-                    "is_late": sub.get("is_late", False),
+                    "is_late": is_late,
                     "submitted_by": submitter_name,
                     "submitted_at": submitted_at.isoformat() if submitted_at else None,
                     "file_name": sub.get("file_name"),
@@ -356,6 +415,9 @@ class IterationSubmissionsResource(Resource):
                 result.append({
                     "group_id": group_id_str,
                     "group_name": group_name,
+                    "project_title": project_title,
+                    "course": group_course,
+                    "dept": group_dept,
                     "submitted": False,
                     "is_late": False,
                     "submitted_by": None,
@@ -370,9 +432,11 @@ class IterationSubmissionsResource(Resource):
             "total_groups": len(all_groups),
             "submitted_count": sum(1 for r in result if r["submitted"]),
             "late_count": sum(1 for r in result if r.get("is_late")),
+            "pending_count": sum(1 for r in result if not r["submitted"]),
             "iteration_title": iteration.get("title"),
             "iteration_deadline": iteration.get("deadline"),
             "course": course,
+            "by_course": list(course_breakdown.values()),
         }
 
         return success_response(
