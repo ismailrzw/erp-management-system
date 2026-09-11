@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '../../../components/ui/Modal';
 import { iterationsApi } from '../../../api/iterationsApi';
-import { Plus, Trash2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { rubricTemplatesApi } from '../../../api/rubricTemplatesApi';
+import { Plus, Trash2, CheckCircle2, AlertTriangle, Copy } from 'lucide-react';
 
 const EMPTY_RUBRIC = () => ({
   question: '',
@@ -9,44 +10,96 @@ const EMPTY_RUBRIC = () => ({
   levels: { '0': '', '1': '', '2': '', '3': '', '4': '', '5': '' },
 });
 
-export const RubricBuilderModal = ({ isOpen, onClose, iteration, onSave }) => {
+export const RubricBuilderModal = ({
+  isOpen,
+  onClose,
+  iteration = null,       // If provided, operates in "iteration mode"
+  template = null,        // If provided, operates in "template mode" (editing existing template)
+  templateMode = false,   // If true + no template, creates a new template
+  courses = [],           // Available courses for template scoping
+  onSave,
+}) => {
   const [rubrics, setRubrics] = useState([EMPTY_RUBRIC()]);
+  const [templateName, setTemplateName] = useState('');
+  const [templateCourse, setTemplateCourse] = useState('All Courses');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // Available templates for "Load from Template" feature
+  const [availableTemplates, setAvailableTemplates] = useState([]);
+
+  const isTemplateOperation = templateMode || !!template;
+
   useEffect(() => {
-    if (iteration?.rubrics && iteration.rubrics.length > 0) {
-      setRubrics(iteration.rubrics.map(r => ({
-        ...r,
-        levels: r.levels || { '0': '', '1': '', '2': '', '3': '', '4': '', '5': '' }
-      })));
+    if (!isOpen) return;
+
+    if (template) {
+      // Editing an existing template
+      setTemplateName(template.name || '');
+      setTemplateCourse(template.course || 'All Courses');
+      setRubrics(
+        (template.criteria || []).map((r) => ({
+          ...r,
+          levels: r.levels || { '0': '', '1': '', '2': '', '3': '', '4': '', '5': '' },
+        }))
+      );
+    } else if (iteration?.rubrics && iteration.rubrics.length > 0) {
+      setRubrics(
+        iteration.rubrics.map((r) => ({
+          ...r,
+          levels: r.levels || { '0': '', '1': '', '2': '', '3': '', '4': '', '5': '' },
+        }))
+      );
     } else {
       setRubrics([EMPTY_RUBRIC()]);
+      setTemplateName('');
+      setTemplateCourse('All Courses');
     }
     setError('');
-  }, [iteration, isOpen]);
+
+    // Fetch templates for the "Load from Template" feature
+    if (!isTemplateOperation) {
+      rubricTemplatesApi
+        .getAll()
+        .then((res) => setAvailableTemplates(res.data || []))
+        .catch(() => setAvailableTemplates([]));
+    }
+  }, [iteration, template, isOpen, isTemplateOperation]);
 
   const totalWeight = rubrics.reduce((sum, r) => sum + Number(r.weight || 0), 0);
   const isValidTotal = totalWeight === 100;
 
   const updateRubric = (index, field, value) => {
-    setRubrics(prev => prev.map((r, i) => i === index ? { ...r, [field]: value } : r));
+    setRubrics((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
   };
 
   const updateLevel = (rIndex, levelKey, value) => {
-    setRubrics(prev => prev.map((r, i) => {
-      if (i !== rIndex) return r;
-      return { ...r, levels: { ...r.levels, [levelKey]: value } };
-    }));
+    setRubrics((prev) =>
+      prev.map((r, i) => {
+        if (i !== rIndex) return r;
+        return { ...r, levels: { ...r.levels, [levelKey]: value } };
+      })
+    );
   };
 
   const handleAddCriterion = () => {
-    setRubrics(prev => [...prev, EMPTY_RUBRIC()]);
+    setRubrics((prev) => [...prev, EMPTY_RUBRIC()]);
   };
 
   const handleRemoveCriterion = (index) => {
     if (rubrics.length <= 1) return;
-    setRubrics(prev => prev.filter((_, i) => i !== index));
+    setRubrics((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleLoadTemplate = (tplId) => {
+    const tpl = availableTemplates.find((t) => t._id === tplId);
+    if (!tpl || !tpl.criteria) return;
+    setRubrics(
+      tpl.criteria.map((r) => ({
+        ...r,
+        levels: r.levels || { '0': '', '1': '', '2': '', '3': '', '4': '', '5': '' },
+      }))
+    );
   };
 
   const handleSave = async () => {
@@ -58,7 +111,27 @@ export const RubricBuilderModal = ({ isOpen, onClose, iteration, onSave }) => {
     setSaving(true);
     setError('');
     try {
-      await iterationsApi.setRubrics(iteration._id, rubrics);
+      if (isTemplateOperation) {
+        // Template mode — save or update a rubric template
+        if (!templateName.trim()) {
+          setError('Template name is required.');
+          setSaving(false);
+          return;
+        }
+        const payload = {
+          name: templateName.trim(),
+          course: templateCourse,
+          criteria: rubrics,
+        };
+        if (template?._id) {
+          await rubricTemplatesApi.update(template._id, payload);
+        } else {
+          await rubricTemplatesApi.create(payload);
+        }
+      } else {
+        // Iteration mode — save rubrics to the iteration
+        await iterationsApi.setRubrics(iteration._id, rubrics);
+      }
       onSave();
       onClose();
     } catch (err) {
@@ -69,9 +142,82 @@ export const RubricBuilderModal = ({ isOpen, onClose, iteration, onSave }) => {
     }
   };
 
+  const modalTitle = isTemplateOperation
+    ? template
+      ? `Edit Template — ${template.name}`
+      : 'Create Rubric Template'
+    : `Build Rubric — ${iteration?.title || ''}`;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Build Rubric — ${iteration?.title || ''}`} maxWidth="720px">
+    <Modal isOpen={isOpen} onClose={onClose} title={modalTitle} maxWidth="720px">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* Template name/course fields (only in template mode) */}
+        {isTemplateOperation && (
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '2px' }}>
+                Template Name <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Sprint 1 — Requirements Analysis"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+              />
+            </div>
+            <div style={{ width: '200px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '2px' }}>
+                Scope
+              </label>
+              <select
+                value={templateCourse}
+                onChange={(e) => setTemplateCourse(e.target.value)}
+                style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+              >
+                <option value="All Courses">All Courses</option>
+                {courses.map((c) => (
+                  <option key={c._id || c.name} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Load from Template selector (only in iteration mode) */}
+        {!isTemplateOperation && availableTemplates.length > 0 && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 14px',
+              backgroundColor: '#f8fafc',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0',
+            }}
+          >
+            <Copy size={16} style={{ color: '#64748b', flexShrink: 0 }} />
+            <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
+              Load from Template:
+            </span>
+            <select
+              onChange={(e) => e.target.value && handleLoadTemplate(e.target.value)}
+              style={{ flex: 1, padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}
+              defaultValue=""
+            >
+              <option value="">— Select a template —</option>
+              {availableTemplates.map((t) => (
+                <option key={t._id} value={t._id}>
+                  {t.name} ({t.criteria?.length || 0} criteria) — {t.course}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Real-time weight total indicator banner */}
         <div
           style={{
@@ -90,7 +236,13 @@ export const RubricBuilderModal = ({ isOpen, onClose, iteration, onSave }) => {
             ) : (
               <AlertTriangle size={20} style={{ color: totalWeight > 100 ? '#dc2626' : '#d97706' }} />
             )}
-            <span style={{ fontSize: '13.5px', fontWeight: 600, color: isValidTotal ? '#15803d' : totalWeight > 100 ? '#b91c1c' : '#b45309' }}>
+            <span
+              style={{
+                fontSize: '13.5px',
+                fontWeight: 600,
+                color: isValidTotal ? '#15803d' : totalWeight > 100 ? '#b91c1c' : '#b45309',
+              }}
+            >
               Total Weight: {totalWeight}% / 100%
             </span>
           </div>
@@ -236,7 +388,7 @@ export const RubricBuilderModal = ({ isOpen, onClose, iteration, onSave }) => {
               cursor: isValidTotal && !saving ? 'pointer' : 'not-allowed',
             }}
           >
-            {saving ? 'Saving...' : 'Save Rubrics'}
+            {saving ? 'Saving...' : isTemplateOperation ? 'Save Template' : 'Save Rubrics'}
           </button>
         </div>
       </div>

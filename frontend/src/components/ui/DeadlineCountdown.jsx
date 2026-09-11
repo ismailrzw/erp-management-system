@@ -1,9 +1,17 @@
+import { useState, useEffect } from 'react';
 
 export const DeadlineCountdown = ({ deadline, style = {} }) => {
+  const [now, setNow] = useState(new Date());
+
+  // Live tick every 60 seconds
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
   if (!deadline) return null;
 
   const deadlineDate = new Date(deadline);
-  const now = new Date();
   const diffMs = deadlineDate - now;
   const isPast = diffMs < 0;
 
@@ -26,15 +34,26 @@ export const DeadlineCountdown = ({ deadline, style = {} }) => {
           ...style,
         }}
       >
-        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#dc2626' }} />
+        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#dc2626', animation: 'pulse 1.5s ease-in-out infinite' }} />
         <span>OVERDUE</span>
       </span>
     );
   }
 
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
   const isUrgent = days <= 2;
+
+  let label;
+  if (days > 0) {
+    label = `${days}d ${hours}h remaining`;
+  } else if (hours > 0) {
+    label = `${hours}h ${minutes}m remaining`;
+  } else {
+    label = `${minutes}m remaining`;
+  }
 
   return (
     <span
@@ -62,7 +81,7 @@ export const DeadlineCountdown = ({ deadline, style = {} }) => {
           backgroundColor: isUrgent ? '#d97706' : '#16a34a',
         }}
       />
-      <span>{days}d {hours}h remaining</span>
+      <span>{label}</span>
     </span>
   );
 };

@@ -5,7 +5,7 @@ import { Toast } from '../../../components/ui/Toast';
 import { DeadlineCountdown } from '../../../components/ui/DeadlineCountdown';
 import { FileDropzone } from '../../../components/ui/FileDropzone';
 import { studentIterationsApi } from '../../../api/studentIterationsApi';
-import { ArrowLeft, Calendar, FileText, Upload, CheckCircle2, Clock, Download } from 'lucide-react';
+import { ArrowLeft, Calendar, FileText, Upload, CheckCircle2, Clock, Download, AlertCircle, User } from 'lucide-react';
 
 export const IterationDetailPage = () => {
   const { id } = useParams();
@@ -73,7 +73,7 @@ export const IterationDetailPage = () => {
   const rubrics = iteration.rubrics || [];
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1000px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
       <button
@@ -112,9 +112,21 @@ export const IterationDetailPage = () => {
             <h1 style={{ margin: '0 0 6px', fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>
               {iteration.title}
             </h1>
-            <p style={{ margin: 0, fontSize: '13.5px', color: '#64748b' }}>
-              Course: <strong style={{ color: '#334155' }}>{iteration.course}</strong>
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <span
+                style={{
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  padding: '2px 10px',
+                  borderRadius: '12px',
+                  backgroundColor: iteration.course === 'All Courses' ? '#f3e8ff' : '#f1f5f9',
+                  color: iteration.course === 'All Courses' ? '#7c3aed' : '#475569',
+                  border: `1px solid ${iteration.course === 'All Courses' ? '#ddd6fe' : '#e2e8f0'}`,
+                }}
+              >
+                {iteration.course}
+              </span>
+            </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -133,9 +145,9 @@ export const IterationDetailPage = () => {
         )}
       </div>
 
-      {/* Grid: Left Column Rubrics, Right Column Submission */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
-        {/* Rubrics Card */}
+      {/* Two-column layout on desktop */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '24px' }}>
+        {/* LEFT: Rubrics Card */}
         <div
           style={{
             backgroundColor: '#ffffff',
@@ -143,6 +155,7 @@ export const IterationDetailPage = () => {
             border: '1px solid #e2e8f0',
             padding: '20px 24px',
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+            gridColumn: rubrics.length === 0 ? '1 / -1' : undefined,
           }}
         >
           <h2 style={{ margin: '0 0 14px', fontSize: '16px', fontWeight: 600, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -183,7 +196,7 @@ export const IterationDetailPage = () => {
           )}
         </div>
 
-        {/* Submission Upload Card */}
+        {/* RIGHT: Submission Upload Card */}
         <div
           style={{
             backgroundColor: '#ffffff',
@@ -197,6 +210,32 @@ export const IterationDetailPage = () => {
             <Upload size={18} style={{ color: '#2563eb' }} />
             Project File Submission
           </h2>
+
+          {/* Rubric pre-submission checklist banner */}
+          {rubrics.length > 0 && !hasSubmission && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                padding: '12px 14px',
+                borderRadius: '8px',
+                backgroundColor: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                marginBottom: '16px',
+              }}
+            >
+              <AlertCircle size={18} style={{ color: '#2563eb', flexShrink: 0, marginTop: '1px' }} />
+              <div>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#1e40af' }}>
+                  Review the rubric criteria before submitting
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#3b82f6' }}>
+                  Your work will be evaluated on the {rubrics.length} criteria listed on the left. Make sure your deliverable addresses all of them.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Previous Submission Status */}
           {hasSubmission && submission && (
@@ -222,10 +261,18 @@ export const IterationDetailPage = () => {
                 </div>
                 {submission.submitted_at && (
                   <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    Submitted: {new Date(submission.submitted_at).toLocaleString()}
+                    {new Date(submission.submitted_at).toLocaleString()}
                   </span>
                 )}
               </div>
+
+              {/* Submitter identity */}
+              {submission.submitted_by_name && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '12.5px', color: '#475569' }}>
+                  <User size={14} style={{ color: '#64748b' }} />
+                  <span>Submitted by <strong>{submission.submitted_by_name}</strong></span>
+                </div>
+              )}
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#ffffff', padding: '10px 12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                 <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
@@ -304,6 +351,15 @@ export const IterationDetailPage = () => {
           </form>
         </div>
       </div>
+
+      {/* Responsive override for mobile — stacked layout */}
+      <style>{`
+        @media (max-width: 768px) {
+          div[style*="gridTemplateColumns: minmax"] {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

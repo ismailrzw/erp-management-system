@@ -22,10 +22,20 @@ upload_parser.add_argument('note', location='form', type=str, required=False, he
 
 
 def is_submission_late(deadline_str: str) -> bool:
-    """Returns True if current UTC time is past the given ISO date deadline."""
+    """Returns True if current UTC time is past the given deadline.
+
+    Supports both 'YYYY-MM-DD' (date-only) and 'YYYY-MM-DDTHH:MM' (datetime-local) formats.
+    """
     if not deadline_str:
         return False
     try:
+        # Try datetime-local format first (e.g. 2026-09-15T23:59)
+        deadline = datetime.strptime(deadline_str, "%Y-%m-%dT%H:%M").replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) > deadline
+    except (ValueError, TypeError):
+        pass
+    try:
+        # Fallback to date-only (e.g. 2026-09-15)
         deadline = datetime.strptime(deadline_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
         return datetime.now(timezone.utc) > deadline
     except (ValueError, TypeError):
@@ -56,7 +66,10 @@ class StudentIterationListResource(Resource):
             "status": "approved"
         })
 
-        iterations = list(mongo.db.iterations.find({"course": course}).sort("createdAt", 1))
+        # Include iterations for the student's course AND any "All Courses" iterations
+        iterations = list(mongo.db.iterations.find({
+            "$or": [{"course": course}, {"course": "All Courses"}]
+        }).sort("createdAt", 1))
 
         # Attach submission status for each iteration
         result = []
@@ -119,6 +132,17 @@ class StudentIterationDetailResource(Resource):
                 "iteration_id": oid
             })
             if sub:
+                # Resolve submitter name
+                submitter_name = None
+                submitter_id = sub.get('submitted_by')
+                if submitter_id:
+                    submitter_user = mongo.db.users.find_one({"_id": ObjectId(submitter_id) if isinstance(submitter_id, str) else submitter_id})
+                    if submitter_user:
+                        submitter_name = (
+                            submitter_user.get('full_name') or
+                            submitter_user.get('name') or
+                            submitter_user.get('email', 'Unknown')
+                        )
                 sub_info = {
                     "id": str(sub['_id']),
                     "file_name": sub.get('file_name'),
@@ -126,7 +150,8 @@ class StudentIterationDetailResource(Resource):
                     "file_size": sub.get('file_size'),
                     "note": sub.get('note'),
                     "is_late": sub.get('is_late', False),
-                    "submitted_at": sub.get('submitted_at').isoformat() if sub.get('submitted_at') else None
+                    "submitted_at": sub.get('submitted_at').isoformat() if sub.get('submitted_at') else None,
+                    "submitted_by_name": submitter_name,
                 }
 
         iteration['submission'] = sub_info

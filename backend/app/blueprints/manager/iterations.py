@@ -73,7 +73,7 @@ class IterationListResource(Resource):
     @iterations_ns.doc(security='Bearer Auth')
     @iterations_ns.param('course', 'Filter iterations by course name')
     def get(self):
-        """Get all iterations, optionally filtered by course."""
+        """Get all iterations, optionally filtered by course. Enriched with submission stats."""
         course = request.args.get('course')
         query = {}
         if course:
@@ -82,6 +82,28 @@ class IterationListResource(Resource):
         iterations = list(mongo.db.iterations.find(query).sort('createdAt', -1))
         for item in iterations:
             format_dates(item)
+
+            # Enrich with submission stats
+            iter_course = item.get('course')
+            if iter_course == 'All Courses':
+                total_groups = mongo.db.groups.count_documents({"status": "approved"})
+            else:
+                total_groups = mongo.db.groups.count_documents({
+                    "status": "approved",
+                    "course": iter_course,
+                })
+
+            iter_oid = ObjectId(item['_id']) if isinstance(item['_id'], str) else item['_id']
+            subs = list(mongo.db.submissions.find({"iteration_id": iter_oid}))
+            submitted_count = len(subs)
+            late_count = sum(1 for s in subs if s.get("is_late"))
+
+            item['submission_stats'] = {
+                'total_groups': total_groups,
+                'submitted_count': submitted_count,
+                'late_count': late_count,
+            }
+
         return success_response("Iterations retrieved successfully.", data=iterations)
 
     @jwt_required()
@@ -95,9 +117,23 @@ class IterationListResource(Resource):
         course = (data.get('course') or '').strip()
         deadline = (data.get('deadline') or '').strip()
         details = (data.get('details') or '').strip()
+        template_id_str = (data.get('rubric_template_id') or '').strip()
 
         if not title or not course or not deadline:
             return error_response("Title, course, and deadline are required.", 400)
+
+        # Pre-populate rubrics from template if provided
+        rubrics = []
+        rubric_template_id = None
+        if template_id_str:
+            try:
+                tpl_oid = ObjectId(template_id_str)
+            except (InvalidId, TypeError, ValueError):
+                return error_response("Invalid rubric template ID.", 400)
+            tpl = mongo.db.rubric_templates.find_one({"_id": tpl_oid})
+            if tpl:
+                rubrics = tpl.get("criteria", [])
+                rubric_template_id = tpl_oid
 
         now = datetime.now(timezone.utc)
         doc = {
@@ -105,13 +141,16 @@ class IterationListResource(Resource):
             "details": details,
             "course": course,
             "deadline": deadline,
-            "rubrics": [],
+            "rubrics": rubrics,
+            "rubric_template_id": rubric_template_id,
             "createdAt": now,
             "updatedAt": now
         }
 
         result = mongo.db.iterations.insert_one(doc)
         doc['_id'] = str(result.inserted_id)
+        if doc.get('rubric_template_id'):
+            doc['rubric_template_id'] = str(doc['rubric_template_id'])
         format_dates(doc)
         return success_response("Iteration created successfully.", data=doc, status=201)
 
@@ -269,11 +308,12 @@ class IterationSubmissionsResource(Resource):
 
         course = iteration.get("course")
 
-        # Fetch all approved groups for this course
-        all_groups = list(mongo.db.groups.find({
-            "status": "approved",
-            "course": course
-        }))
+        # Fetch all approved groups — if "All Courses", get all; otherwise filter by course
+        group_query = {"status": "approved"}
+        if course and course != "All Courses":
+            group_query["course"] = course
+
+        all_groups = list(mongo.db.groups.find(group_query))
 
         # Fetch all submissions for this iteration
         submissions = list(mongo.db.submissions.find({"iteration_id": oid}))

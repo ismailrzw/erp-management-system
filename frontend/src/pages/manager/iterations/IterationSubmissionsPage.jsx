@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { Preloader } from '../../../components/ui/Preloader';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { iterationsApi } from '../../../api/iterationsApi';
-import { ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Download, Users, Calendar, FileText } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Download, Users, Calendar, FileText, Search, FileDown } from 'lucide-react';
 
 const fmt = (s) => {
   if (!s) return '-';
@@ -21,6 +21,25 @@ const thS = { padding: '11px 16px', fontSize: '12px', fontWeight: 600, color: '#
 const tdS = { padding: '14px 16px', verticalAlign: 'middle' };
 const bdg = (bg, c, br) => ({ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 9px', borderRadius: '12px', fontSize: '11.5px', fontWeight: 600, backgroundColor: bg, color: c, border: '1px solid ' + br });
 
+const filterTabs = [
+  { key: 'all', label: 'All' },
+  { key: 'submitted', label: 'Submitted' },
+  { key: 'not_submitted', label: 'Not Submitted' },
+  { key: 'late', label: 'Late' },
+];
+
+const tabStyle = (active) => ({
+  padding: '5px 14px',
+  borderRadius: '20px',
+  fontSize: '12.5px',
+  fontWeight: 600,
+  cursor: 'pointer',
+  border: active ? '1px solid #2563eb' : '1px solid #e2e8f0',
+  backgroundColor: active ? '#eff6ff' : '#ffffff',
+  color: active ? '#1d4ed8' : '#64748b',
+  transition: 'all 0.15s ease',
+});
+
 export const IterationSubmissionsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -28,6 +47,8 @@ export const IterationSubmissionsPage = () => {
   const [summary, setSummary] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
     (async () => {
@@ -43,6 +64,55 @@ export const IterationSubmissionsPage = () => {
     })();
   }, [id]);
 
+  // Filter logic
+  const filtered = useMemo(() => {
+    let result = submissions;
+
+    // Status filter
+    if (statusFilter === 'submitted') result = result.filter((r) => r.submitted && !r.is_late);
+    else if (statusFilter === 'not_submitted') result = result.filter((r) => !r.submitted);
+    else if (statusFilter === 'late') result = result.filter((r) => r.is_late);
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (r) =>
+          r.group_name?.toLowerCase().includes(q) ||
+          r.submitted_by?.toLowerCase().includes(q)
+      );
+    }
+
+    return result;
+  }, [submissions, statusFilter, searchQuery]);
+
+  // CSV export
+  const handleExportCSV = () => {
+    if (!submissions.length) return;
+    const header = ['Group Name', 'Status', 'Submitted By', 'Submitted At', 'Late', 'File Name', 'Note'];
+    const rows = submissions.map((r) => [
+      r.group_name || '',
+      r.submitted ? 'Submitted' : 'Not Submitted',
+      r.submitted_by || '',
+      r.submitted_at ? fmt(r.submitted_at) : '',
+      r.is_late ? 'Yes' : 'No',
+      r.file_name || '',
+      r.note || '',
+    ]);
+    const csvContent = [header, ...rows].map((row) => row.map((c) => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `submissions_${summary?.iteration_title || id}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const progressPct = summary && summary.total_groups > 0
+    ? Math.round((summary.submitted_count / summary.total_groups) * 100)
+    : 0;
+
   return (
     <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
       <button
@@ -54,8 +124,31 @@ export const IterationSubmissionsPage = () => {
 
       <PageHeader
         title={summary ? summary.iteration_title : 'Submission Review'}
-        subtitle={summary ? summary.course + ' \u00b7 Deadline: ' + summary.iteration_deadline : 'Group-wise submission status'}
-      />
+        subtitle={summary ? summary.course + ' · Deadline: ' + summary.iteration_deadline : 'Group-wise submission status'}
+      >
+        {submissions.length > 0 && (
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+              backgroundColor: '#ffffff',
+              color: '#334155',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <FileDown size={15} />
+            Export CSV
+          </button>
+        )}
+      </PageHeader>
 
       {loading ? (
         <Preloader label="Loading submissions..." />
@@ -64,23 +157,94 @@ export const IterationSubmissionsPage = () => {
       ) : (
         <>
           {summary && (
-            <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '24px' }}>
-              {[
-                ['Total Groups', summary.total_groups, '#1e293b'],
-                ['Submitted', summary.submitted_count, '#16a34a'],
-                ['Not Submitted', summary.total_groups - summary.submitted_count, '#dc2626'],
-                ['Late', summary.late_count, '#d97706'],
-              ].map(([label, value, color]) => (
-                <div key={label} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '18px 24px', minWidth: '140px', flex: '1 1 140px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                  <div style={{ fontSize: '28px', fontWeight: 700, color }}>{value}</div>
-                  <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '4px' }}>{label}</div>
+            <>
+              {/* Progress bar */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                    Submission Progress
+                  </span>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: progressPct === 100 ? '#16a34a' : '#1e293b' }}>
+                    {progressPct}%
+                  </span>
                 </div>
-              ))}
-            </div>
+                <div style={{ width: '100%', height: '8px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      width: `${progressPct}%`,
+                      height: '100%',
+                      backgroundColor: progressPct === 100 ? '#16a34a' : progressPct > 50 ? '#2563eb' : '#d97706',
+                      borderRadius: '4px',
+                      transition: 'width 0.4s ease',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Stat Cards */}
+              <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '24px' }}>
+                {[
+                  ['Total Groups', summary.total_groups, '#1e293b'],
+                  ['Submitted', summary.submitted_count, '#16a34a'],
+                  ['Not Submitted', summary.total_groups - summary.submitted_count, '#dc2626'],
+                  ['Late', summary.late_count, '#d97706'],
+                ].map(([label, value, color]) => (
+                  <div key={label} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '18px 24px', minWidth: '140px', flex: '1 1 140px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                    <div style={{ fontSize: '28px', fontWeight: 700, color }}>{value}</div>
+                    <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '4px' }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
-          {submissions.length === 0 ? (
-            <EmptyState title="No groups found" description="No approved groups are enrolled in this course yet." />
+          {/* Search & Filter toolbar */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '16px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ position: 'relative', flex: '1 1 220px', maxWidth: '320px' }}>
+              <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <input
+                type="text"
+                placeholder="Search by group or student name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px 8px 32px',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0',
+                  fontSize: '13px',
+                  color: '#1e293b',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {filterTabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.key)}
+                  style={tabStyle(statusFilter === tab.key)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filtered.length === 0 ? (
+            <EmptyState
+              title={searchQuery || statusFilter !== 'all' ? 'No matching results' : 'No groups found'}
+              description={searchQuery || statusFilter !== 'all' ? 'Try adjusting your search or filter.' : 'No approved groups are enrolled in this course yet.'}
+            />
           ) : (
             <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -95,7 +259,7 @@ export const IterationSubmissionsPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {submissions.map((row) => (
+                  {filtered.map((row) => (
                     <tr key={row.group_id} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: row.submitted ? '#ffffff' : '#fafafa' }}>
                       <td style={tdS}><span style={{ fontWeight: 600, color: '#0f172a', fontSize: '13.5px' }}>{row.group_name}</span></td>
                       <td style={tdS}>

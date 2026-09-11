@@ -150,6 +150,7 @@ export const Sidebar = ({
           icon: Layers,
           subitems: [
             { text: 'All Iterations & Rubrics', to: '/manager/iterations' },
+            { text: 'Rubric Templates', to: '/manager/rubric-templates' },
           ],
         },
       ],
