@@ -23,20 +23,27 @@ import {
   Search,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
   Building2,
   GraduationCap,
   ChevronUp,
+  ChevronDown,
   BarChart3,
   Layers,
   ArrowUpDown,
+  Sparkles,
+  ArrowRight,
+  Kanban,
+  Table as TableIcon,
+  Check,
+  ShieldCheck,
 } from 'lucide-react';
 
 const statusFilterOptions = [
   { key: 'all', label: 'All Milestones' },
-  { key: 'upcoming', label: 'Upcoming' },
-  { key: 'overdue', label: 'Overdue' },
-  { key: 'needs_attention', label: 'Needs Attention (<50%)' },
+  { key: 'upcoming', label: 'Active & Upcoming' },
+  { key: 'needs_rubrics', label: 'Missing Rubrics' },
+  { key: 'needs_attention', label: 'Needs Follow-up (<50%)' },
+  { key: 'overdue', label: 'Overdue / Closed' },
 ];
 
 const pillStyle = (active) => ({
@@ -51,18 +58,42 @@ const pillStyle = (active) => ({
   transition: 'all 0.15s ease',
 });
 
+// Human-friendly date and time formatters
+const formatHumanDate = (dateStr) => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('en-PK', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
+const formatHumanTime = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString('en-PK', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
 export const IterationsManagePage = () => {
   const navigate = useNavigate();
   const [iterations, setIterations] = useState([]);
   const [courses, setCourses] = useState([]);
   const [departments, setDepartments] = useState([]);
 
-  // Filters & Sorting
+  // Filters, Sorting & View Mode
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedDept, setSelectedDept] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('deadline_asc');
+  const [viewMode, setViewMode] = useState('lifecycle'); // 'lifecycle' | 'table'
+  const [collapsedCompleted, setCollapsedCompleted] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
@@ -144,7 +175,7 @@ export const IterationsManagePage = () => {
     }
   };
 
-  // Collective Statistics calculation across all iterations on the page
+  // Executive Statistics calculation across all iterations
   const collectiveStats = useMemo(() => {
     const totalMilestones = iterations.length;
     let upcomingMilestones = 0;
@@ -153,6 +184,7 @@ export const IterationsManagePage = () => {
     let totalExpected = 0;
     let totalLate = 0;
     let totalPending = 0;
+    let withRubricsCount = 0;
     const now = new Date();
 
     const courseMap = {};
@@ -162,11 +194,13 @@ export const IterationsManagePage = () => {
       if (dl >= now) upcomingMilestones += 1;
       else overdueMilestones += 1;
 
+      if ((item.rubrics?.length || 0) > 0) withRubricsCount += 1;
+
       const stats = item.submission_stats || {};
       const tg = stats.total_groups || 0;
       const sub = stats.submitted_count || 0;
       const late = stats.late_count || 0;
-      const pend = stats.pending_count !== undefined ? stats.pending_count : Math.max(0, tg - sub);
+      const pend = Math.max(0, tg - sub);
 
       totalExpected += tg;
       totalSubmissions += sub;
@@ -188,7 +222,7 @@ export const IterationsManagePage = () => {
         }
         courseMap[key].submitted_count += bc.submitted_count;
         courseMap[key].late_count += bc.late_count;
-        courseMap[key].pending_count += bc.pending_count;
+        courseMap[key].pending_count += Math.max(0, bc.total_groups - bc.submitted_count);
       });
     });
 
@@ -206,6 +240,8 @@ export const IterationsManagePage = () => {
       totalLate,
       totalPending,
       submissionRate,
+      withRubricsCount,
+      missingRubricsCount: totalMilestones - withRubricsCount,
       courseBreakdown: Object.values(courseMap),
     };
   }, [iterations]);
@@ -230,6 +266,7 @@ export const IterationsManagePage = () => {
       const dl = new Date(item.deadline);
       if (statusFilter === 'upcoming' && dl < now) return false;
       if (statusFilter === 'overdue' && dl >= now) return false;
+      if (statusFilter === 'needs_rubrics' && (item.rubrics?.length || 0) > 0) return false;
       if (statusFilter === 'needs_attention') {
         const stats = item.submission_stats || {};
         const pct = stats.total_groups > 0 ? (stats.submitted_count / stats.total_groups) * 100 : 0;
@@ -263,20 +300,280 @@ export const IterationsManagePage = () => {
         return rateA - rateB;
       }
       if (sortBy === 'title_asc') return (a.title || '').localeCompare(b.title || '');
-      if (sortBy === 'created_desc') return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      if (sortBy === 'created_desc') return new Date(b.created_at || b._id) - new Date(a.created_at || a._id);
       return 0;
     });
 
     return result;
   }, [iterations, selectedCourse, selectedDept, statusFilter, searchQuery, sortBy]);
 
+  // Identify the Primary Active Milestone (Nearest deadline in progress)
+  const activeMilestone = useMemo(() => {
+    const now = new Date();
+    const upcoming = iterations
+      .filter((i) => new Date(i.deadline) >= now)
+      .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+    return upcoming[0] || iterations[0] || null;
+  }, [iterations]);
+
+  // Lifecycle Stages (Active / Upcoming / Completed) for human mental model
+  const lifecycleStages = useMemo(() => {
+    const now = new Date();
+    const active = [];
+    const upcoming = [];
+    const completed = [];
+
+    filteredAndSortedIterations.forEach((item) => {
+      const dl = new Date(item.deadline);
+      const isPast = dl < now;
+      const stats = item.submission_stats || {};
+      const totalGroups = stats.total_groups || 0;
+      const submitted = stats.submitted_count || 0;
+      const allSubmitted = totalGroups > 0 && submitted >= totalGroups;
+
+      if (isPast || allSubmitted) {
+        completed.push(item);
+      } else if (active.length === 0) {
+        // Nearest active milestone
+        active.push(item);
+      } else {
+        upcoming.push(item);
+      }
+    });
+
+    return { active, upcoming, completed };
+  }, [filteredAndSortedIterations]);
+
+  // Card renderer helper for Lifecycle Stages view
+  const renderMilestoneCard = (item, isActive = false, isCompleted = false) => {
+    const rubricCount = item.rubrics?.length || 0;
+    const stats = item.submission_stats || {};
+    const totalGroups = stats.total_groups || 0;
+    const submitted = stats.submitted_count || 0;
+    const pending = Math.max(0, totalGroups - submitted);
+    const progressPct = totalGroups > 0 ? Math.round((submitted / totalGroups) * 100) : 0;
+    const progressColor = progressPct === 100 ? '#16a34a' : progressPct >= 50 ? '#2563eb' : '#d97706';
+
+    return (
+      <div
+        key={item._id}
+        onClick={() => navigate(`/manager/iterations/${item._id}/submissions`)}
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '10px',
+          border: isActive ? '1.5px solid #3b82f6' : '1px solid #e2e8f0',
+          padding: '16px 18px',
+          boxShadow: isActive ? '0 4px 12px rgba(37, 99, 235, 0.08)' : '0 1px 3px rgba(0,0,0,0.03)',
+          cursor: 'pointer',
+          transition: 'all 0.15s ease',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          opacity: isCompleted ? 0.88 : 1,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#2563eb';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = isActive ? '#3b82f6' : '#e2e8f0';
+          e.currentTarget.style.transform = 'none';
+        }}
+      >
+        {/* Top: Scope & Title */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '2px 7px',
+                  borderRadius: '10px',
+                  backgroundColor: item.course === 'All Courses' ? '#f3e8ff' : '#f1f5f9',
+                  color: item.course === 'All Courses' ? '#7c3aed' : '#475569',
+                  border: `1px solid ${item.course === 'All Courses' ? '#ddd6fe' : '#e2e8f0'}`,
+                }}
+              >
+                {item.course}
+              </span>
+              {isActive && (
+                <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#1d4ed8', backgroundColor: '#eff6ff', padding: '1px 6px', borderRadius: '6px' }}>
+                  ACTIVE
+                </span>
+              )}
+              {isCompleted && (
+                <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#15803d', backgroundColor: '#dcfce7', padding: '1px 6px', borderRadius: '6px' }}>
+                  COMPLETED
+                </span>
+              )}
+            </div>
+
+            <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
+              {item.title}
+            </div>
+
+            {item.details && (
+              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', maxWidth: '420px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {item.details}
+              </div>
+            )}
+          </div>
+
+          {/* Live Countdown Chip */}
+          <DeadlineCountdown deadline={item.deadline} />
+        </div>
+
+        {/* Middle: Deadline & Rubrics */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '12px', color: '#475569', borderTop: '1px solid #f8fafc', paddingTop: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Calendar size={13} style={{ color: '#64748b' }} />
+            <span>{formatHumanDate(item.deadline)}</span>
+            {formatHumanTime(item.deadline) && <span style={{ color: '#94a3b8' }}>· {formatHumanTime(item.deadline)}</span>}
+          </div>
+
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '2px 8px',
+              borderRadius: '10px',
+              fontSize: '11px',
+              fontWeight: 600,
+              backgroundColor: rubricCount > 0 ? '#eff6ff' : '#fef3c7',
+              color: rubricCount > 0 ? '#1d4ed8' : '#b45309',
+              border: `1px solid ${rubricCount > 0 ? '#bfdbfe' : '#fde68a'}`,
+            }}
+          >
+            <FileText size={11} />
+            {rubricCount > 0 ? `${rubricCount} Criteria` : 'No Rubric'}
+          </span>
+        </div>
+
+        {/* Progress Bar */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', fontSize: '11.5px' }}>
+            <span style={{ color: '#64748b' }}>Submissions:</span>
+            <span style={{ fontWeight: 600, color: progressColor }}>
+              {submitted} / {totalGroups} ({progressPct}%)
+            </span>
+          </div>
+
+          <div style={{ width: '100%', height: '5px', backgroundColor: '#f1f5f9', borderRadius: '3px', overflow: 'hidden' }}>
+            <div
+              style={{
+                width: `${progressPct}%`,
+                height: '100%',
+                backgroundColor: progressColor,
+                borderRadius: '3px',
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '3px' }}>
+            <span style={{ color: pending > 0 ? '#dc2626' : '#16a34a' }}>
+              {pending > 0 ? `${pending} pending` : 'All groups submitted'}
+            </span>
+            {stats.late_count > 0 && (
+              <span style={{ color: '#d97706', fontWeight: 500 }}>
+                {stats.late_count} late
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Actions */}
+        <div
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '10px', marginTop: '2px' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={() => handleOpenRubrics(item)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '5px 10px',
+                borderRadius: '6px',
+                border: '1px solid #bfdbfe',
+                backgroundColor: '#eff6ff',
+                color: '#1d4ed8',
+                fontSize: '11.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <Sliders size={12} /> Rubric
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(`/manager/iterations/${item._id}/submissions`)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '5px 10px',
+                borderRadius: '6px',
+                border: '1px solid #cbd5e1',
+                backgroundColor: '#f8fafc',
+                color: '#334155',
+                fontSize: '11.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <Eye size={12} /> Submissions
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button
+              type="button"
+              onClick={() => handleEdit(item)}
+              title="Edit Milestone"
+              style={{
+                padding: '5px',
+                borderRadius: '6px',
+                border: '1px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                color: '#64748b',
+                cursor: 'pointer',
+              }}
+            >
+              <Edit2 size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIterationToDelete(item)}
+              title="Delete Milestone"
+              style={{
+                padding: '5px',
+                borderRadius: '6px',
+                border: '1px solid #fecaca',
+                backgroundColor: '#fff1f2',
+                color: '#e11d48',
+                cursor: 'pointer',
+              }}
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ padding: '24px', maxWidth: '1220px', margin: '0 auto' }}>
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
+      {/* Header */}
       <PageHeader
-        title="Iteration Milestones & Submissions"
-        subtitle="Manage FYP iterations, rubrics, and track collective submission progress across courses & departments."
+        title="Iteration Milestones & Evaluation"
+        subtitle="Manage semester deliverables, student submission progress, and evaluation rubrics across academic courses."
       >
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button
@@ -289,15 +586,16 @@ export const IterationsManagePage = () => {
               backgroundColor: showMatrix ? '#eff6ff' : '#ffffff',
               color: showMatrix ? '#1d4ed8' : '#475569',
               padding: '8px 14px',
-              borderRadius: '6px',
+              borderRadius: '8px',
               fontSize: '13px',
               fontWeight: 600,
               border: `1px solid ${showMatrix ? '#bfdbfe' : '#cbd5e1'}`,
               cursor: 'pointer',
+              transition: 'all 0.15s ease',
             }}
           >
             <BarChart3 size={15} />
-            <span>{showMatrix ? 'Hide Cross-Course Matrix' : 'Cross-Course Matrix'}</span>
+            <span>{showMatrix ? 'Close Course Matrix' : 'Course Matrix'}</span>
           </button>
 
           <button
@@ -310,11 +608,13 @@ export const IterationsManagePage = () => {
               backgroundColor: '#2563eb',
               color: '#ffffff',
               padding: '8px 16px',
-              borderRadius: '6px',
+              borderRadius: '8px',
               fontSize: '13px',
               fontWeight: 600,
               border: 'none',
               cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(37, 99, 235, 0.2)',
+              transition: 'background-color 0.15s ease',
             }}
           >
             <Plus size={16} />
@@ -323,37 +623,245 @@ export const IterationsManagePage = () => {
         </div>
       </PageHeader>
 
-      {/* Collective Statistics KPI Cards */}
+      {/* 1. Active Milestone Spotlight Banner (Executive Focus) */}
+      {activeMilestone && (statusFilter === 'all' || statusFilter === 'upcoming') && !selectedCourse && (
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #bfdbfe',
+            padding: '20px 24px',
+            marginBottom: '20px',
+            boxShadow: '0 4px 16px -2px rgba(37, 99, 235, 0.07), 0 2px 6px -1px rgba(0, 0, 0, 0.03)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Top Gradient Accent Bar */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'linear-gradient(90deg, #2563eb, #7c3aed)' }} />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
+            {/* Left: Eyebrow + Title + Details */}
+            <div style={{ flex: '1 1 340px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    backgroundColor: '#eff6ff',
+                    color: '#1d4ed8',
+                    border: '1px solid #dbeafe',
+                  }}
+                >
+                  <Sparkles size={11} /> Current Active Milestone
+                </span>
+                <span
+                  style={{
+                    fontSize: '11.5px',
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    backgroundColor: activeMilestone.course === 'All Courses' ? '#f3e8ff' : '#f1f5f9',
+                    color: activeMilestone.course === 'All Courses' ? '#7c3aed' : '#334155',
+                    border: `1px solid ${activeMilestone.course === 'All Courses' ? '#ddd6fe' : '#e2e8f0'}`,
+                  }}
+                >
+                  {activeMilestone.course}
+                </span>
+              </div>
+
+              <h2 style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
+                {activeMilestone.title}
+              </h2>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#475569', flexWrap: 'wrap' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <Calendar size={14} style={{ color: '#2563eb' }} />
+                  <strong>{formatHumanDate(activeMilestone.deadline)}</strong>
+                  {formatHumanTime(activeMilestone.deadline) && <span>at {formatHumanTime(activeMilestone.deadline)}</span>}
+                </span>
+                <span>·</span>
+                <DeadlineCountdown deadline={activeMilestone.deadline} />
+              </div>
+
+              {activeMilestone.details && (
+                <p style={{ margin: '8px 0 0 0', fontSize: '12.5px', color: '#64748b', lineHeight: 1.4 }}>
+                  {activeMilestone.details}
+                </p>
+              )}
+            </div>
+
+            {/* Middle: Live Progress Bar */}
+            {(() => {
+              const stats = activeMilestone.submission_stats || {};
+              const totalGroups = stats.total_groups || 0;
+              const submitted = stats.submitted_count || 0;
+              const late = stats.late_count || 0;
+              const pending = Math.max(0, totalGroups - submitted);
+              const pct = totalGroups > 0 ? Math.round((submitted / totalGroups) * 100) : 0;
+              const color = pct === 100 ? '#16a34a' : pct >= 50 ? '#2563eb' : '#d97706';
+
+              return (
+                <div style={{ flex: '0 1 280px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>
+                      Deliverables Submitted
+                    </span>
+                    <span style={{ fontSize: '14px', fontWeight: 700, color }}>
+                      {submitted} / {totalGroups} ({pct}%)
+                    </span>
+                  </div>
+
+                  <div style={{ width: '100%', height: '8px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        width: `${pct}%`,
+                        height: '100%',
+                        backgroundColor: color,
+                        borderRadius: '4px',
+                        transition: 'width 0.4s ease',
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', fontSize: '11.5px', color: '#64748b' }}>
+                    <span>{pending} pending</span>
+                    {late > 0 && <span style={{ color: '#d97706', fontWeight: 600 }}>· {late} late</span>}
+                    {pct === 100 && <span style={{ color: '#16a34a', fontWeight: 600 }}>· Complete!</span>}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Right: Rubric Readiness & Primary CTA */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+              {/* Rubric Badge */}
+              {(() => {
+                const rCount = activeMilestone.rubrics?.length || 0;
+                return rCount > 0 ? (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      fontSize: '11.5px',
+                      fontWeight: 600,
+                      backgroundColor: '#dcfce7',
+                      color: '#15803d',
+                      border: '1px solid #bbf7d0',
+                    }}
+                  >
+                    <Check size={13} />
+                    <span>{rCount} Criteria Ready</span>
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      fontSize: '11.5px',
+                      fontWeight: 600,
+                      backgroundColor: '#fef3c7',
+                      color: '#b45309',
+                      border: '1px solid #fde68a',
+                    }}
+                  >
+                    <AlertTriangle size={13} />
+                    <span>Missing Rubrics</span>
+                  </span>
+                );
+              })()}
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleOpenRubrics(activeMilestone)}
+                  style={{
+                    padding: '7px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#ffffff',
+                    color: '#334155',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                >
+                  <Sliders size={13} /> Rubrics
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => navigate(`/manager/iterations/${activeMilestone._id}/submissions`)}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: '#2563eb',
+                    color: '#ffffff',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxShadow: '0 1px 2px rgba(37, 99, 235, 0.2)',
+                  }}
+                >
+                  <Eye size={13} /> Review Submissions <ArrowRight size={13} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Executive Pulse Indicators (Streamlined 3-Card Header) */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
           gap: '12px',
           marginBottom: '20px',
         }}
       >
-        {/* Card 1: Milestones */}
+        {/* Pulse 1: Semester Milestones */}
         <div
           style={{
             backgroundColor: '#ffffff',
-            borderRadius: '8px',
+            borderRadius: '10px',
             border: '1px solid #e2e8f0',
-            padding: '14px 16px',
+            padding: '14px 18px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
           }}
         >
           <div>
-            <div style={{ fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-              Total Milestones
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Semester Milestones
             </div>
-            <div style={{ fontSize: '22px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>
-              {collectiveStats.totalMilestones}
+            <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>
+              {collectiveStats.totalMilestones} Planned
             </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
-              {collectiveStats.upcomingMilestones} upcoming · {collectiveStats.overdueMilestones} overdue
+            <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
+              {collectiveStats.upcomingMilestones} active/upcoming · {collectiveStats.overdueMilestones} closed
             </div>
           </div>
           <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -361,162 +869,94 @@ export const IterationsManagePage = () => {
           </div>
         </div>
 
-        {/* Card 2: Tracked Deliverables */}
+        {/* Pulse 2: Submission Health */}
         <div
           style={{
             backgroundColor: '#ffffff',
-            borderRadius: '8px',
+            borderRadius: '10px',
             border: '1px solid #e2e8f0',
-            padding: '14px 16px',
+            padding: '14px 18px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
           }}
         >
           <div>
-            <div style={{ fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-              Tracked Deliverables
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Deliverable Compliance
             </div>
-            <div style={{ fontSize: '22px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>
-              {collectiveStats.totalExpected}
+            <div style={{ fontSize: '20px', fontWeight: 700, color: collectiveStats.submissionRate >= 70 ? '#16a34a' : '#2563eb', marginTop: '2px' }}>
+              {collectiveStats.submissionRate}% Submitted
             </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
-              Across {collectiveStats.courseBreakdown.length} course sections
+            <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
+              {collectiveStats.totalSubmissions}/{collectiveStats.totalExpected} deliverables · {collectiveStats.totalLate} late
             </div>
           </div>
-          <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#f5f3ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Users size={20} />
-          </div>
-        </div>
-
-        {/* Card 3: Collective Submission Rate */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            border: '1px solid #e2e8f0',
-            padding: '14px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-          }}
-        >
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-              Overall Submission Rate
-            </div>
-            <div style={{ fontSize: '22px', fontWeight: 700, color: collectiveStats.submissionRate >= 80 ? '#16a34a' : collectiveStats.submissionRate >= 50 ? '#2563eb' : '#dc2626', marginTop: '2px' }}>
-              {collectiveStats.submissionRate}%
-            </div>
-            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-              {collectiveStats.totalSubmissions} / {collectiveStats.totalExpected} submitted
-            </div>
-            {collectiveStats.totalExpected > 0 && (
-              <div style={{ width: '85%', height: '4px', backgroundColor: '#f1f5f9', borderRadius: '2px', overflow: 'hidden', marginTop: '4px' }}>
-                <div style={{ width: `${collectiveStats.submissionRate}%`, height: '100%', backgroundColor: collectiveStats.submissionRate >= 80 ? '#16a34a' : '#2563eb', borderRadius: '2px' }} />
-              </div>
-            )}
-          </div>
-          <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#dcfce7', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#dcfce7', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <CheckCircle2 size={20} />
           </div>
         </div>
 
-        {/* Card 4: On-Time vs Late */}
+        {/* Pulse 3: Rubric Evaluation Readiness */}
         <div
           style={{
             backgroundColor: '#ffffff',
-            borderRadius: '8px',
+            borderRadius: '10px',
             border: '1px solid #e2e8f0',
-            padding: '14px 16px',
+            padding: '14px 18px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
           }}
         >
           <div>
-            <div style={{ fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-              On-Time vs Late
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Evaluation Readiness
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '2px' }}>
-              <span style={{ fontSize: '22px', fontWeight: 700, color: '#16a34a' }}>
-                {collectiveStats.onTimeSubmissions}
-              </span>
-              <span style={{ fontSize: '13px', color: '#94a3b8' }}>/</span>
-              <span style={{ fontSize: '16px', fontWeight: 700, color: '#d97706' }}>
-                {collectiveStats.totalLate} late
-              </span>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: collectiveStats.missingRubricsCount === 0 ? '#16a34a' : '#d97706', marginTop: '2px' }}>
+              {collectiveStats.withRubricsCount} of {collectiveStats.totalMilestones} Ready
             </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
-              {collectiveStats.totalSubmissions > 0 ? Math.round((collectiveStats.onTimeSubmissions / collectiveStats.totalSubmissions) * 100) : 0}% on-time compliance
+            <div style={{ fontSize: '11.5px', color: collectiveStats.missingRubricsCount > 0 ? '#d97706' : '#16a34a', marginTop: '2px' }}>
+              {collectiveStats.missingRubricsCount > 0 ? `⚠️ ${collectiveStats.missingRubricsCount} milestone missing rubrics` : '✓ All criteria configured'}
             </div>
           </div>
           <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#fef3c7', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Calendar size={20} />
-          </div>
-        </div>
-
-        {/* Card 5: Pending Submissions */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            border: '1px solid #e2e8f0',
-            padding: '14px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-          }}
-        >
-          <div>
-            <div style={{ fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-              Pending Deliverables
-            </div>
-            <div style={{ fontSize: '22px', fontWeight: 700, color: collectiveStats.totalPending > 0 ? '#dc2626' : '#16a34a', marginTop: '2px' }}>
-              {collectiveStats.totalPending}
-            </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
-              {collectiveStats.totalPending > 0 ? 'Requires student attention' : 'All groups submitted!'}
-            </div>
-          </div>
-          <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <XCircle size={20} />
+            <ShieldCheck size={20} />
           </div>
         </div>
       </div>
 
-      {/* Cross-Course & Cross-Department Overview Matrix (Collapsible Panel) */}
+      {/* 3. Collapsible Cross-Course Matrix Panel (Toggled only on request) */}
       {showMatrix && (
         <div
           style={{
             backgroundColor: '#ffffff',
-            borderRadius: '8px',
+            borderRadius: '10px',
             border: '1px solid #bfdbfe',
-            padding: '16px 18px',
+            padding: '18px 20px',
             marginBottom: '20px',
-            boxShadow: '0 2px 6px rgba(37, 99, 235, 0.06)',
+            boxShadow: '0 2px 8px rgba(37, 99, 235, 0.05)',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
             <div>
               <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Building2 size={16} style={{ color: '#2563eb' }} />
-                <span>Cross-Course & Cross-Department Submissions Matrix</span>
+                <span>Cross-Course & Department Submissions Matrix</span>
               </div>
               <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                High-level oversight of group compliance across all registered courses and academic departments.
+                Breakdown of group deliverable compliance across individual course sections.
               </div>
             </div>
             <button
               type="button"
               onClick={() => setShowMatrix(false)}
               style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+              title="Close Matrix"
             >
-              <ChevronUp size={16} />
+              <ChevronUp size={18} />
             </button>
           </div>
 
@@ -543,7 +983,9 @@ export const IterationsManagePage = () => {
                   {collectiveStats.courseBreakdown.map((row, idx) => {
                     const pct = row.total_groups > 0 ? Math.round((row.submitted_count / row.total_groups) * 100) : 0;
                     const onTime = Math.max(0, row.submitted_count - row.late_count);
+                    const pending = Math.max(0, row.total_groups - row.submitted_count);
                     const color = pct === 100 ? '#16a34a' : pct >= 50 ? '#2563eb' : '#dc2626';
+
                     return (
                       <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                         <td style={{ padding: '10px 12px', fontWeight: 600, color: '#0f172a' }}>{row.course}</td>
@@ -556,7 +998,7 @@ export const IterationsManagePage = () => {
                         <td style={{ padding: '10px 12px', fontWeight: 600, color: '#0f172a' }}>{row.submitted_count}</td>
                         <td style={{ padding: '10px 12px', color: '#16a34a' }}>{onTime}</td>
                         <td style={{ padding: '10px 12px', color: row.late_count > 0 ? '#d97706' : '#94a3b8' }}>{row.late_count}</td>
-                        <td style={{ padding: '10px 12px', color: row.pending_count > 0 ? '#dc2626' : '#94a3b8', fontWeight: row.pending_count > 0 ? 600 : 400 }}>{row.pending_count}</td>
+                        <td style={{ padding: '10px 12px', color: pending > 0 ? '#dc2626' : '#94a3b8', fontWeight: pending > 0 ? 600 : 400 }}>{pending}</td>
                         <td style={{ padding: '10px 12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ fontWeight: 600, color, minWidth: '35px' }}>{pct}%</span>
@@ -575,7 +1017,7 @@ export const IterationsManagePage = () => {
         </div>
       )}
 
-      {/* Filter & Sorting Toolbar */}
+      {/* 4. Streamlined Filter & View Toolbar */}
       <div
         style={{
           display: 'flex',
@@ -583,32 +1025,32 @@ export const IterationsManagePage = () => {
           gap: '12px',
           backgroundColor: '#ffffff',
           padding: '14px 18px',
-          borderRadius: '8px',
+          borderRadius: '10px',
           border: '1px solid #e2e8f0',
           marginBottom: '20px',
-          boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
         }}
       >
-        {/* Row 1: Search and Dropdowns */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+        {/* Row 1: Search, Filters, and View Mode Toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {/* Search box */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '8px',
               border: '1px solid #cbd5e1',
-              borderRadius: '6px',
-              padding: '6px 12px',
-              flex: '1 1 220px',
-              minWidth: '200px',
+              borderRadius: '8px',
+              padding: '7px 12px',
+              flex: '1 1 200px',
+              minWidth: '180px',
               backgroundColor: '#ffffff',
             }}
           >
             <Search size={14} style={{ color: '#94a3b8' }} />
             <input
               type="text"
-              placeholder="Search milestones or courses..."
+              placeholder="Search milestones..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -635,7 +1077,7 @@ export const IterationsManagePage = () => {
                 fontWeight: 500,
                 color: '#1e293b',
                 backgroundColor: '#ffffff',
-                minWidth: '160px',
+                minWidth: '150px',
               }}
             >
               <option value="">All Courses</option>
@@ -661,7 +1103,7 @@ export const IterationsManagePage = () => {
                 fontWeight: 500,
                 color: '#1e293b',
                 backgroundColor: '#ffffff',
-                minWidth: '150px',
+                minWidth: '140px',
               }}
             >
               <option value="">All Departments</option>
@@ -674,9 +1116,8 @@ export const IterationsManagePage = () => {
           </div>
 
           {/* Sort By Dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <ArrowUpDown size={14} style={{ color: '#64748b' }} />
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b' }}>Sort:</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -698,12 +1139,71 @@ export const IterationsManagePage = () => {
               <option value="created_desc">Recently Created</option>
             </select>
           </div>
+
+          {/* Segmented View Mode Toggle (Lifecycle vs Table) */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: '#f1f5f9',
+              borderRadius: '8px',
+              padding: '3px',
+              marginLeft: 'auto',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setViewMode('lifecycle')}
+              title="Lifecycle Journey View"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '5px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: viewMode === 'lifecycle' ? '#ffffff' : 'transparent',
+                color: viewMode === 'lifecycle' ? '#2563eb' : '#64748b',
+                boxShadow: viewMode === 'lifecycle' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Kanban size={13} />
+              <span>Stages</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              title="Compact Table View"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '5px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: viewMode === 'table' ? '#ffffff' : 'transparent',
+                color: viewMode === 'table' ? '#2563eb' : '#64748b',
+                boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <TableIcon size={13} />
+              <span>Table</span>
+            </button>
+          </div>
         </div>
 
         {/* Row 2: Status Filter Pills */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', marginRight: '4px' }}>
-            Status:
+          <span style={{ fontSize: '11.5px', fontWeight: 600, color: '#64748b', marginRight: '4px' }}>
+            Filter:
           </span>
           {statusFilterOptions.map((opt) => (
             <button
@@ -715,41 +1215,106 @@ export const IterationsManagePage = () => {
               {opt.label}
             </button>
           ))}
-          <span style={{ fontSize: '12px', color: '#94a3b8', marginLeft: 'auto' }}>
-            Showing <strong>{filteredAndSortedIterations.length}</strong> of {iterations.length} milestones
+          <span style={{ fontSize: '11.5px', color: '#94a3b8', marginLeft: 'auto' }}>
+            Showing {filteredAndSortedIterations.length} of {iterations.length} milestones
           </span>
         </div>
       </div>
 
-      {/* Iterations Table or Empty State */}
+      {/* 5. Main Content Area */}
       {loading ? (
-        <Preloader label="Loading iterations..." />
+        <Preloader />
       ) : filteredAndSortedIterations.length === 0 ? (
         <EmptyState
-          title="No Iterations Found"
-          description={
-            searchQuery || selectedCourse || selectedDept || statusFilter !== 'all'
-              ? 'No iteration milestones match the selected filters.'
-              : 'No iteration milestones configured yet.'
-          }
-          actionLabel="Create Iteration"
-          onAction={handleCreateNew}
+          title="No milestones match your filters"
+          message="Try changing the course filter or search query, or click 'Add Iteration' to schedule a new milestone."
         />
+      ) : viewMode === 'lifecycle' ? (
+        /* LIFECYCLE STAGES VIEW (Natural Real-Life Recalling) */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Stage 1: Active In-Progress */}
+          {lifecycleStages.active.length > 0 && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#2563eb' }} />
+                <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Current Active Milestone ({lifecycleStages.active.length})
+                </h3>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {lifecycleStages.active.map((item) => renderMilestoneCard(item, true))}
+              </div>
+            </div>
+          )}
+
+          {/* Stage 2: Upcoming Milestones (Planning Ahead) */}
+          {lifecycleStages.upcoming.length > 0 && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Upcoming Milestones ({lifecycleStages.upcoming.length})
+                </h3>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '12px' }}>
+                {lifecycleStages.upcoming.map((item) => renderMilestoneCard(item, false))}
+              </div>
+            </div>
+          )}
+
+          {/* Stage 3: Completed / Closed Milestones */}
+          {lifecycleStages.completed.length > 0 && (
+            <div style={{ marginTop: '8px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 4px',
+                  cursor: 'pointer',
+                  borderBottom: '1px solid #e2e8f0',
+                  marginBottom: '12px',
+                }}
+                onClick={() => setCollapsedCompleted(!collapsedCompleted)}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                  <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Completed / Closed Milestones ({lifecycleStages.completed.length})
+                  </h3>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#64748b' }}>
+                  <span>{collapsedCompleted ? 'Show archived' : 'Hide archived'}</span>
+                  {collapsedCompleted ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+                </div>
+              </div>
+
+              {!collapsedCompleted && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '12px' }}>
+                  {lifecycleStages.completed.map((item) => renderMilestoneCard(item, false, true))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       ) : (
+        /* COMPACT TABLE VIEW (Power Scanner) */
         <div
           style={{
             backgroundColor: '#ffffff',
-            borderRadius: '8px',
+            borderRadius: '10px',
             border: '1px solid #e2e8f0',
             overflow: 'hidden',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
           }}
         >
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                 <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase' }}>
-                  Iteration Title & Details
+                  Iteration Milestone
                 </th>
                 <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase' }}>
                   Course
@@ -758,7 +1323,7 @@ export const IterationsManagePage = () => {
                   Deadline
                 </th>
                 <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase' }}>
-                  Rubrics
+                  Rubric Criteria
                 </th>
                 <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase' }}>
                   Submissions
@@ -774,6 +1339,7 @@ export const IterationsManagePage = () => {
                 const stats = item.submission_stats || {};
                 const totalGroups = stats.total_groups || 0;
                 const submitted = stats.submitted_count || 0;
+                const pending = Math.max(0, totalGroups - submitted);
                 const progressPct = totalGroups > 0 ? Math.round((submitted / totalGroups) * 100) : 0;
                 const progressColor = progressPct === 100 ? '#16a34a' : progressPct >= 50 ? '#2563eb' : '#dc2626';
 
@@ -795,7 +1361,7 @@ export const IterationsManagePage = () => {
                   >
                     {/* Title */}
                     <td style={{ padding: '14px 16px' }}>
-                      <div style={{ fontWeight: 600, fontSize: '14px', color: '#0f172a' }}>
+                      <div style={{ fontWeight: 600, fontSize: '13.5px', color: '#0f172a' }}>
                         {item.title}
                       </div>
                       {item.details && (
@@ -819,7 +1385,7 @@ export const IterationsManagePage = () => {
                     <td style={{ padding: '14px 16px' }}>
                       <span
                         style={{
-                          fontSize: '12px',
+                          fontSize: '11.5px',
                           fontWeight: 600,
                           padding: '2px 8px',
                           borderRadius: '12px',
@@ -837,7 +1403,8 @@ export const IterationsManagePage = () => {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12.5px', color: '#0f172a', fontWeight: 500 }}>
                           <Calendar size={13} style={{ color: '#64748b' }} />
-                          <span>{item.deadline}</span>
+                          <span>{formatHumanDate(item.deadline)}</span>
+                          {formatHumanTime(item.deadline) && <span style={{ color: '#64748b' }}>at {formatHumanTime(item.deadline)}</span>}
                         </div>
                         <DeadlineCountdown deadline={item.deadline} />
                       </div>
@@ -852,7 +1419,7 @@ export const IterationsManagePage = () => {
                           gap: '4px',
                           padding: '2px 8px',
                           borderRadius: '12px',
-                          fontSize: '12px',
+                          fontSize: '11.5px',
                           fontWeight: 600,
                           backgroundColor: rubricCount > 0 ? '#eff6ff' : '#fef3c7',
                           color: rubricCount > 0 ? '#1d4ed8' : '#b45309',
@@ -895,9 +1462,9 @@ export const IterationsManagePage = () => {
                               {stats.late_count} late
                             </span>
                           )}
-                          {stats.pending_count > 0 && (
+                          {pending > 0 && (
                             <span style={{ color: '#dc2626' }}>
-                              {stats.pending_count} pending
+                              {pending} pending
                             </span>
                           )}
                         </div>
@@ -913,7 +1480,7 @@ export const IterationsManagePage = () => {
                         <button
                           type="button"
                           onClick={() => navigate(`/manager/iterations/${item._id}/submissions`)}
-                          title="View Submissions Drill-Down"
+                          title="View Submissions"
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -961,9 +1528,9 @@ export const IterationsManagePage = () => {
                           style={{
                             padding: '6px',
                             borderRadius: '6px',
-                            border: '1px solid #e2e8f0',
+                            border: '1px solid #cbd5e1',
                             backgroundColor: '#ffffff',
-                            color: '#64748b',
+                            color: '#475569',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -1070,11 +1637,11 @@ export const IterationsManagePage = () => {
               <AlertTriangle size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>
+              <div style={{ fontSize: '14.5px', fontWeight: 600, color: '#0f172a' }}>
                 Are you sure you want to delete this iteration?
               </div>
               <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
-                This action is permanent and cannot be undone.
+                This action will permanently remove the milestone and its configuration.
               </div>
             </div>
           </div>
@@ -1084,7 +1651,7 @@ export const IterationsManagePage = () => {
               style={{
                 backgroundColor: '#f8fafc',
                 border: '1px solid #e2e8f0',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 padding: '12px 14px',
                 fontSize: '13px',
                 display: 'flex',
@@ -1095,36 +1662,50 @@ export const IterationsManagePage = () => {
               <div style={{ fontWeight: 600, color: '#1e293b' }}>
                 {iterationToDelete.title}
               </div>
-              <div style={{ display: 'flex', gap: '12px', color: '#64748b', fontSize: '12px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', color: '#64748b', fontSize: '12px' }}>
                 <span>Course: <strong>{iterationToDelete.course}</strong></span>
-                <span>Deadline: <strong>{iterationToDelete.deadline}</strong></span>
-                <span>Criteria: <strong>{iterationToDelete.rubrics?.length || 0}</strong></span>
+                <span>Deadline: <strong>{formatHumanDate(iterationToDelete.deadline)}</strong></span>
+                <span>Rubrics: <strong>{iterationToDelete.rubrics?.length || 0} criteria</strong></span>
+                <span>Submissions: <strong>{iterationToDelete.submission_stats?.submitted_count || 0} groups</strong></span>
               </div>
             </div>
           )}
 
-          {iterationToDelete?.submission_stats?.submitted_count > 0 ? (
+          {/* Submission guard warning */}
+          {iterationToDelete && (iterationToDelete.submission_stats?.submitted_count || 0) > 0 ? (
             <div
               style={{
-                backgroundColor: '#fffbeb',
-                border: '1px solid #fef3c7',
+                backgroundColor: '#fff1f2',
+                border: '1px solid #fecaca',
                 borderRadius: '6px',
                 padding: '10px 12px',
                 fontSize: '12px',
-                color: '#b45309',
+                color: '#be123c',
                 display: 'flex',
-                alignItems: 'flex-start',
                 gap: '8px',
+                alignItems: 'flex-start',
               }}
             >
               <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
               <div>
-                <strong>Deletion Guard:</strong> {iterationToDelete.submission_stats.submitted_count} student submission(s) have been received. Iterations with existing student deliverables cannot be deleted to prevent data loss.
+                <strong>Warning: Active Submissions Present</strong>
+                <div>
+                  This milestone already contains {iterationToDelete.submission_stats.submitted_count} submitted student deliverables. Deleting milestones with active student work is blocked to prevent data loss.
+                </div>
               </div>
             </div>
           ) : (
-            <div style={{ fontSize: '12px', color: '#16a34a' }}>
-              ✓ No student submissions exist for this iteration. It can be safely deleted.
+            <div
+              style={{
+                backgroundColor: '#eff6ff',
+                border: '1px solid #dbeafe',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                fontSize: '11.5px',
+                color: '#1e40af',
+              }}
+            >
+              ℹ️ Safe deletion: No students have submitted work for this milestone yet.
             </div>
           )}
 
@@ -1140,7 +1721,7 @@ export const IterationsManagePage = () => {
                 border: '1px solid #cbd5e1',
                 backgroundColor: '#ffffff',
                 color: '#475569',
-                borderRadius: '4px',
+                borderRadius: '6px',
                 cursor: 'pointer',
               }}
             >
@@ -1148,17 +1729,17 @@ export const IterationsManagePage = () => {
             </button>
             <button
               type="button"
-              disabled={deleteLoading || (iterationToDelete?.submission_stats?.submitted_count > 0)}
+              disabled={deleteLoading || (iterationToDelete?.submission_stats?.submitted_count || 0) > 0}
               onClick={handleConfirmDelete}
               style={{
                 padding: '8px 16px',
                 fontSize: '13px',
                 fontWeight: 600,
                 border: 'none',
-                backgroundColor: iterationToDelete?.submission_stats?.submitted_count > 0 ? '#94a3b8' : '#dc2626',
+                backgroundColor: (iterationToDelete?.submission_stats?.submitted_count || 0) > 0 ? '#94a3b8' : '#dc2626',
                 color: '#ffffff',
-                borderRadius: '4px',
-                cursor: deleteLoading || iterationToDelete?.submission_stats?.submitted_count > 0 ? 'not-allowed' : 'pointer',
+                borderRadius: '6px',
+                cursor: deleteLoading || (iterationToDelete?.submission_stats?.submitted_count || 0) > 0 ? 'not-allowed' : 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
