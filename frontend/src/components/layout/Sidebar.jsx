@@ -15,6 +15,8 @@ import {
   LogOut,
   X,
   Layers,
+  Award,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 
@@ -49,6 +51,7 @@ export const Sidebar = ({
   };
 
   const isStudent = user?.role === 'student';
+  const isEvaluator = user?.role === 'evaluator';
 
   const managerNavSections = [
     {
@@ -258,7 +261,56 @@ export const Sidebar = ({
     },
   ];
 
-  const navSections = isStudent ? studentNavSections : managerNavSections;
+  const evaluatorNavSections = [
+    {
+      section: 'Navigation',
+      items: [
+        {
+          type: 'link',
+          text: 'Dashboard',
+          to: '/evaluator/dashboard',
+          icon: LayoutDashboard,
+        },
+      ],
+    },
+    {
+      section: 'Evaluator Portal',
+      items: [
+        {
+          type: 'link',
+          text: 'Assigned Groups',
+          to: '/evaluator/groups',
+          icon: Users,
+        },
+        {
+          type: 'link',
+          text: 'Exhibition Eval',
+          to: '/evaluator/exhibition',
+          icon: Award,
+        },
+        {
+          type: 'link',
+          text: 'Supervision Meetings',
+          to: '/evaluator/meetings',
+          icon: Calendar,
+        },
+      ],
+    },
+    {
+      section: 'Account',
+      items: [
+        {
+          type: 'action',
+          text: 'Logout',
+          onClick: handleLogout,
+          icon: LogOut,
+          danger: true,
+        },
+      ],
+    },
+  ];
+
+  const navSections = isStudent ? studentNavSections : isEvaluator ? evaluatorNavSections : managerNavSections;
 
   const sidebarStyle = isMobileView
     ? {

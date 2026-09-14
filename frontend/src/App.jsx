@@ -52,6 +52,13 @@ import { StudentProfilePage } from './pages/student/profile/StudentProfilePage';
 import { StudentIterationsPage } from './pages/student/iterations/StudentIterationsPage';
 import { IterationDetailPage } from './pages/student/iterations/IterationDetailPage';
 
+// Evaluator Pages (Sprint 4)
+import { EvaluatorDashboard } from './pages/evaluator/EvaluatorDashboard';
+import { AssignedGroupsPage } from './pages/evaluator/groups/AssignedGroupsPage';
+import { GroupEvalDetail } from './pages/evaluator/groups/GroupEvalDetail';
+import { ExhibitionPage } from './pages/evaluator/exhibition/ExhibitionPage';
+import { MeetingsPage } from './pages/evaluator/meetings/MeetingsPage';
+
 // Fallback
 import { NotFoundPage } from './pages/NotFoundPage';
 
@@ -73,6 +80,7 @@ const RootRedirect = () => {
 
   if (!isAuthed) return <Navigate to="/login" replace />;
   if (effectiveUser?.role === 'student') return <Navigate to="/student/dashboard" replace />;
+  if (effectiveUser?.role === 'evaluator') return <Navigate to="/evaluator/dashboard" replace />;
   return <Navigate to="/manager/dashboard" replace />;
 };
 
@@ -157,6 +165,25 @@ export default function App() {
             {/* Iterations (Student) */}
             <Route path="iterations" element={<StudentIterationsPage />} />
             <Route path="iterations/:id" element={<IterationDetailPage />} />
+
+            {/* Fallback for other subpages */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+
+          {/* Protected Evaluator Routes (Sprint 4) */}
+          <Route
+            path="/evaluator"
+            element={
+              <ProtectedRoute allowedRoles={['evaluator']}>
+                <AppShell />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="dashboard" element={<EvaluatorDashboard />} />
+            <Route path="groups" element={<AssignedGroupsPage />} />
+            <Route path="groups/:groupId" element={<GroupEvalDetail />} />
+            <Route path="exhibition" element={<ExhibitionPage />} />
+            <Route path="meetings" element={<MeetingsPage />} />
 
             {/* Fallback for other subpages */}
             <Route path="*" element={<NotFoundPage />} />

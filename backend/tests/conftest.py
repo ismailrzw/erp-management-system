@@ -193,3 +193,124 @@ def second_student_headers(client, second_student_user) -> dict[str, str]:
     )
     assert response.status_code == 200, response.get_json()
     return {"Authorization": f"Bearer {response.get_json()['data']['token']}"}
+
+
+# ── Sprint 4: Evaluator Fixtures ─────────────────────────────────────────────
+
+EVALUATOR_EMAIL    = "evaluator.test@bnu.edu.pk"
+EVALUATOR_PASSWORD = "eval-password-123"
+
+
+@pytest.fixture
+def evaluator_user(app) -> dict:
+    """Insert an evaluator user directly and return id + credentials."""
+    import bcrypt as _bcrypt
+    from datetime import datetime, timezone
+    with app.app_context():
+        pw_hash = _bcrypt.hashpw(EVALUATOR_PASSWORD.encode(), _bcrypt.gensalt()).decode()
+        doc = {
+            "name":          "Test Evaluator",
+            "email":         EVALUATOR_EMAIL,
+            "password_hash": pw_hash,
+            "role":          Role.EVALUATOR,
+            "dept":          "SE",
+            "deleted":       False,
+            "created_at":    datetime.now(timezone.utc),
+        }
+        mongo.db.users.replace_one({"email": EVALUATOR_EMAIL}, doc, upsert=True)
+        inserted = mongo.db.users.find_one({"email": EVALUATOR_EMAIL})
+        return {"id": str(inserted["_id"]), "email": EVALUATOR_EMAIL, "password": EVALUATOR_PASSWORD}
+
+
+@pytest.fixture
+def evaluator_token(client, evaluator_user) -> str:
+    """Login as the evaluator and return a JWT."""
+    resp = client.post(
+        "/api/auth/login",
+        json={"email": evaluator_user["email"], "password": evaluator_user["password"]},
+    )
+    assert resp.status_code == 200, resp.get_json()
+    return resp.get_json()["data"]["token"]
+
+
+@pytest.fixture
+def evaluator_headers(evaluator_token) -> dict[str, str]:
+    return {"Authorization": f"Bearer {evaluator_token}"}
+
+
+@pytest.fixture
+def approved_group(app, evaluator_user) -> dict:
+    """Insert an approved group assigned to the evaluator."""
+    from bson import ObjectId as OID
+    from datetime import datetime, timezone
+    with app.app_context():
+        gid = mongo.db.groups.insert_one({
+            "name":    "Alpha Team",
+            "course":  "Final Year Project",
+            "dept":    "SE",
+            "status":  "approved",
+            "members": [],
+        }).inserted_id
+        mongo.db.assignments.insert_one({
+            "evaluator_id": OID(evaluator_user["id"]),
+            "group_id":     gid,
+            "assigned_at":  datetime.now(timezone.utc),
+        })
+        return {"id": str(gid), "course": "Final Year Project"}
+
+
+@pytest.fixture
+def iteration_with_rubrics(app, approved_group) -> dict:
+    """Insert an iteration for the group's course that has two rubric criteria."""
+    from datetime import datetime, timezone
+    with app.app_context():
+        iid = mongo.db.iterations.insert_one({
+            "title":    "Proposal Submission",
+            "course":   approved_group["course"],
+            "deadline": datetime(2026, 11, 1, tzinfo=timezone.utc),
+            "rubrics": [
+                {"id": 1, "question": "Problem Statement", "weight": 60,
+                 "levels": {"0": "Missing", "5": "Excellent"}},
+                {"id": 2, "question": "Literature Review",  "weight": 40,
+                 "levels": {"0": "Missing", "5": "Excellent"}},
+            ],
+        }).inserted_id
+        return {"id": str(iid)}
+
+
+@pytest.fixture
+def submitted_evaluation(app, evaluator_user, approved_group, iteration_with_rubrics) -> dict:
+    """Insert a pre-existing locked evaluation (for duplicate / lock tests)."""
+    from bson import ObjectId as OID
+    from datetime import datetime, timezone
+    with app.app_context():
+        eid = mongo.db.evaluations.insert_one({
+            "group_id":             OID(approved_group["id"]),
+            "iteration_id":         OID(iteration_with_rubrics["id"]),
+            "evaluator_id":         OID(evaluator_user["id"]),
+            "scores":               {"1": 4, "2": 3},
+            "total_weighted_score": 72.0,
+            "comment":              "Good work.",
+            "locked":               True,
+            "submitted_at":         datetime.now(timezone.utc),
+        }).inserted_id
+        return {
+            "id":           str(eid),
+            "group_id":     approved_group["id"],
+            "iteration_id": iteration_with_rubrics["id"],
+        }
+
+
+@pytest.fixture
+def unassigned_group(app) -> dict:
+    """Insert a group NOT assigned to the test evaluator."""
+    with app.app_context():
+        gid = mongo.db.groups.insert_one({
+            "name":    "Beta Team",
+            "course":  "Final Year Project",
+            "dept":    "CS",
+            "status":  "approved",
+            "members": [],
+        }).inserted_id
+        return {"id": str(gid)}
+

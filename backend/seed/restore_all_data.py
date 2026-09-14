@@ -1,4 +1,4 @@
-﻿import os
+import os
 from datetime import datetime, timezone
 
 import bcrypt
@@ -117,8 +117,34 @@ it = db.iterations.find_one_and_update(
     return_document=True
 )
 
+# 7. Evaluator User & Assignment
+eval_pass = bcrypt.hashpw(b"11223344", bcrypt.gensalt()).decode()
+eval_user = db.users.find_one_and_update(
+    {"email": "evaluator1@bnu.edu.pk"},
+    {"$set": {
+        "name": "Dr. Imran (Evaluator)",
+        "email": "evaluator1@bnu.edu.pk",
+        "role": "evaluator",
+        "dept": "SE",
+        "password_hash": eval_pass,
+        "deleted": False,
+        "created_at": datetime.now(timezone.utc)
+    }},
+    upsert=True,
+    return_document=True
+)
+
+if grp:
+    db.assignments.update_one(
+        {"evaluator_id": eval_user["_id"], "group_id": grp["_id"]},
+        {"$set": {"evaluator_id": eval_user["_id"], "group_id": grp["_id"], "assigned_at": datetime.now(timezone.utc)}},
+        upsert=True
+    )
+
 print("✅ Seeding complete!")
 print(f"Manager count: {db.users.count_documents({'role': 'pbl_manager'})}")
 print(f"Student count: {db.users.count_documents({'role': 'student'})}")
+print(f"Evaluator count: {db.users.count_documents({'role': 'evaluator'})}")
 print(f"Group count: {db.groups.count_documents({})}")
 print(f"Iteration count: {db.iterations.count_documents({})}")
+
