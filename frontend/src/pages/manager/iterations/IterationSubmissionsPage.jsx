@@ -4,7 +4,8 @@ import { PageHeader } from '../../../components/ui/PageHeader';
 import { Preloader } from '../../../components/ui/Preloader';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { iterationsApi } from '../../../api/iterationsApi';
-import { ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Download, Users, Calendar, FileText, Search, FileDown } from 'lucide-react';
+import { coursesApi } from '../../../api/coursesApi';
+import { ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Download, Users, Calendar, FileText, Search, FileDown, Flag, Eye, Sliders } from 'lucide-react';
 
 const fmt = (s) => {
   if (!s) return '-';
@@ -44,17 +45,49 @@ export const IterationSubmissionsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [iterationsList, setIterationsList] = useState([]);
+  const [coursesList, setCoursesList] = useState([]);
+  const [selectedCourse, setSelectedCourse] = useState('');
+  const [selectedIterationId, setSelectedIterationId] = useState(id || '');
   const [summary, setSummary] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
+  // 1. Fetch initial iterations and courses list
   useEffect(() => {
     (async () => {
-      setLoading(true);
       try {
-        const res = await iterationsApi.getSubmissions(id);
+        const [iterRes, courseRes] = await Promise.all([
+          iterationsApi.getAll(),
+          coursesApi.list(),
+        ]);
+        const iters = iterRes.data || iterRes || [];
+        const crs = courseRes.data?.items || courseRes.data || courseRes || [];
+        setIterationsList(iters);
+        setCoursesList(crs);
+
+        if (!id && iters.length > 0) {
+          setSelectedIterationId(iters[0]._id);
+        }
+      } catch (err) {
+        console.error('Failed to load initial data:', err);
+      }
+    })();
+  }, [id]);
+
+  // 2. Fetch submission data for current selected iteration ID
+  useEffect(() => {
+    if (!selectedIterationId) {
+      setLoading(false);
+      return;
+    }
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await iterationsApi.getSubmissions(selectedIterationId);
         const data = res.data || res;
         setSummary(data.summary || null);
         setSubmissions(data.submissions || []);
@@ -62,11 +95,22 @@ export const IterationSubmissionsPage = () => {
         setError(err.response?.data?.message || err.message || 'Failed to load submissions.');
       } finally { setLoading(false); }
     })();
-  }, [id]);
+  }, [selectedIterationId]);
 
-  // Filter logic
+  // Filter iterations by selected course
+  const availableIterations = useMemo(() => {
+    if (!selectedCourse) return iterationsList;
+    return iterationsList.filter((it) => it.course === 'All Courses' || it.course === selectedCourse);
+  }, [iterationsList, selectedCourse]);
+
+  // Filter submission records
   const filtered = useMemo(() => {
     let result = submissions;
+
+    // Course filter override if selected
+    if (selectedCourse) {
+      result = result.filter((r) => !r.course || r.course === 'All Courses' || r.course === selectedCourse);
+    }
 
     // Status filter
     if (statusFilter === 'submitted') result = result.filter((r) => r.submitted && !r.is_late);
@@ -86,7 +130,7 @@ export const IterationSubmissionsPage = () => {
     }
 
     return result;
-  }, [submissions, statusFilter, searchQuery]);
+  }, [submissions, selectedCourse, statusFilter, searchQuery]);
 
   // CSV export
   const handleExportCSV = () => {
@@ -109,7 +153,7 @@ export const IterationSubmissionsPage = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `submissions_${summary?.iteration_title || id}.csv`;
+    a.download = `submissions_${summary?.iteration_title || selectedIterationId}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -120,16 +164,96 @@ export const IterationSubmissionsPage = () => {
 
   return (
     <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
-      <button
-        onClick={() => navigate('/manager/iterations')}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#475569', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '12px', padding: '4px 0' }}
+
+      {/* Top 3 Navigation Tabs */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '24px',
+          borderBottom: '1px solid #e2e8f0',
+          marginBottom: '20px',
+          paddingBottom: '4px',
+        }}
       >
-        <ArrowLeft size={15} /> Back to Iterations
-      </button>
+        <button
+          type="button"
+          onClick={() => navigate('/manager/iterations')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '13.5px',
+            fontWeight: 500,
+            color: '#64748b',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '0 0 8px 0',
+            transition: 'color 0.15s ease',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#1e293b')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
+        >
+          <Flag size={15} />
+          <span>Milestones</span>
+        </button>
+
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '13.5px',
+            fontWeight: 600,
+            color: '#2563eb',
+            position: 'relative',
+            paddingBottom: '8px',
+            cursor: 'pointer',
+          }}
+        >
+          <Eye size={16} />
+          <span>Submissions</span>
+          <span
+            style={{
+              position: 'absolute',
+              bottom: '-5px',
+              left: 0,
+              right: 0,
+              height: '2px',
+              backgroundColor: '#2563eb',
+              borderRadius: '2px',
+            }}
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => navigate('/manager/rubric-templates')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '13.5px',
+            fontWeight: 500,
+            color: '#64748b',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '0 0 8px 0',
+            transition: 'color 0.15s ease',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#1e293b')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
+        >
+          <Sliders size={15} />
+          <span>Rubrics</span>
+        </button>
+      </div>
 
       <PageHeader
-        title={summary ? summary.iteration_title : 'Submission Review'}
-        subtitle={summary ? summary.course + ' · Deadline: ' + summary.iteration_deadline : 'Group-wise submission status'}
+        title={summary ? summary.iteration_title : 'Group Submissions'}
+        subtitle={summary ? `${summary.course} · Deadline: ${summary.iteration_deadline}` : 'Group-wise submission status and progress'}
       >
         {submissions.length > 0 && (
           <button
@@ -155,10 +279,59 @@ export const IterationSubmissionsPage = () => {
         )}
       </PageHeader>
 
+      {/* Top Filter Bar: Select Course & Milestone */}
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px 16px' }}>
+        <div style={{ flex: '1 1 200px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
+            Filter by Course
+          </label>
+          <select
+            value={selectedCourse}
+            onChange={(e) => {
+              const c = e.target.value;
+              setSelectedCourse(c);
+              const matching = iterationsList.filter((it) => !c || it.course === 'All Courses' || it.course === c);
+              if (matching.length > 0) {
+                setSelectedIterationId(matching[0]._id);
+              }
+            }}
+            style={{ width: '100%', padding: '7px 32px 7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#ffffff' }}
+          >
+            <option value="">All Courses</option>
+            {coursesList.map((crs) => (
+              <option key={crs._id || crs.name} value={crs.name}>
+                {crs.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ flex: '1 1 240px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
+            Select Milestone / Deliverable
+          </label>
+          <select
+            value={selectedIterationId}
+            onChange={(e) => setSelectedIterationId(e.target.value)}
+            style={{ width: '100%', padding: '7px 32px 7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#ffffff' }}
+          >
+            {availableIterations.length === 0 ? (
+              <option value="">No milestones available</option>
+            ) : (
+              availableIterations.map((it) => (
+                <option key={it._id} value={it._id}>
+                  {it.title} ({it.course})
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+      </div>
+
       {loading ? (
         <Preloader label="Loading submissions..." />
       ) : error ? (
-        <EmptyState title="Could not load submissions" description={error} actionLabel="Go Back" onAction={() => navigate('/manager/iterations')} />
+        <EmptyState title="Could not load submissions" description={error} actionLabel="Go Back to Milestones" onAction={() => navigate('/manager/iterations')} />
       ) : (
         <>
           {summary && (
@@ -200,40 +373,6 @@ export const IterationSubmissionsPage = () => {
                   </div>
                 ))}
               </div>
-
-              {/* Cross-Course & Department Breakdown */}
-              {summary.by_course && summary.by_course.length > 0 && (
-                <div style={{ marginBottom: '24px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px 16px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.04em' }}>
-                    Cross-Course & Department Completion
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
-                    {summary.by_course.map((bc, idx) => {
-                      const pct = bc.total_groups > 0 ? Math.round((bc.submitted_count / bc.total_groups) * 100) : 0;
-                      const color = pct === 100 ? '#16a34a' : pct >= 50 ? '#2563eb' : '#dc2626';
-                      return (
-                        <div key={idx} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px 12px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={bc.course}>
-                              {bc.course}
-                            </span>
-                            <span style={{ fontSize: '11px', fontWeight: 700, padding: '1px 6px', borderRadius: '6px', backgroundColor: '#f1f5f9', color: '#475569' }}>
-                              {bc.dept}
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#64748b', marginBottom: '4px' }}>
-                            <span>{bc.submitted_count}/{bc.total_groups} submitted</span>
-                            <span style={{ fontWeight: 600, color }}>{pct}%</span>
-                          </div>
-                          <div style={{ width: '100%', height: '4px', backgroundColor: '#f1f5f9', borderRadius: '2px', overflow: 'hidden' }}>
-                            <div style={{ width: `${pct}%`, height: '100%', backgroundColor: color, borderRadius: '2px' }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </>
           )}
 

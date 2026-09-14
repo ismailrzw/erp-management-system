@@ -4,7 +4,8 @@ import { Select } from '../../../components/ui/Select';
 import { DateTimePicker } from '../../../components/ui/DateTimePicker';
 import { iterationsApi } from '../../../api/iterationsApi';
 import { rubricTemplatesApi } from '../../../api/rubricTemplatesApi';
-import { FileText, GraduationCap } from 'lucide-react';
+import { attachmentsApi } from '../../../api/attachmentsApi';
+import { FileText, GraduationCap, Paperclip, Upload, X } from 'lucide-react';
 
 export const IterationFormModal = ({
   isOpen,
@@ -22,10 +23,13 @@ export const IterationFormModal = ({
     course: '',
     deadline: '',
     details: '',
+    document_url: '',
+    document_name: '',
     rubric_template_id: '',
   });
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -43,6 +47,8 @@ export const IterationFormModal = ({
         course: currentIteration.course || '',
         deadline: currentIteration.deadline || '',
         details: currentIteration.details || '',
+        document_url: currentIteration.document_url || '',
+        document_name: currentIteration.document_name || '',
         rubric_template_id: currentIteration.rubric_template_id || '',
       });
     } else {
@@ -52,6 +58,8 @@ export const IterationFormModal = ({
         course: '',
         deadline: '',
         details: '',
+        document_url: '',
+        document_name: '',
         rubric_template_id: '',
       });
     }
@@ -163,6 +171,78 @@ export const IterationFormModal = ({
             onChange={(e) => setFormData({ ...formData, details: e.target.value })}
             style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', resize: 'vertical' }}
           />
+        </div>
+
+        {/* Attachment / Resource Document for Students */}
+        <div>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+            Attach Document / Guidelines for Students (Optional)
+          </label>
+          {formData.document_url ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e293b', fontWeight: 500 }}>
+                <Paperclip size={15} style={{ color: '#2563eb' }} />
+                <span>{formData.document_name || 'Attached Document'}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, document_url: '', document_name: '' })}
+                style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '12px', fontWeight: 500 }}
+              >
+                <X size={14} /> Remove
+              </button>
+            </div>
+          ) : (
+            <div>
+              <input
+                type="file"
+                id="iteration-doc-upload"
+                style={{ display: 'none' }}
+                accept=".pdf,.docx,.xlsx,.zip"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setUploadingDoc(true);
+                  try {
+                    const uploadData = new FormData();
+                    uploadData.append('file', file);
+                    uploadData.append('title', file.name);
+                    const res = await attachmentsApi.upload(uploadData);
+                    const att = res.data || res;
+                    setFormData({
+                      ...formData,
+                      document_name: file.name,
+                      document_url: att.url || `/api/manager/attachments/${att.id || att._id}/download`,
+                    });
+                  } catch (err) {
+                    setError(err.response?.data?.message || 'Failed to upload document.');
+                  } finally {
+                    setUploadingDoc(false);
+                  }
+                }}
+              />
+              <label
+                htmlFor="iteration-doc-upload"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '1px dashed #cbd5e1',
+                  backgroundColor: '#f8fafc',
+                  color: '#475569',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  cursor: uploadingDoc ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Upload size={15} style={{ color: '#2563eb' }} />
+                <span>{uploadingDoc ? 'Uploading document...' : 'Click to attach PDF, DOCX, XLSX, or ZIP document for students'}</span>
+              </label>
+            </div>
+          )}
         </div>
 
         {/* Rubric Template Selector (only for creation) */}

@@ -60,9 +60,9 @@ def validate_rubric_weights(rubrics: list) -> tuple[bool, str | None]:
     try:
         total = sum(int(r.get("weight", 0)) for r in rubrics)
     except (TypeError, ValueError):
-        return False, "All rubric weights must be integers."
-    if total != 100:
-        return False, f"Rubric weights must sum to exactly 100. Current sum: {total}."
+        return False, "All rubric weights/marks must be integers."
+    if total <= 0:
+        return False, "Total rubric marks/weight must be greater than 0."
     return True, None
 
 
@@ -145,6 +145,8 @@ class IterationListResource(Resource):
         course = (data.get('course') or '').strip()
         deadline = (data.get('deadline') or '').strip()
         details = (data.get('details') or '').strip()
+        document_url = (data.get('document_url') or '').strip()
+        document_name = (data.get('document_name') or '').strip()
         template_id_str = (data.get('rubric_template_id') or '').strip()
 
         if not title or not course or not deadline:
@@ -167,6 +169,8 @@ class IterationListResource(Resource):
         doc = {
             "title": title,
             "details": details,
+            "document_url": document_url,
+            "document_name": document_name,
             "course": course,
             "deadline": deadline,
             "rubrics": rubrics,
@@ -206,7 +210,7 @@ class IterationDetailResource(Resource):
     @iterations_ns.doc(security='Bearer Auth')
     @iterations_ns.expect(create_iteration_model)
     def put(self, iteration_id):
-        """Update iteration title, details, and/or deadline."""
+        """Update iteration title, details, document attachment, and/or deadline."""
         try:
             oid = ObjectId(iteration_id)
         except (InvalidId, TypeError, ValueError):
@@ -218,6 +222,10 @@ class IterationDetailResource(Resource):
             update_fields['title'] = data['title'].strip()
         if 'details' in data:
             update_fields['details'] = data['details'].strip()
+        if 'document_url' in data:
+            update_fields['document_url'] = (data['document_url'] or '').strip()
+        if 'document_name' in data:
+            update_fields['document_name'] = (data['document_name'] or '').strip()
         if data.get('deadline'):
             update_fields['deadline'] = data['deadline'].strip()
         if data.get('course'):
@@ -264,7 +272,7 @@ class IterationRubricsResource(Resource):
     @iterations_ns.doc(security='Bearer Auth')
     @iterations_ns.expect(rubrics_payload_model)
     def post(self, iteration_id):
-        """Replace the entire rubric set for an iteration. Weights must sum to 100."""
+        """Replace the entire rubric set for an iteration. Total marks can be custom set by manager."""
         try:
             oid = ObjectId(iteration_id)
         except (InvalidId, TypeError, ValueError):
@@ -277,10 +285,23 @@ class IterationRubricsResource(Resource):
         if not valid:
             return error_response(err, 422)
 
+        default_lvl = {
+            "0": "Not submitted / Unsatisfactory",
+            "1": "Minimal effort / Major deficiencies",
+            "2": "Basic attempt / Needs improvement",
+            "3": "Satisfactory / Meets expectations",
+            "4": "Good quality / Minor gaps",
+            "5": "Exemplary / Fully comprehensive"
+        }
+
         for i, r in enumerate(rubrics, start=1):
             r["id"] = i
-            if "levels" not in r or len(r["levels"]) < 6:
-                return error_response(f"Rubric question {i} must have levels for keys 0 through 5.", 422)
+            if "levels" not in r or not isinstance(r["levels"], dict):
+                r["levels"] = {**default_lvl}
+            else:
+                for k, v in default_lvl.items():
+                    if k not in r["levels"] or not r["levels"][k]:
+                        r["levels"][k] = v
 
         result = mongo.db.iterations.update_one(
             {"_id": oid},

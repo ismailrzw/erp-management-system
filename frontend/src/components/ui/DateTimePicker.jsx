@@ -176,50 +176,6 @@ export const DateTimePicker = ({
           transition: 'all 0.15s ease',
         }}
       >
-        {/* Quick Presets Toolbar */}
-        <div style={{ marginBottom: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
-            <Sparkles size={12} style={{ color: '#2563eb' }} />
-            <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Quick Presets
-            </span>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => applyPreset('today_end')}
-              style={presetButtonStyle(false)}
-            >
-              End of Day (23:59)
-            </button>
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => applyPreset('tomorrow_end')}
-              style={presetButtonStyle(false)}
-            >
-              Tomorrow 23:59
-            </button>
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => applyPreset('week_end')}
-              style={presetButtonStyle(false)}
-            >
-              +1 Week
-            </button>
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => applyPreset('two_weeks')}
-              style={presetButtonStyle(false)}
-            >
-              +2 Weeks
-            </button>
-          </div>
-        </div>
-
         {/* Dual Controls: Date + Time */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '10px' }}>
           {/* Date Control */}
@@ -299,36 +255,6 @@ export const DateTimePicker = ({
               />
             </div>
           </div>
-        </div>
-
-        {/* Quick Time Selection Pills */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
-          <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500 }}>Time shortcuts:</span>
-          {[
-            { label: '11:59 PM', val: '23:59' },
-            { label: '05:00 PM', val: '17:00' },
-            { label: '12:00 PM', val: '12:00' },
-            { label: '09:00 AM', val: '09:00' },
-          ].map((t) => (
-            <button
-              key={t.val}
-              type="button"
-              disabled={disabled}
-              onClick={() => handleTimeChange(t.val)}
-              style={{
-                padding: '2px 7px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: timePart === t.val ? 600 : 500,
-                backgroundColor: timePart === t.val ? '#eff6ff' : '#f1f5f9',
-                color: timePart === t.val ? '#1d4ed8' : '#64748b',
-                border: timePart === t.val ? '1px solid #bfdbfe' : '1px solid transparent',
-                cursor: disabled ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
         </div>
 
         {/* Formatted Preview Badge */}

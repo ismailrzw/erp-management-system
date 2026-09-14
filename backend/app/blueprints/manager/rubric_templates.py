@@ -45,21 +45,20 @@ create_template_model = rubric_templates_ns.model('CreateRubricTemplate', {
 
 
 def _validate_criteria_weights(criteria: list) -> tuple[bool, str | None]:
-    """Ensure every criterion has a question and that weights sum to exactly 100."""
+    """Ensure every criterion has a question and that total weight/marks is greater than 0."""
     if not criteria:
         return False, "At least one criterion is required."
     try:
         total = sum(int(c.get("weight", 0)) for c in criteria)
     except (TypeError, ValueError):
-        return False, "All criterion weights must be integers."
-    if total != 100:
-        return False, f"Criteria weights must sum to exactly 100. Current sum: {total}."
+        return False, "All criterion weights/marks must be integers."
+    if total <= 0:
+        return False, "Total criteria marks/weight must be greater than 0."
     for i, c in enumerate(criteria, start=1):
         if not (c.get("question") or "").strip():
             return False, f"Criterion {i} is missing a question/name."
-        levels = c.get("levels", {})
-        if len(levels) < 6:
-            return False, f"Criterion {i} must define levels 0 through 5."
+        if int(c.get("weight", 0)) <= 0:
+            return False, f"Criterion {i} must have marks/weight greater than 0."
     return True, None
 
 

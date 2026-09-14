@@ -128,6 +128,7 @@ export default function App() {
 
             {/* Iterations Management (Manager) */}
             <Route path="iterations" element={<IterationsManagePage />} />
+            <Route path="iterations/submissions" element={<IterationSubmissionsPage />} />
             <Route path="iterations/:id/submissions" element={<IterationSubmissionsPage />} />
             <Route path="rubric-templates" element={<RubricTemplatesPage />} />
 

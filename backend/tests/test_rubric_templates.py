@@ -105,7 +105,7 @@ def test_create_rubric_template_invalid_weights(client):
     criteria = [
         {
             "question": "Problem Statement",
-            "weight": 30,
+            "weight": 0,
             "levels": {str(i): f"Level {i}" for i in range(6)}
         }
     ]
@@ -113,7 +113,7 @@ def test_create_rubric_template_invalid_weights(client):
         json={"name": "Bad Template", "criteria": criteria},
         headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 422
-    assert "100" in resp.get_json()["message"]
+    assert "greater than 0" in resp.get_json()["message"]
 
 
 def test_list_and_get_rubric_templates(client):

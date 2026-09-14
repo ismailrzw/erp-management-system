@@ -149,8 +149,9 @@ export const Sidebar = ({
           text: 'Manage Iterations',
           icon: Layers,
           subitems: [
-            { text: 'All Iterations & Rubrics', to: '/manager/iterations' },
-            { text: 'Rubric Templates', to: '/manager/rubric-templates' },
+            { text: 'Milestones', to: '/manager/iterations' },
+            { text: 'Submissions', to: '/manager/iterations/submissions' },
+            { text: 'Rubrics', to: '/manager/rubric-templates' },
           ],
         },
       ],

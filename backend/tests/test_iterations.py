@@ -88,7 +88,7 @@ def test_set_rubrics_weight_sum_100_success(client):
     assert resp.status_code == 200
     assert resp.get_json()["success"] is True
 
-def test_set_rubrics_weight_sum_not_100_fails(client):
+def test_set_rubrics_invalid_weight_fails(client):
     token = get_manager_token(client)
     create_resp = client.post("/api/manager/iterations",
         json={"title": "Iteration 2", "course": "FYP 2025", "deadline": "2026-08-01"},
@@ -96,10 +96,10 @@ def test_set_rubrics_weight_sum_not_100_fails(client):
     iteration_id = create_resp.get_json()["data"]["_id"]
 
     rubrics = [
-        {"question": "Q1", "weight": 50, "levels": {"0":"a","1":"b","2":"c","3":"d","4":"e","5":"f"}}
+        {"question": "Q1", "weight": 0, "levels": {"0":"a","1":"b","2":"c","3":"d","4":"e","5":"f"}}
     ]
     resp = client.post(f"/api/manager/iterations/{iteration_id}/rubrics",
         json={"rubrics": rubrics},
         headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 422
-    assert "100" in resp.get_json()["message"]
+    assert "greater than 0" in resp.get_json()["message"]
