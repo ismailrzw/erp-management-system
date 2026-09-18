@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EmptyState } from '../../../components/ui/EmptyState';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { Toast } from '../../../components/ui/Toast';
 import { Modal } from '../../../components/ui/Modal';
 import { iterationsApi } from '../../../api/iterationsApi';
 import { coursesApi } from '../../../api/coursesApi';
 import { IterationFormModal } from './IterationFormModal';
 import { RubricBuilderModal } from './RubricBuilderModal';
+import { IterationsTabBar } from './IterationsTabBar';
 import {
   Plus,
   Edit2,
@@ -18,7 +19,6 @@ import {
   Search,
   CheckCircle2,
   Table as TableIcon,
-  Flag,
 } from 'lucide-react';
 
 const formatHumanDate = (dateStr) => {
@@ -60,7 +60,6 @@ export const IterationsManagePage = () => {
   const [editingIteration, setEditingIteration] = useState(null);
   const [isRubricOpen, setIsRubricOpen] = useState(false);
   const [rubricIteration, setRubricIteration] = useState(null);
-  const [isMatrixModalOpen, setIsMatrixModalOpen] = useState(false);
 
   // Delete Confirmation Modal
   const [iterationToDelete, setIterationToDelete] = useState(null);
@@ -167,131 +166,12 @@ export const IterationsManagePage = () => {
     return { all: iterations.length, active, completed };
   }, [iterations]);
 
-  // Aggregate Cross-Course Matrix
-  const courseMatrix = useMemo(() => {
-    const map = {};
-    iterations.forEach((item) => {
-      const stats = item.submission_stats || {};
-      (stats.by_course || []).forEach((bc) => {
-        const key = `${bc.course}__${bc.dept}`;
-        if (!map[key]) {
-          map[key] = {
-            course: bc.course,
-            dept: bc.dept,
-            total_groups: bc.total_groups || 0,
-            submitted_count: 0,
-            late_count: 0,
-            on_time_count: 0,
-          };
-        }
-        map[key].submitted_count += bc.submitted_count || 0;
-        map[key].late_count += bc.late_count || 0;
-        map[key].on_time_count += bc.on_time_count || 0;
-      });
-    });
-    return Object.values(map);
-  }, [iterations]);
-
   return (
     <div style={{ padding: '24px 32px', maxWidth: '1240px', margin: '0 auto', fontFamily: 'inherit' }}>
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
-      {/* Top Sub-Navigation Bar (Stitch Design) */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: '1px solid #e2e8f0',
-          paddingBottom: '12px',
-          marginBottom: '20px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
-          {/* 1. Milestones (active) */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13.5px',
-              fontWeight: 600,
-              color: '#2563eb',
-              position: 'relative',
-              paddingBottom: '8px',
-              cursor: 'pointer',
-            }}
-          >
-            <Flag size={16} />
-            <span>Milestones</span>
-            <span
-              style={{
-                position: 'absolute',
-                bottom: '-13px',
-                left: 0,
-                right: 0,
-                height: '2px',
-                backgroundColor: '#2563eb',
-                borderRadius: '2px',
-              }}
-            />
-          </div>
-
-          {/* 2. Submissions */}
-          <button
-            type="button"
-            onClick={() => navigate('/manager/iterations/submissions')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13.5px',
-              fontWeight: 500,
-              color: '#64748b',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '0 0 8px 0',
-              transition: 'color 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#1e293b')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-          >
-            <Eye size={15} />
-            <span>Submissions</span>
-          </button>
-
-          {/* 3. Rubrics */}
-          <button
-            type="button"
-            onClick={() => navigate('/manager/rubric-templates')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13.5px',
-              fontWeight: 500,
-              color: '#64748b',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '0 0 8px 0',
-              transition: 'color 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#1e293b')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-          >
-            <Sliders size={15} />
-            <span>Rubrics</span>
-          </button>
-        </div>
-
-        {/* Term / Cycle Indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#64748b' }}>
-          <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-          <span>Active Academic Semester</span>
-        </div>
-      </div>
+      {/* Top Sub-Navigation Bar */}
+      <IterationsTabBar />
 
       {/* Main Filter & Action Toolbar */}
       <div
@@ -428,7 +308,7 @@ export const IterationsManagePage = () => {
 
       {/* Main Milestones Table */}
       {loading ? (
-        <Preloader label="Loading milestones..." />
+        <ContentLoader label="Loading milestones..." />
       ) : filteredIterations.length === 0 ? (
         <EmptyState
           title="No Milestones Found"

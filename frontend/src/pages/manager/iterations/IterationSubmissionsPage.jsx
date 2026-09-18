@@ -1,11 +1,12 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../components/ui/PageHeader';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { iterationsApi } from '../../../api/iterationsApi';
 import { coursesApi } from '../../../api/coursesApi';
-import { ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Download, Users, Calendar, FileText, Search, FileDown, Flag, Eye, Sliders } from 'lucide-react';
+import { IterationsTabBar } from './IterationsTabBar';
+import { ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Download, Users, Calendar, FileText, Search, FileDown } from 'lucide-react';
 
 const fmt = (s) => {
   if (!s) return '-';
@@ -55,47 +56,75 @@ export const IterationSubmissionsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // 1. Fetch initial iterations and courses list
+  // Helper to load submissions for a given iteration ID without tearing down page
+  const loadSubmissions = async (iterId) => {
+    if (!iterId) {
+      setSummary(null);
+      setSubmissions([]);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await iterationsApi.getSubmissions(iterId);
+      const data = res.data || res;
+      setSummary(data.summary || null);
+      setSubmissions(data.submissions || []);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to load submissions.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleIterationChange = (newId) => {
+    setSelectedIterationId(newId);
+    loadSubmissions(newId);
+  };
+
+  // Coordinated initial fetch: loads iterations, courses, and target iteration submissions in one smooth pass
   useEffect(() => {
+    let isCurrent = true;
     (async () => {
+      setLoading(true);
+      setError(null);
       try {
         const [iterRes, courseRes] = await Promise.all([
           iterationsApi.getAll(),
           coursesApi.list(),
         ]);
+        if (!isCurrent) return;
         const iters = iterRes.data || iterRes || [];
         const crs = courseRes.data?.items || courseRes.data || courseRes || [];
         setIterationsList(iters);
         setCoursesList(crs);
 
-        if (!id && iters.length > 0) {
-          setSelectedIterationId(iters[0]._id);
+        const targetId = id || (iters.length > 0 ? iters[0]._id : '');
+        setSelectedIterationId(targetId);
+
+        if (targetId) {
+          const subRes = await iterationsApi.getSubmissions(targetId);
+          if (!isCurrent) return;
+          const data = subRes.data || subRes;
+          setSummary(data.summary || null);
+          setSubmissions(data.submissions || []);
+        } else {
+          setSummary(null);
+          setSubmissions([]);
         }
       } catch (err) {
-        console.error('Failed to load initial data:', err);
+        if (isCurrent) {
+          setError(err.response?.data?.message || err.message || 'Failed to load submissions.');
+        }
+      } finally {
+        if (isCurrent) setLoading(false);
       }
     })();
-  }, [id]);
 
-  // 2. Fetch submission data for current selected iteration ID
-  useEffect(() => {
-    if (!selectedIterationId) {
-      setLoading(false);
-      return;
-    }
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await iterationsApi.getSubmissions(selectedIterationId);
-        const data = res.data || res;
-        setSummary(data.summary || null);
-        setSubmissions(data.submissions || []);
-      } catch (err) {
-        setError(err.response?.data?.message || err.message || 'Failed to load submissions.');
-      } finally { setLoading(false); }
-    })();
-  }, [selectedIterationId]);
+    return () => {
+      isCurrent = false;
+    };
+  }, [id]);
 
   // Filter iterations by selected course
   const availableIterations = useMemo(() => {
@@ -165,91 +194,8 @@ export const IterationSubmissionsPage = () => {
   return (
     <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
 
-      {/* Top 3 Navigation Tabs */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '24px',
-          borderBottom: '1px solid #e2e8f0',
-          marginBottom: '20px',
-          paddingBottom: '4px',
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => navigate('/manager/iterations')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '13.5px',
-            fontWeight: 500,
-            color: '#64748b',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '0 0 8px 0',
-            transition: 'color 0.15s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#1e293b')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-        >
-          <Flag size={15} />
-          <span>Milestones</span>
-        </button>
-
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '13.5px',
-            fontWeight: 600,
-            color: '#2563eb',
-            position: 'relative',
-            paddingBottom: '8px',
-            cursor: 'pointer',
-          }}
-        >
-          <Eye size={16} />
-          <span>Submissions</span>
-          <span
-            style={{
-              position: 'absolute',
-              bottom: '-5px',
-              left: 0,
-              right: 0,
-              height: '2px',
-              backgroundColor: '#2563eb',
-              borderRadius: '2px',
-            }}
-          />
-        </div>
-
-        <button
-          type="button"
-          onClick={() => navigate('/manager/rubric-templates')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '13.5px',
-            fontWeight: 500,
-            color: '#64748b',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '0 0 8px 0',
-            transition: 'color 0.15s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#1e293b')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-        >
-          <Sliders size={15} />
-          <span>Rubrics</span>
-        </button>
-      </div>
+      {/* Top Sub-Navigation Bar */}
+      <IterationsTabBar />
 
       <PageHeader
         title={summary ? summary.iteration_title : 'Group Submissions'}
@@ -292,7 +238,9 @@ export const IterationSubmissionsPage = () => {
               setSelectedCourse(c);
               const matching = iterationsList.filter((it) => !c || it.course === 'All Courses' || it.course === c);
               if (matching.length > 0) {
-                setSelectedIterationId(matching[0]._id);
+                handleIterationChange(matching[0]._id);
+              } else {
+                handleIterationChange('');
               }
             }}
             style={{ width: '100%', padding: '7px 32px 7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#ffffff' }}
@@ -312,7 +260,7 @@ export const IterationSubmissionsPage = () => {
           </label>
           <select
             value={selectedIterationId}
-            onChange={(e) => setSelectedIterationId(e.target.value)}
+            onChange={(e) => handleIterationChange(e.target.value)}
             style={{ width: '100%', padding: '7px 32px 7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#ffffff' }}
           >
             {availableIterations.length === 0 ? (
@@ -329,7 +277,7 @@ export const IterationSubmissionsPage = () => {
       </div>
 
       {loading ? (
-        <Preloader label="Loading submissions..." />
+        <ContentLoader label="Loading submissions..." />
       ) : error ? (
         <EmptyState title="Could not load submissions" description={error} actionLabel="Go Back to Milestones" onAction={() => navigate('/manager/iterations')} />
       ) : (

@@ -1,17 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { EmptyState } from '../../../components/ui/EmptyState';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { Toast } from '../../../components/ui/Toast';
 import { Modal } from '../../../components/ui/Modal';
 import { rubricTemplatesApi } from '../../../api/rubricTemplatesApi';
 import { coursesApi } from '../../../api/coursesApi';
 import { RubricBuilderModal } from './RubricBuilderModal';
-import { Plus, Edit2, Trash2, FileText, ChevronDown, ChevronUp, Layers, AlertTriangle, Flag, Eye, Sliders } from 'lucide-react';
+import { IterationsTabBar } from './IterationsTabBar';
+import { Plus, Edit2, Trash2, FileText, ChevronDown, ChevronUp, Layers, AlertTriangle } from 'lucide-react';
 
 export const RubricTemplatesPage = () => {
-  const navigate = useNavigate();
   const [templates, setTemplates] = useState([]);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -83,91 +82,8 @@ export const RubricTemplatesPage = () => {
     <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
-      {/* Top 3 Navigation Tabs */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '24px',
-          borderBottom: '1px solid #e2e8f0',
-          marginBottom: '20px',
-          paddingBottom: '4px',
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => navigate('/manager/iterations')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '13.5px',
-            fontWeight: 500,
-            color: '#64748b',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '0 0 8px 0',
-            transition: 'color 0.15s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#1e293b')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-        >
-          <Flag size={15} />
-          <span>Milestones</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => navigate('/manager/iterations/submissions')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '13.5px',
-            fontWeight: 500,
-            color: '#64748b',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '0 0 8px 0',
-            transition: 'color 0.15s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#1e293b')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-        >
-          <Eye size={15} />
-          <span>Submissions</span>
-        </button>
-
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '13.5px',
-            fontWeight: 600,
-            color: '#2563eb',
-            position: 'relative',
-            paddingBottom: '8px',
-            cursor: 'pointer',
-          }}
-        >
-          <Sliders size={16} />
-          <span>Rubrics</span>
-          <span
-            style={{
-              position: 'absolute',
-              bottom: '-5px',
-              left: 0,
-              right: 0,
-              height: '2px',
-              backgroundColor: '#2563eb',
-              borderRadius: '2px',
-            }}
-          />
-        </div>
-      </div>
+      {/* Top Sub-Navigation Bar */}
+      <IterationsTabBar />
 
       <PageHeader
         title="Rubric Templates"
@@ -196,7 +112,7 @@ export const RubricTemplatesPage = () => {
       </PageHeader>
 
       {loading ? (
-        <Preloader label="Loading rubric templates..." />
+        <ContentLoader label="Loading rubric templates..." />
       ) : templates.length === 0 ? (
         <EmptyState
           title="No Rubric Templates"
