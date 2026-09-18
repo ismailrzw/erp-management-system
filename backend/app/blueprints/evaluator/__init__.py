@@ -8,7 +8,9 @@ from flask import Blueprint
 
 evaluator_bp = Blueprint("evaluator", __name__)
 
-from app.blueprints.evaluator import routes        # noqa: E402, F401
-from app.blueprints.evaluator import evaluations   # noqa: E402, F401
-from app.blueprints.evaluator import exhibition    # noqa: E402, F401
-from app.blueprints.evaluator import meetings      # noqa: E402, F401
+from app.blueprints.evaluator import routes               # noqa: E402, F401
+from app.blueprints.evaluator import evaluations          # noqa: E402, F401
+from app.blueprints.evaluator import exhibition           # noqa: E402, F401
+from app.blueprints.evaluator import meetings             # noqa: E402, F401
+from app.blueprints.evaluator import supervisor_requests  # noqa: E402, F401
+

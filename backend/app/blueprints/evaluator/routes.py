@@ -76,11 +76,26 @@ def evaluator_dashboard():
         "evaluator_id": evaluator_id
     })
 
+    # Active supervisions and breakdown by course (max 4 per course)
+    from app.services.supervisor_service import get_evaluator_active_count
+    from app.models.group import COLLECTION as GROUPS_COLLECTION, Field as GroupField, Status as GroupStatus
+    active_supervision_count = get_evaluator_active_count(str(evaluator_id))
+    supervised_groups = list(mongo.db[GROUPS_COLLECTION].find({
+        "supervisor_id": evaluator_id,
+        GroupField.STATUS: {"$ne": GroupStatus.DELETED},
+    }, {GroupField.COURSE: 1, GroupField.NAME: 1}))
+    supervision_by_course = {}
+    for sg in supervised_groups:
+        c = sg.get(GroupField.COURSE) or "General"
+        supervision_by_course[c] = supervision_by_course.get(c, 0) + 1
+
     return success_response("Dashboard data retrieved.", data={
         "assigned_groups": assigned_count,
         "pending_evaluations": pending,
         "completed_evaluations": completed_evals,
         "meetings_logged": meetings_count,
+        "active_supervision_count": active_supervision_count,
+        "supervision_by_course": supervision_by_course,
     })
 
 

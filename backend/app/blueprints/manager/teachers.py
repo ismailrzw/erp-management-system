@@ -193,3 +193,22 @@ class TeacherPermanentDelete(Resource):
             target_id=teacher_id, old_value=teacher,
         )
         return {"success": True, "message": "Teacher permanently deleted.", "data": {"deleted": True, "teacher_id": teacher_id}}, 200
+
+
+@teachers_ns.route("/<string:teacher_id>/domains")
+@teachers_ns.param("teacher_id", "MongoDB teacher ID")
+class TeacherDomains(Resource):
+    @teachers_ns.doc(security="Bearer Auth")
+    @role_required(Role.MANAGER)
+    def put(self, teacher_id):
+        """Update teacher/evaluator expertise domain tags."""
+        try:
+            from app.services.supervisor_service import update_evaluator_domains
+            body = request.get_json() or {}
+            domains = body.get("domains", [])
+            result = update_evaluator_domains(teacher_id, domains)
+            return {"success": True, "message": "Teacher domains updated.", "data": result}, 200
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, 400
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
