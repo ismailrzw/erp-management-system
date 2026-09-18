@@ -17,15 +17,15 @@ export const ContentLoader = ({ label = 'Loading...', minHeight = '320px' }) => 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
         <div
           className="ball-scale-1"
-          style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#2563eb' }}
+          style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--primary)' }}
         />
         <div
           className="ball-scale-2"
-          style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#60a5fa' }}
+          style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--primary-hover)' }}
         />
         <div
           className="ball-scale-3"
-          style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#93c5fd' }}
+          style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--primary-light)' }}
         />
       </div>
       <span style={{ fontSize: '13px', fontWeight: 500, color: '#64748b' }}>{label}</span>
