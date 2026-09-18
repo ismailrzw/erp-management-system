@@ -1,4 +1,4 @@
-# backend/app/blueprints/student/iterations.py
+﻿# backend/app/blueprints/student/iterations.py
 from datetime import datetime, timezone
 
 from bson import ObjectId
@@ -229,4 +229,3 @@ class StudentIterationSubmitResource(Resource):
 
         msg = f"Submission received {'(LATE)' if is_late else 'on time'}."
         return success_response(msg, data=sub_doc, status=201)
-

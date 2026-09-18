@@ -1,4 +1,4 @@
-# backend/app/blueprints/student/groups.py
+﻿# backend/app/blueprints/student/groups.py
 """
 Student Group API endpoints.
 
@@ -34,7 +34,6 @@ from marshmallow import ValidationError
 from app.extensions import mongo
 from app.models.user import Role
 from app.schemas.group_schema import (
-    CreateGroupSchema,
     InviteMemberSchema,
     UpdateGroupSchema,
 )
@@ -94,10 +93,10 @@ join_request_model = student_groups_ns.model("SendJoinRequest", {
     "message": fields.String(description="Optional note to the group leader"),
 })
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # Group endpoints
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 @student_groups_ns.route("/my")
 class MyGroup(Resource):
@@ -188,7 +187,6 @@ class GroupListCreate(Resource):
             new_value={"name": group["name"], "project_title": group["project_title"]},
         )
         return {"success": True, "message": f"Project group {group['name']} created successfully.", "data": group}, 201
-
 
 
 @student_groups_ns.route("/<string:group_id>")
@@ -458,10 +456,10 @@ class RejectJoinRequest(Resource):
         log_audit(mongo.db, leader_id, Role.STUDENT, "join_requests", "reject", target_id=request_id)
         return {"success": True, "message": result["message"]}, 200
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # Invitation endpoints
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 @student_invitations_ns.route("/pending")
 class PendingInvitations(Resource):
@@ -529,10 +527,10 @@ class DeclineInvitation(Resource):
         )
         return {"success": True, "message": "Invitation declined.", "data": result}, 200
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # Peer discovery endpoint
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 @student_search_ns.route("/")
 class StudentSearch(Resource):

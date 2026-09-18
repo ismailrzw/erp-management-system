@@ -1,4 +1,4 @@
-# backend/app/blueprints/manager/rubric_templates.py
+﻿# backend/app/blueprints/manager/rubric_templates.py
 from datetime import datetime, timezone
 
 from bson import ObjectId

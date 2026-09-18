@@ -1,4 +1,4 @@
-# backend/app/blueprints/manager/students.py
+﻿# backend/app/blueprints/manager/students.py
 """
 Manager Students API endpoints.
 
@@ -415,4 +415,3 @@ class NotifyUngroupedStudents(Resource):
             }, 200
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500
-

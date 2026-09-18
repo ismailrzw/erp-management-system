@@ -1,4 +1,4 @@
-# backend/app/blueprints/student/attachments.py
+﻿# backend/app/blueprints/student/attachments.py
 """
 Student Attachments API endpoints.
 

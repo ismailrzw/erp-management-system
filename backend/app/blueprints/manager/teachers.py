@@ -1,4 +1,4 @@
-# backend/app/blueprints/manager/teachers.py
+﻿# backend/app/blueprints/manager/teachers.py
 """
 Manager teacher/evaluator API endpoints.
 
@@ -211,4 +211,4 @@ class TeacherDomains(Resource):
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 400
         except Exception as exc:  # noqa: BLE001
-            return {"success": False, "message": str(exc)}, 500
+            return {"success": False, "message": str(exc)}, 500

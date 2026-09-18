@@ -1,4 +1,4 @@
-# backend/app/blueprints/evaluator/exhibition.py
+﻿# backend/app/blueprints/evaluator/exhibition.py
 """
 Exhibition Evaluation endpoints.
 

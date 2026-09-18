@@ -1,4 +1,4 @@
-# backend/app/blueprints/manager/courses.py
+﻿# backend/app/blueprints/manager/courses.py
 """Manager course API endpoints."""
 
 from flask import request

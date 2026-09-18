@@ -1,4 +1,4 @@
-"""Manager attachment API endpoints."""
+﻿"""Manager attachment API endpoints."""
 
 from flask import Blueprint, request, send_file
 from flask_jwt_extended import get_jwt_identity

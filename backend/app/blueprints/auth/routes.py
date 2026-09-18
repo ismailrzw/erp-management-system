@@ -1,4 +1,4 @@
-# backend/app/blueprints/auth/routes.py
+﻿# backend/app/blueprints/auth/routes.py
 """
 Authentication routes.
 
@@ -163,4 +163,3 @@ def me_bp():
 def change_password_bp():
     """Blueprint version of POST /api/auth/change-password."""
     return ChangePassword().post()
-

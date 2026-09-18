@@ -9,7 +9,7 @@ from flask_restx import Namespace, Resource, fields
 
 from app.extensions import mongo
 from app.models.group import COLLECTION as GROUPS_COLLECTION, Field as GroupField, Status as GroupStatus
-from app.models.user import Role, UserFields
+from app.models.user import Role
 from app.services.supervisor_service import (
     cancel_supervisor_request,
     create_supervisor_request,

@@ -1,4 +1,4 @@
-# backend/app/blueprints/student/profile.py
+﻿# backend/app/blueprints/student/profile.py
 """
 Student Profile API endpoints.
 

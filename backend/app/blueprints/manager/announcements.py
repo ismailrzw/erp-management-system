@@ -1,4 +1,4 @@
-# backend/app/blueprints/manager/announcements.py
+﻿# backend/app/blueprints/manager/announcements.py
 """
 Manager announcement API endpoints.
 

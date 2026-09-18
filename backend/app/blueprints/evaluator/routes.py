@@ -1,4 +1,4 @@
-# backend/app/blueprints/evaluator/routes.py
+﻿# backend/app/blueprints/evaluator/routes.py
 """
 Evaluator Dashboard and Groups endpoints.
 
@@ -6,10 +6,9 @@ GET /api/evaluator/dashboard  — stat counts for logged-in evaluator
 GET /api/evaluator/groups     — only groups assigned to this evaluator
 GET /api/evaluator/groups/<group_id> — single group with iteration + eval status
 """
-from datetime import datetime, timezone
+from datetime import datetime
 
 from bson import ObjectId
-from flask import request
 from flask_jwt_extended import get_jwt_identity
 
 from app.blueprints.evaluator import evaluator_bp as bp

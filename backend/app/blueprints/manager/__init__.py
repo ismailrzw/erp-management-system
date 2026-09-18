@@ -1,4 +1,4 @@
-# backend/app/blueprints/manager/__init__.py
+﻿# backend/app/blueprints/manager/__init__.py
 """Manager blueprints package."""
 
 from .dashboard import dashboard_bp, dashboard_ns

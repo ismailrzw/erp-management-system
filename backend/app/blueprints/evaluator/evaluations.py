@@ -1,4 +1,4 @@
-# backend/app/blueprints/evaluator/evaluations.py
+﻿# backend/app/blueprints/evaluator/evaluations.py
 """
 Evaluator Iteration Scoring endpoints.
 
