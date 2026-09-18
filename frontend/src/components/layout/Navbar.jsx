@@ -51,27 +51,30 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: isMobileView ? '0 12px' : '0 20px',
+        padding: isMobileView ? '0 12px' : '0 20px 0 0',
         zIndex: 500,
+        boxSizing: 'border-box',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? '8px' : '14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
         {/* Desktop Brand Column */}
         {!isMobileView && (
           <div
             style={{
-              width: isSidebarCollapsed ? '64px' : '235px',
-              marginLeft: '-20px',
-              paddingLeft: '18px',
+              width: isSidebarCollapsed ? '64px' : '240px',
               height: '60px',
               backgroundColor: '#1f2d3a',
               color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+              padding: isSidebarCollapsed ? '0' : '0 18px',
               gap: '10px',
               transition: 'width 0.2s ease',
               overflow: 'hidden',
               flexShrink: 0,
+              boxSizing: 'border-box',
+              borderRight: '1px solid #1f2d3a',
             }}
           >
             <div
@@ -86,6 +89,7 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
                 fontWeight: 700,
                 fontSize: '13px',
                 flexShrink: 0,
+                color: '#ffffff',
               }}
             >
               PBL
@@ -113,33 +117,40 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
               fontWeight: 700,
               fontSize: '12px',
               flexShrink: 0,
+              marginRight: '8px',
             }}
           >
             PBL
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          style={{
-            border: 'none',
-            background: 'none',
-            color: '#64748b',
-            cursor: 'pointer',
-            padding: '8px',
-            borderRadius: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            minWidth: '36px',
-            minHeight: '36px',
-            justifyContent: 'center',
-          }}
-          title="Toggle Navigation Menu"
-          aria-label="Toggle Navigation Menu"
-        >
-          <Menu size={20} />
-        </button>
+        {/* Menu Toggle Button */}
+        <div style={{ paddingLeft: isMobileView ? '0' : '16px' }}>
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            style={{
+              border: 'none',
+              background: 'none',
+              color: '#64748b',
+              cursor: 'pointer',
+              padding: '8px',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              minWidth: '36px',
+              minHeight: '36px',
+              justifyContent: 'center',
+              transition: 'background-color 0.15s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            title="Toggle Navigation Menu"
+            aria-label="Toggle Navigation Menu"
+          >
+            <Menu size={20} />
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? '8px' : '12px' }}>

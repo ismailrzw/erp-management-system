@@ -17,7 +17,7 @@
   --muted: #9f9f9f;
   --dark-text: #2c3e50;
   --border: #dddddd;
-  --sidebar-w: 235px;
+  --sidebar-w: 240px;
   --sidebar-collapsed-w: 64px;
   --navbar-h: 60px;
 }
@@ -56,13 +56,40 @@ input, select, textarea {
 }
 
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #ccc;
+  background: #cbd5e1;
   border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Slim modern scrollbar specifically for the sidebar */
+.app-sidebar-nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+.app-sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.app-sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 4px;
+}
+
+.app-sidebar-nav:hover::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.5);
 }
 
 /* Animations */
@@ -112,7 +139,7 @@ input, select, textarea {
 
 @media (min-width: 1024px) {
   .app-main-content.sidebar-open {
-    margin-left: 235px;
+    margin-left: 240px;
     padding: 24px 30px;
   }
   .app-main-content.sidebar-collapsed {

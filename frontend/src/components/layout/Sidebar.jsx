@@ -349,7 +349,7 @@ export const Sidebar = ({
   const isCollapsedView = !isMobileView && isCollapsed;
 
   return (
-    <aside style={sidebarStyle} aria-label="Sidebar Navigation">
+    <aside className="app-sidebar-nav" style={sidebarStyle} aria-label="Sidebar Navigation">
       {/* Mobile Header in Drawer */}
       {isMobileView && (
         <div
@@ -438,10 +438,11 @@ export const Sidebar = ({
                     fontSize: '13.5px',
                     color: isActive ? '#0073aa' : '#334155',
                     backgroundColor: isActive ? '#eaf5fb' : 'transparent',
-                    borderRight: isActive && !isCollapsedView ? '3px solid #0073aa' : 'none',
+                    borderRight: isActive && !isCollapsedView ? '3px solid #0073aa' : '3px solid transparent',
                     fontWeight: isActive ? 600 : 500,
                     textDecoration: 'none',
-                    transition: 'background-color 0.15s ease',
+                    boxSizing: 'border-box',
+                    transition: 'background-color 0.15s ease, color 0.15s ease',
                   }}
                   title={isCollapsedView ? item.text : undefined}
                 >
@@ -474,6 +475,7 @@ export const Sidebar = ({
                     cursor: 'pointer',
                     fontWeight: 500,
                     textAlign: 'left',
+                    boxSizing: 'border-box',
                     transition: 'background-color 0.15s ease',
                   }}
                   onMouseEnter={(e) => {
@@ -511,6 +513,7 @@ export const Sidebar = ({
                     cursor: 'pointer',
                     fontWeight: hasActiveChild ? 600 : 500,
                     textAlign: 'left',
+                    boxSizing: 'border-box',
                   }}
                   title={isCollapsedView ? item.text : undefined}
                 >
@@ -545,7 +548,10 @@ export const Sidebar = ({
                             color: isSubActive ? '#0073aa' : '#64748b',
                             fontWeight: isSubActive ? 600 : 400,
                             backgroundColor: isSubActive ? '#eaf5fb' : 'transparent',
+                            borderRight: isSubActive ? '3px solid #0073aa' : '3px solid transparent',
                             textDecoration: 'none',
+                            boxSizing: 'border-box',
+                            transition: 'all 0.15s ease',
                           }}
                         >
                           {sub.text}
