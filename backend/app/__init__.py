@@ -1,4 +1,4 @@
-import json
+﻿import json
 from datetime import datetime
 
 from bson import ObjectId
@@ -13,6 +13,7 @@ from app.middleware import fix_authorization_header
 from app.utils import register_jwt_handlers
 
 jwt = JWTManager()
+
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -158,4 +159,4 @@ def create_app(config_class=Config):
     except Exception:  # noqa: BLE001
         pass
 
-    return app
+    return app

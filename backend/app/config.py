@@ -1,8 +1,9 @@
-import os
+﻿import os
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
 
 class Config:
     MONGO_URI = os.getenv("MONGO_URI")
@@ -23,5 +24,3 @@ class Config:
 
     # ── Group Naming ─────────────────────────────────────
     GROUP_NAME_FORMAT = os.getenv("GROUP_NAME_FORMAT", "GRP-{YEAR}-{SEQ:03d}")
-
-
