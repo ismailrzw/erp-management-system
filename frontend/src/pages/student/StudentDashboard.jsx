@@ -162,22 +162,7 @@ export const StudentDashboard = () => {
           type="button"
           onClick={() => fetchDashboard(true)}
           disabled={refreshing}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            fontSize: '13px',
-            fontWeight: 500,
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '6px',
-            color: '#334155',
-            cursor: refreshing ? 'not-allowed' : 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+          className="btn btn-ghost btn-sm"
         >
           <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
           <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
@@ -225,20 +210,8 @@ export const StudentDashboard = () => {
                   setEditGroupModalMode('all');
                   setIsEditGroupModalOpen(true);
                 }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 14px',
-                  fontSize: '12.5px',
-                  fontWeight: 600,
-                  backgroundColor: '#dc2626',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                }}
+                className="btn btn-danger"
+                style={{ flexShrink: 0 }}
               >
                 <Edit size={14} />
                 <span>Update Proposal & Resubmit</span>
@@ -247,20 +220,8 @@ export const StudentDashboard = () => {
             <button
               type="button"
               onClick={() => navigate('/student/group/my')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 14px',
-                fontSize: '12.5px',
-                fontWeight: 500,
-                backgroundColor: '#ffffff',
-                border: '1px solid #fecaca',
-                borderRadius: '6px',
-                color: '#dc2626',
-                cursor: 'pointer',
-                flexShrink: 0,
-              }}
+              className="btn btn-danger-outline btn-sm"
+              style={{ flexShrink: 0 }}
             >
               <span>View Group</span>
             </button>
@@ -372,22 +333,7 @@ export const StudentDashboard = () => {
                         setIsEditGroupModalOpen(true);
                       }}
                       title="Change Group Name"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '2px 8px',
-                        fontSize: '11.5px',
-                        fontWeight: 500,
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '4px',
-                        color: '#0369a1',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f9ff')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+                      className="btn btn-ghost btn-sm"
                     >
                       <Edit2 size={12} />
                       <span>Change Name</span>
@@ -427,7 +373,7 @@ export const StudentDashboard = () => {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '8px 12px',
-                        backgroundColor: m.is_leader ? '#eff6ff' : '#ffffff',
+                        backgroundColor: m.is_leader ? 'var(--primary-light)' : '#ffffff',
                         border: '1px solid #e2e8f0',
                         borderRadius: '6px',
                         flexWrap: 'wrap',
@@ -488,25 +434,8 @@ export const StudentDashboard = () => {
               <button
                 type="button"
                 onClick={() => navigate('/student/group/my')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  padding: '10px 16px',
-                  backgroundColor: 'var(--primary)',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  marginTop: '6px',
-                  transition: 'background-color 0.15s ease',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--primary-hover)')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--primary)')}
+                className="btn btn-primary"
+                style={{ width: '100%', marginTop: '6px' }}
               >
                 <span>Manage Project Group</span>
                 <ArrowRight size={16} />
@@ -530,21 +459,8 @@ export const StudentDashboard = () => {
                   <button
                     type="button"
                     onClick={() => navigate('/student/group/create')}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      padding: '9px 16px',
-                      backgroundColor: 'var(--primary)',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      flex: '1 1 150px',
-                    }}
+                    className="btn btn-primary"
+                    style={{ flex: '1 1 150px' }}
                   >
                     <PlusCircle size={16} />
                     <span>Create Group</span>
@@ -553,21 +469,8 @@ export const StudentDashboard = () => {
                   <button
                     type="button"
                     onClick={() => navigate('/student/group/browse')}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      padding: '9px 16px',
-                      backgroundColor: '#ffffff',
-                      color: '#334155',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '6px',
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      flex: '1 1 150px',
-                    }}
+                    className="btn btn-secondary"
+                    style={{ flex: '1 1 150px' }}
                   >
                     <Compass size={16} />
                     <span>Browse Groups {pendingInvitesCount > 0 && `(${pendingInvitesCount})`}</span>
@@ -664,19 +567,7 @@ export const StudentDashboard = () => {
                 <button
                   type="button"
                   onClick={handleMarkAllViewed}
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    color: '#0369a1',
-                    backgroundColor: '#f0f9ff',
-                    border: '1px solid #bae6fd',
-                    borderRadius: '4px',
-                    padding: '4px 10px',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e0f2fe')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f0f9ff')}
+                  className="btn btn-ghost btn-sm"
                 >
                   Mark all as read
                 </button>
@@ -774,22 +665,8 @@ export const StudentDashboard = () => {
                       <button
                         type="button"
                         onClick={() => handleDownloadAttachment(att)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 12px',
-                          fontSize: '12px',
-                          fontWeight: 500,
-                          backgroundColor: '#ffffff',
-                          color: 'var(--primary)',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          flexShrink: 0,
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--primary-light)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+                        className="btn btn-ghost btn-sm"
+                        style={{ flexShrink: 0 }}
                       >
                         <Download size={13} />
                         <span>Download</span>

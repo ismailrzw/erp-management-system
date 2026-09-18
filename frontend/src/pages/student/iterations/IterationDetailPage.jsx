@@ -142,21 +142,8 @@ export const IterationDetailPage = () => {
       <button
         type="button"
         onClick={() => navigate('/student/iterations')}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '8px',
-          background: 'none',
-          border: 'none',
-          color: '#5f6368',
-          fontSize: '13.5px',
-          fontWeight: 500,
-          cursor: 'pointer',
-          marginBottom: '20px',
-          padding: '4px 0',
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.color = '#202124')}
-        onMouseLeave={(e) => (e.currentTarget.style.color = '#5f6368')}
+        className="btn btn-back"
+        style={{ marginBottom: '20px' }}
       >
         <ArrowLeft size={16} />
         Back to Class Iterations
@@ -249,8 +236,6 @@ export const IterationDetailPage = () => {
                   boxShadow: '0 1px 2px rgba(60,64,67,0.08)',
                   transition: 'background-color 0.15s ease',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8f9fa')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
               >
                 <div style={{ width: '36px', height: '36px', borderRadius: '6px', backgroundColor: '#e8f0fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Paperclip size={18} style={{ color: '#1a73e8' }} />
@@ -342,7 +327,7 @@ export const IterationDetailPage = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedFile(null)}
-                  style={{ background: 'none', border: 'none', color: '#5f6368', cursor: 'pointer' }}
+                  className="btn btn-back"
                 >
                   <X size={16} />
                 </button>
@@ -377,8 +362,6 @@ export const IterationDetailPage = () => {
                   marginBottom: '12px',
                   transition: 'background-color 0.15s ease',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8f9fa')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
               >
                 <Plus size={16} />
                 <span>{hasSubmission ? 'Attach replacement file' : 'Add or create'}</span>
@@ -390,18 +373,8 @@ export const IterationDetailPage = () => {
               <button
                 type="submit"
                 disabled={submitting || (!selectedFile && !hasSubmission)}
-                style={{
-                  width: '100%',
-                  padding: '10px 16px',
-                  borderRadius: '24px',
-                  border: 'none',
-                  backgroundColor: (selectedFile || hasSubmission) && !submitting ? '#1a73e8' : '#e8eaed',
-                  color: (selectedFile || hasSubmission) && !submitting ? '#ffffff' : '#80868b',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
-                  cursor: (selectedFile || hasSubmission) && !submitting ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.15s ease',
-                }}
+                className="btn btn-primary"
+                style={{ width: '100%' }}
               >
                 {submitting
                   ? 'Submitting...'

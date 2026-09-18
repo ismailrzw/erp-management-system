@@ -286,19 +286,7 @@ export const MyGroupPage = () => {
             type="button"
             onClick={() => fetchGroup(true)}
             disabled={refreshing}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              fontSize: '13px',
-              fontWeight: 500,
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '6px',
-              color: '#334155',
-              cursor: refreshing ? 'not-allowed' : 'pointer',
-            }}
+            className="btn btn-ghost btn-sm"
           >
             <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
             <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
@@ -315,19 +303,7 @@ export const MyGroupPage = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/student/group/create')}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '9px 18px',
-                    fontSize: '13.5px',
-                    fontWeight: 600,
-                    backgroundColor: 'var(--primary)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                  }}
+                  className="btn btn-primary"
                 >
                   <PlusCircle size={16} />
                   <span>Create New Group</span>
@@ -336,19 +312,7 @@ export const MyGroupPage = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/student/group/browse')}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '9px 18px',
-                    fontSize: '13.5px',
-                    fontWeight: 500,
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '6px',
-                    color: '#334155',
-                    cursor: 'pointer',
-                  }}
+                  className="btn btn-secondary"
                 >
                   <Compass size={16} />
                   <span>Browse Groups & Invites</span>
@@ -389,28 +353,7 @@ export const MyGroupPage = () => {
                 type="button"
                 onClick={() => handleOpenEditModal('name')}
                 title="Change Group Name"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '4px 10px',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  backgroundColor: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  color: '#475569',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e2e8f0';
-                  e.currentTarget.style.color = 'var(--primary)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f1f5f9';
-                  e.currentTarget.style.color = '#475569';
-                }}
+                className="btn btn-ghost btn-sm"
               >
                 <Edit2 size={13} />
                 <span>Change Name</span>
@@ -425,19 +368,7 @@ export const MyGroupPage = () => {
           type="button"
           onClick={() => fetchGroup(true)}
           disabled={refreshing}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            fontSize: '13px',
-            fontWeight: 500,
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '6px',
-            color: '#334155',
-            cursor: refreshing ? 'not-allowed' : 'pointer',
-          }}
+          className="btn btn-ghost btn-sm"
         >
           <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
           <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
@@ -447,19 +378,7 @@ export const MyGroupPage = () => {
           <button
             type="button"
             onClick={() => handleOpenEditModal('all')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              fontSize: '13px',
-              fontWeight: 500,
-              backgroundColor: '#ffffff',
-              border: '1px solid #cbd5e1',
-              borderRadius: '6px',
-              color: '#334155',
-              cursor: 'pointer',
-            }}
+            className="btn btn-secondary"
           >
             <Edit size={14} />
             <span>Edit Proposal</span>
@@ -469,21 +388,7 @@ export const MyGroupPage = () => {
         <button
           type="button"
           onClick={() => setIsLeaveModalOpen(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            fontSize: '13px',
-            fontWeight: 500,
-            backgroundColor: '#ffffff',
-            border: '1px solid #fecaca',
-            borderRadius: '6px',
-            color: '#dc2626',
-            cursor: 'pointer',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+          className="btn btn-danger-outline"
         >
           <LogOut size={14} />
           <span>Leave Group</span>
@@ -525,20 +430,8 @@ export const MyGroupPage = () => {
             <button
               type="button"
               onClick={() => handleOpenEditModal('all')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: 600,
-                backgroundColor: '#dc2626',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                flexShrink: 0,
-              }}
+              className="btn btn-danger"
+              style={{ flexShrink: 0 }}
             >
               <Edit size={14} />
               <span>Update Proposal & Resubmit</span>
@@ -639,19 +532,7 @@ export const MyGroupPage = () => {
               <button
                 type="button"
                 onClick={() => setIsInviteModalOpen(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 12px',
-                  fontSize: '12.5px',
-                  fontWeight: 600,
-                  backgroundColor: 'var(--primary)',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                }}
+                className="btn btn-primary btn-sm"
               >
                 <UserPlus size={14} />
                 <span>+ Invite Peer</span>
@@ -671,11 +552,11 @@ export const MyGroupPage = () => {
             <div
               style={{
                 padding: '10px 14px',
-                backgroundColor: '#eff6ff',
-                border: '1px solid #bfdbfe',
+                backgroundColor: 'var(--primary-light)',
+                border: '1px solid rgba(0, 115, 170, 0.2)',
                 borderRadius: '6px',
                 fontSize: '12.5px',
-                color: '#1e40af',
+                color: 'var(--primary)',
                 marginTop: '12px',
                 textAlign: 'center',
                 fontWeight: 500,
@@ -836,21 +717,7 @@ export const MyGroupPage = () => {
                   type="button"
                   onClick={handleCancelSupervisorRequest}
                   disabled={cancellingSupervisorReq}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 14px',
-                    fontSize: '12.5px',
-                    fontWeight: 600,
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #fca5a5',
-                    color: '#dc2626',
-                    borderRadius: '6px',
-                    cursor: cancellingSupervisorReq ? 'not-allowed' : 'pointer',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+                  className="btn btn-danger-outline btn-sm"
                 >
                   {cancellingSupervisorReq ? <Loader2 size={13} className="animate-spin" /> : <XCircle size={13} />}
                   <span>Cancel Supervisor Request</span>
@@ -1040,20 +907,7 @@ export const MyGroupPage = () => {
                           type="button"
                           onClick={() => handleOpenSupervisorRequestModal(sup)}
                           disabled={isAtCap}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px',
-                            padding: '7px 12px',
-                            fontSize: '12.5px',
-                            fontWeight: 600,
-                            backgroundColor: isAtCap ? '#e2e8f0' : 'var(--primary)',
-                            color: isAtCap ? '#94a3b8' : '#ffffff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: isAtCap ? 'not-allowed' : 'pointer',
-                          }}
+                          className="btn btn-primary btn-sm"
                         >
                           <Send size={13} />
                           <span>{isAtCap ? 'Capacity Full' : 'Request Supervision'}</span>
@@ -1167,20 +1021,7 @@ export const MyGroupPage = () => {
                       onClick={() => handleAcceptJoinRequest(req.id)}
                       disabled={isProcessing || isFull}
                       title={isFull ? 'Group is at max capacity' : 'Accept candidate into group'}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        padding: '6px 14px',
-                        fontSize: '12.5px',
-                        fontWeight: 600,
-                        backgroundColor: isFull ? '#94a3b8' : 'var(--success)',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '5px',
-                        cursor: isFull || isProcessing ? 'not-allowed' : 'pointer',
-                        opacity: isFull ? 0.7 : 1,
-                      }}
+                      className="btn btn-success btn-sm"
                     >
                       {isProcessing ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
                       <span>Accept</span>
@@ -1190,21 +1031,7 @@ export const MyGroupPage = () => {
                       type="button"
                       onClick={() => handleRejectJoinRequest(req.id)}
                       disabled={isProcessing}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        padding: '6px 12px',
-                        fontSize: '12.5px',
-                        fontWeight: 500,
-                        backgroundColor: '#ffffff',
-                        color: '#dc2626',
-                        border: '1px solid #fecaca',
-                        borderRadius: '5px',
-                        cursor: isProcessing ? 'not-allowed' : 'pointer',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+                      className="btn btn-danger-outline btn-sm"
                     >
                       <XCircle size={13} />
                       <span>Decline</span>
@@ -1274,15 +1101,7 @@ export const MyGroupPage = () => {
             <button
               type="button"
               onClick={() => setMemberToRemove(null)}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                color: '#475569',
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
@@ -1290,19 +1109,7 @@ export const MyGroupPage = () => {
               type="button"
               onClick={handleConfirmRemoveMember}
               disabled={removing}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 18px',
-                fontSize: '13px',
-                fontWeight: 600,
-                backgroundColor: '#dc2626',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: removing ? 'not-allowed' : 'pointer',
-              }}
+              className="btn btn-danger"
             >
               {removing ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
               <span>{removing ? 'Removing...' : 'Remove Member'}</span>
@@ -1398,15 +1205,7 @@ export const MyGroupPage = () => {
             <button
               type="button"
               onClick={() => setIsSupervisorModalOpen(false)}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                color: '#475569',
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
@@ -1414,19 +1213,7 @@ export const MyGroupPage = () => {
               type="button"
               onClick={handleSendSupervisorRequest}
               disabled={submittingSupervisorReq}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 18px',
-                fontSize: '13px',
-                fontWeight: 600,
-                backgroundColor: 'var(--primary)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: submittingSupervisorReq ? 'not-allowed' : 'pointer',
-              }}
+              className="btn btn-primary"
             >
               {submittingSupervisorReq ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               <span>{submittingSupervisorReq ? 'Submitting...' : 'Send Supervisor Request'}</span>

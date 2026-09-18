@@ -22,7 +22,7 @@ export const GroupMemberList = ({
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '10px 14px',
-              backgroundColor: isCurrentLeader ? '#eff6ff' : '#ffffff',
+              backgroundColor: isCurrentLeader ? 'var(--primary-light)' : '#ffffff',
               border: '1px solid #e2e8f0',
               borderRadius: '6px',
               gap: '12px',
@@ -35,8 +35,8 @@ export const GroupMemberList = ({
                   width: '34px',
                   height: '34px',
                   borderRadius: '50%',
-                  backgroundColor: isCurrentLeader ? '#dbeafe' : '#f1f5f9',
-                  color: isCurrentLeader ? '#1d4ed8' : '#64748b',
+                  backgroundColor: isCurrentLeader ? 'var(--primary-light)' : '#f1f5f9',
+                  color: isCurrentLeader ? 'var(--primary)' : '#64748b',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -60,8 +60,8 @@ export const GroupMemberList = ({
                         fontSize: '10.5px',
                         fontWeight: 700,
                         borderRadius: '10px',
-                        backgroundColor: '#dbeafe',
-                        color: '#1e40af',
+                        backgroundColor: 'var(--primary-light)',
+                        color: 'var(--primary)',
                       }}
                     >
                       Leader
@@ -77,21 +77,8 @@ export const GroupMemberList = ({
             {canRemove && onRemoveMember && (
               <button
                 type="button"
+                className="btn btn-danger-outline btn-sm"
                 onClick={() => onRemoveMember(m)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '5px 10px',
-                  fontSize: '12px',
-                  color: '#dc2626',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #fecaca',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
                 title="Remove member from group"
               >
                 <Trash2 size={13} />

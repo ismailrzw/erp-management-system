@@ -125,33 +125,15 @@ export const CreateGroupPage = () => {
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
             <button
               type="button"
+              className="btn btn-primary"
               onClick={() => navigate('/student/group/my')}
-              style={{
-                padding: '9px 18px',
-                backgroundColor: 'var(--primary)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
             >
               Go to My Group
             </button>
             <button
               type="button"
+              className="btn btn-secondary"
               onClick={() => navigate('/student/dashboard')}
-              style={{
-                padding: '9px 18px',
-                backgroundColor: '#ffffff',
-                color: '#334155',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
             >
               Back to Dashboard
             </button>
@@ -185,8 +167,8 @@ export const CreateGroupPage = () => {
           <div
             style={{
               display: 'inline-block',
-              backgroundColor: '#eff6ff',
-              border: '2px dashed #93c5fd',
+              backgroundColor: 'var(--primary-light)',
+              border: '2px dashed rgba(0, 115, 170, 0.35)',
               borderRadius: '8px',
               padding: '12px 28px',
               marginBottom: '20px',
@@ -207,17 +189,8 @@ export const CreateGroupPage = () => {
           <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
             <button
               type="button"
+              className="btn btn-primary"
               onClick={() => navigate('/student/group/my')}
-              style={{
-                padding: '10px 22px',
-                backgroundColor: '#0073aa',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '13.5px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
             >
               Go to Group Management
             </button>
@@ -242,19 +215,8 @@ export const CreateGroupPage = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
         <button
           type="button"
+          className="btn btn-back"
           onClick={() => navigate('/student/dashboard')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '36px',
-            height: '36px',
-            borderRadius: '6px',
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            color: '#475569',
-            cursor: 'pointer',
-          }}
           title="Back to Dashboard"
         >
           <ArrowLeft size={18} />
@@ -271,26 +233,15 @@ export const CreateGroupPage = () => {
 
       {/* Info Card */}
       <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: '12px',
-          padding: '14px 16px',
-          backgroundColor: '#eff6ff',
-          border: '1px solid #bfdbfe',
-          borderRadius: '8px',
-          marginBottom: '20px',
-          fontSize: '13px',
-          color: '#1e40af',
-          lineHeight: '1.5',
-        }}
+        className="form-info-banner"
+        style={{ gap: '12px', padding: '14px 16px', borderRadius: '8px', marginBottom: '20px', fontSize: '13px', lineHeight: '1.5' }}
       >
         <Info size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
         <div>
           <div>
             You are creating a group for <b>{studentInfo?.course || 'Course'}</b> (Department of <b>{studentInfo?.dept}</b>, Section <b>{studentInfo?.section}</b>).
           </div>
-          <div style={{ marginTop: '4px', fontSize: '12px', color: '#3b82f6' }}>
+          <div style={{ marginTop: '4px', fontSize: '12px', opacity: 0.8 }}>
             The system will <strong>automatically generate your Group Name</strong> (e.g. <code>GRP-2026-001</code>) and record your creation status against the course deadline.
           </div>
         </div>
@@ -430,38 +381,17 @@ export const CreateGroupPage = () => {
           >
             <button
               type="button"
+              className="btn btn-secondary"
               onClick={() => navigate('/student/dashboard')}
               disabled={submitting}
-              style={{
-                padding: '9px 16px',
-                backgroundColor: '#ffffff',
-                color: '#475569',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
             >
               Cancel
             </button>
 
             <button
               type="submit"
+              className="btn btn-primary"
               disabled={submitting}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '9px 20px',
-                backgroundColor: 'var(--primary)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: submitting ? 'not-allowed' : 'pointer',
-              }}
             >
               {submitting ? (
                 <>

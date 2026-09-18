@@ -260,29 +260,8 @@ export const SignInPage = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            style={{
-              width: '100%',
-              backgroundColor: '#0073aa',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '4px',
-              padding: '10px 18px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: isSubmitting ? 'not-allowed' : 'pointer',
-              opacity: isSubmitting ? 0.75 : 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              transition: 'background-color 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              if (!isSubmitting) e.currentTarget.style.backgroundColor = '#0095dd';
-            }}
-            onMouseLeave={(e) => {
-              if (!isSubmitting) e.currentTarget.style.backgroundColor = '#0073aa';
-            }}
+            className="btn btn-primary btn-lg"
+            style={{ width: '100%' }}
           >
             {isSubmitting ? (
               <>
@@ -321,15 +300,6 @@ export const SignInPage = () => {
                 padding: '5px 4px',
                 borderRadius: '3px',
                 cursor: 'pointer',
-                transition: 'background-color 0.1s ease, color 0.1s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#eaf5fb';
-                e.currentTarget.style.color = '#0073aa';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = '#64748b';
               }}
             >
               <span style={{ fontWeight: 500 }}>{acc.role}</span>

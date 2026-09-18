@@ -236,20 +236,7 @@ export const StudentProfilePage = () => {
           <button
             type="button"
             onClick={() => setIsEditingProfile(!isEditingProfile)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '7px 14px',
-              fontSize: '13px',
-              fontWeight: 600,
-              backgroundColor: isEditingProfile ? '#f1f5f9' : '#ffffff',
-              color: '#334155',
-              border: '1px solid #cbd5e1',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
+            className="btn btn-secondary"
           >
             <Edit3 size={14} />
             <span>{isEditingProfile ? 'Cancel Edit' : 'Edit Profile Details'}</span>
@@ -279,22 +266,7 @@ export const StudentProfilePage = () => {
           <button
             type="button"
             onClick={() => setIsPasswordModalOpen(true)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              color: 'var(--primary, #0073aa)',
-              backgroundColor: '#eaf5fb',
-              border: '1px solid #bae6fd',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#dbeafe')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#eaf5fb')}
+            className="btn btn-secondary"
           >
             <KeyRound size={15} />
             <span>Change Password</span>
@@ -384,33 +356,13 @@ export const StudentProfilePage = () => {
               <button
                 type="button"
                 onClick={() => setIsEditingProfile(false)}
-                style={{
-                  padding: '7px 14px',
-                  fontSize: '13px',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  color: '#475569',
-                  cursor: 'pointer',
-                }}
+                className="btn btn-secondary"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 16px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  backgroundColor: 'var(--primary, #0073aa)',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: savingProfile ? 'not-allowed' : 'pointer',
-                }}
+                className="btn btn-primary"
                 disabled={savingProfile}
               >
                 {savingProfile && <Loader2 size={14} className="animate-spin" />}
