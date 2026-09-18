@@ -150,7 +150,7 @@ export const RubricTemplatesPage = () => {
                   }}
                   onClick={() => setExpandedId(isExpanded ? null : tpl._id)}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: 0 }}>
                     <div
                       style={{
                         width: '40px',
@@ -166,9 +166,9 @@ export const RubricTemplatesPage = () => {
                     >
                       <Layers size={20} style={{ color: '#2563eb' }} />
                     </div>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#0f172a' }}>{tpl.name}</h3>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tpl.name}</h3>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                         <span
                           style={{
                             fontSize: '12px',
@@ -178,11 +178,12 @@ export const RubricTemplatesPage = () => {
                             backgroundColor: tpl.course === 'All Courses' ? '#f3e8ff' : '#f1f5f9',
                             color: tpl.course === 'All Courses' ? '#7c3aed' : '#64748b',
                             border: `1px solid ${tpl.course === 'All Courses' ? '#ddd6fe' : '#e2e8f0'}`,
+                            whiteSpace: 'nowrap',
                           }}
                         >
                           {tpl.course}
                         </span>
-                        <span style={{ fontSize: '12px', color: '#64748b' }}>
+                        <span style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap' }}>
                           <FileText size={12} style={{ verticalAlign: 'middle', marginRight: '3px' }} />
                           {criteriaCount} criteria
                         </span>
@@ -191,6 +192,7 @@ export const RubricTemplatesPage = () => {
                             fontSize: '12px',
                             fontWeight: 600,
                             color: totalWeight > 0 ? '#16a34a' : '#dc2626',
+                            whiteSpace: 'nowrap',
                           }}
                         >
                           {totalWeight} Marks total
@@ -199,7 +201,7 @@ export const RubricTemplatesPage = () => {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handleEdit(tpl); }}

@@ -48,9 +48,11 @@ export const IterationsTabBar = () => {
         borderBottom: '1px solid #e2e8f0',
         paddingBottom: '12px',
         marginBottom: '20px',
+        gap: '12px',
+        overflowX: 'auto',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexShrink: 0 }}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
@@ -71,6 +73,7 @@ export const IterationsTabBar = () => {
                 padding: '0 0 8px 0',
                 position: 'relative',
                 transition: 'color 0.15s ease',
+                whiteSpace: 'nowrap',
               }}
               onMouseEnter={(e) => {
                 if (!tab.active) e.currentTarget.style.color = '#1e293b';
@@ -99,10 +102,10 @@ export const IterationsTabBar = () => {
         })}
       </div>
 
-      {/* Academic Term Indicator */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#64748b' }}>
-        <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-        <span>Active Academic Semester</span>
+      {/* Academic Term Indicator — hidden on very narrow screens */}
+      <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#64748b', flexShrink: 0 }}>
+        <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#10b981', flexShrink: 0 }} />
+        <span style={{ whiteSpace: 'nowrap' }}>Active Academic Semester</span>
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
+  Mail,
 } from 'lucide-react';
 import { studentsApi } from '../../../api/studentsApi';
 import { departmentsApi } from '../../../api/departmentsApi';
@@ -16,6 +17,7 @@ import { coursesApi } from '../../../api/coursesApi';
 import { teachersApi } from '../../../api/teachersApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
+import { PageHeader } from '../../../components/ui/PageHeader';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
 
 export const StudentListPage = () => {
@@ -175,6 +177,23 @@ export const StudentListPage = () => {
     }
   };
 
+  const handleResendEmail = async (stu) => {
+    try {
+      setActionLoading(true);
+      const res = await studentsApi.resendPasswordEmail(stu.id || stu._id);
+      if (res.success) {
+        setToast({ message: `Activation email resent to ${stu.email}`, type: 'success' });
+      }
+    } catch (err) {
+      setToast({
+        message: err.response?.data?.message || 'Failed to resend activation email',
+        type: 'error',
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (!studentToDelete) return;
     try {
@@ -193,39 +212,42 @@ export const StudentListPage = () => {
     }
   };
 
-  return loading ? (
-    <div><ContentLoader label="Loading students..." /></div>
-  ) : (
-    <div>
+  if (loading && !refreshing && students.length === 0) {
+    return (
+      <div className="page-frame-container">
+        <PageHeader
+          title="Students Management"
+          subtitle="Manage student enrollment, course associations, and departments."
+          breadcrumbs={[
+            { label: 'Home', to: '/manager/dashboard' },
+            { label: 'Students', to: '/manager/students' },
+            { label: 'View All Students' },
+          ]}
+        />
+        <ContentLoader label="Loading students..." />
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-frame-container">
       <Toast
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '20px',
-          flexWrap: 'wrap',
-          gap: '12px',
-        }}
+      {/* Unified Page Header */}
+      <PageHeader
+        title="Students Management"
+        subtitle="Manage student enrollment, course associations, and departments."
+        breadcrumbs={[
+          { label: 'Home', to: '/manager/dashboard' },
+          { label: 'Students', to: '/manager/students' },
+          { label: 'View All Students' },
+        ]}
       >
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-            Students Management
-          </h1>
-          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-            <span>Home</span> <span style={{ margin: '0 4px' }}>/</span>{' '}
-            <span>Students</span> <span style={{ margin: '0 4px' }}>/</span>{' '}
-            <span style={{ color: '#0073aa', fontWeight: 500 }}>View All Students</span>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             type="button"
             onClick={() => navigate('/manager/students/add')}
@@ -239,9 +261,12 @@ export const StudentListPage = () => {
               backgroundColor: '#0073aa',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '4px',
+              borderRadius: '6px',
               cursor: 'pointer',
+              transition: 'background-color 0.15s ease',
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#006291')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0073aa')}
           >
             <Plus size={15} />
             <span>Add New Student</span>
@@ -259,15 +284,42 @@ export const StudentListPage = () => {
               backgroundColor: '#ffffff',
               border: '1px solid #cbd5e1',
               color: '#64748b',
-              borderRadius: '4px',
+              borderRadius: '6px',
               cursor: 'pointer',
+              transition: 'all 0.15s ease',
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
           >
             <Trash2 size={15} />
             <span>Recycle Bin</span>
           </button>
+          <button
+            type="button"
+            onClick={() => fetchStudents(pagination.page, true)}
+            disabled={refreshing}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              padding: '8px 14px',
+              backgroundColor: '#ffffff',
+              border: '1px solid #cbd5e1',
+              borderRadius: '6px',
+              color: '#334155',
+              cursor: refreshing ? 'not-allowed' : 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+          >
+            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Filter / Search Bar */}
       <div
@@ -419,18 +471,18 @@ export const StudentListPage = () => {
           overflow: 'hidden',
         }}
       >
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-responsive-container table-wide" style={{ borderRadius: 0 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
             <thead>
               <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Roll No</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Name</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Email</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Dept</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Sec</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Course</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Teacher</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, textAlign: 'right' }}>Actions</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '100px' }}>Roll No</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '120px' }}>Name</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '160px' }}>Email</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '60px' }}>Dept</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '50px' }}>Sec</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '120px' }}>Course</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '100px' }}>Teacher</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, textAlign: 'right', minWidth: '100px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -480,6 +532,27 @@ export const StudentListPage = () => {
                     <td style={{ padding: '12px 16px', color: '#475569' }}>{stu.teacher || '-'}</td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleResendEmail(stu)}
+                          disabled={actionLoading}
+                          style={{
+                            border: '1px solid #cbd5e1',
+                            backgroundColor: '#ffffff',
+                            color: '#0073aa',
+                            padding: '5px 8px',
+                            borderRadius: '4px',
+                            cursor: actionLoading ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '12px',
+                          }}
+                          title="Resend Password Setup Email"
+                        >
+                          <Mail size={13} />
+                          <span>Email</span>
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(stu)}

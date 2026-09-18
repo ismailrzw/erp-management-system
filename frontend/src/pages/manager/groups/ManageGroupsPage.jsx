@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   FolderGit2,
   CheckCircle2,
@@ -6,14 +7,21 @@ import {
   Eye,
   Search,
   RefreshCw,
-  Users,
   ChevronLeft,
   ChevronRight,
   Loader2,
+  Download,
+  FileText,
+  UserCheck,
+  UserX,
+  Mail,
+  Send,
 } from 'lucide-react';
 import { managerGroupsApi } from '../../../api/managerGroupsApi';
+import { studentsApi } from '../../../api/studentsApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { coursesApi } from '../../../api/coursesApi';
+import { reportsApi } from '../../../api/reportsApi';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { EmptyState } from '../../../components/ui/EmptyState';
@@ -23,15 +31,19 @@ import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { formatDate } from '../../../utils/dateUtils';
 
 export const ManageGroupsPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'all';
+
   const [groups, setGroups] = useState([]);
   const [counts, setCounts] = useState({ all: 0, pending: 0, approved: 0, rejected: 0 });
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, pages: 1 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [downloadingReport, setDownloadingReport] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(initialTab);
   const [search, setSearch] = useState('');
   const [selectedDept, setSelectedDept] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('');
@@ -39,6 +51,18 @@ export const ManageGroupsPage = () => {
   // Dropdowns reference data
   const [departments, setDepartments] = useState([]);
   const [courses, setCourses] = useState([]);
+
+  // Ungrouped Students State
+  const [ungroupedStudents, setUngroupedStudents] = useState([]);
+  const [ungroupedCount, setUngroupedCount] = useState(0);
+  const [ungroupedLoading, setUngroupedLoading] = useState(false);
+  const [ungroupedDept, setUngroupedDept] = useState('');
+  const [ungroupedCourse, setUngroupedCourse] = useState('');
+  const [ungroupedSearch, setUngroupedSearch] = useState('');
+  const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
+  const [notifyCustomMessage, setNotifyCustomMessage] = useState('');
+  const [notifyLoading, setNotifyLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   // Modals
   const [groupToApprove, setGroupToApprove] = useState(null);
@@ -48,8 +72,28 @@ export const ManageGroupsPage = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectError, setRejectError] = useState('');
 
+  // Sync tab with URL search params
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['all', 'pending', 'approved', 'rejected', 'ungrouped'].includes(tab)) {
+      setStatusFilter(tab);
+    } else if (!tab) {
+      setStatusFilter('all');
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (newTab) => {
+    setStatusFilter(newTab);
+    if (newTab === 'all') {
+      setSearchParams({});
+    } else {
+      setSearchParams({ tab: newTab });
+    }
+  };
+
   const fetchGroups = useCallback(
     async (page = 1, isRefresh = false) => {
+      if (statusFilter === 'ungrouped') return;
       if (isRefresh) setRefreshing(true);
       try {
         const params = {
@@ -85,9 +129,52 @@ export const ManageGroupsPage = () => {
     [statusFilter, selectedDept, selectedCourse, search, pagination.limit]
   );
 
+  const fetchUngroupedStudents = useCallback(
+    async (isInitialCountOnly = false) => {
+      try {
+        if (!isInitialCountOnly) setUngroupedLoading(true);
+        const params = {
+          dept: ungroupedDept || undefined,
+          course: ungroupedCourse || undefined,
+        };
+        const res = await studentsApi.getUngrouped(params);
+        if (res.success && res.data) {
+          const items = Array.isArray(res.data)
+            ? res.data
+            : Array.isArray(res.data.items)
+              ? res.data.items
+              : [];
+          setUngroupedStudents(items);
+          setUngroupedCount(res.data.total ?? items.length);
+        }
+      } catch (err) {
+        if (!isInitialCountOnly) {
+          setToast({
+            message: err.response?.data?.message || 'Failed to load ungrouped students',
+            type: 'error',
+          });
+        }
+      } finally {
+        if (!isInitialCountOnly) setUngroupedLoading(false);
+      }
+    },
+    [ungroupedDept, ungroupedCourse]
+  );
+
+  // Initial fetch for count
   useEffect(() => {
-    fetchGroups(1);
-  }, [fetchGroups]);
+    fetchUngroupedStudents(true);
+  }, [fetchUngroupedStudents]);
+
+  // Handle active tab switches
+  useEffect(() => {
+    if (statusFilter === 'ungrouped') {
+      setLoading(false);
+      fetchUngroupedStudents(false);
+    } else {
+      fetchGroups(1);
+    }
+  }, [statusFilter, fetchGroups, fetchUngroupedStudents]);
 
   // Load dropdown options once
   useEffect(() => {
@@ -109,6 +196,101 @@ export const ManageGroupsPage = () => {
     };
     loadFilters();
   }, []);
+
+  // Ungrouped Export & Notify Handlers
+  const handleExportUngrouped = async () => {
+    try {
+      setExportLoading(true);
+      const params = {
+        dept: ungroupedDept || undefined,
+        course: ungroupedCourse || undefined,
+      };
+      const response = await studentsApi.exportUngrouped(params);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `ungrouped_students_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setToast({ message: 'Ungrouped students spreadsheet downloaded.', type: 'success' });
+    } catch (err) {
+      setToast({
+        message: err.response?.data?.message || 'Failed to export ungrouped students',
+        type: 'error',
+      });
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleSendUngroupedNotification = async (e) => {
+    e.preventDefault();
+    try {
+      setNotifyLoading(true);
+      const res = await studentsApi.notifyUngrouped({
+        dept: ungroupedDept || undefined,
+        course: ungroupedCourse || undefined,
+        message: notifyCustomMessage.trim() || undefined,
+      });
+      if (res.success) {
+        setToast({
+          message: `Successfully notified ${res.data?.sent_count || 0} student(s) via email.`,
+          type: 'success',
+        });
+        setIsNotifyModalOpen(false);
+        setNotifyCustomMessage('');
+      }
+    } catch (err) {
+      setToast({
+        message: err.response?.data?.message || 'Failed to send notification emails',
+        type: 'error',
+      });
+    } finally {
+      setNotifyLoading(false);
+    }
+  };
+
+  // Filtered Ungrouped Students for Search
+  const filteredUngrouped = ungroupedStudents.filter((s) => {
+    if (!ungroupedSearch.trim()) return true;
+    const term = ungroupedSearch.toLowerCase();
+    return (
+      (s.roll && s.roll.toLowerCase().includes(term)) ||
+      (s.name && s.name.toLowerCase().includes(term)) ||
+      (s.email && s.email.toLowerCase().includes(term)) ||
+      (s.section && s.section.toLowerCase().includes(term)) ||
+      (s.dept && s.dept.toLowerCase().includes(term)) ||
+      (s.course && s.course.toLowerCase().includes(term))
+    );
+  });
+
+  const handleDownloadReport = async () => {
+    try {
+      setDownloadingReport(true);
+      const params = {
+        dept: selectedDept || undefined,
+        course: selectedCourse || undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+      };
+      const response = await reportsApi.downloadGroupReport(params);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `group_report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setToast({ message: 'Group report Excel file downloaded successfully.', type: 'success' });
+    } catch (err) {
+      setToast({
+        message: err.response?.data?.message || 'Failed to download report',
+        type: 'error',
+      });
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
 
   const handleApprove = async () => {
     if (!groupToApprove) return;
@@ -168,16 +350,64 @@ export const ManageGroupsPage = () => {
     }
   };
 
-  if (loading && !refreshing) {
+  const renderFormationBadge = (st) => {
+    if (st === 'on_time') {
+      return (
+        <span style={{ backgroundColor: '#ecfdf5', color: '#047857', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 600 }}>
+          On Time
+        </span>
+      );
+    }
+    if (st === 'on_deadline') {
+      return (
+        <span style={{ backgroundColor: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 600 }}>
+          On Deadline
+        </span>
+      );
+    }
+    if (st === 'late') {
+      return (
+        <span style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 600 }}>
+          Late
+        </span>
+      );
+    }
     return (
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+      <span style={{ color: '#94a3b8', fontSize: '11.5px' }}>
+        -
+      </span>
+    );
+  };
+
+  const renderSubmissionBadge = (st) => {
+    if (st === 'submitted') {
+      return (
+        <span style={{ backgroundColor: '#f0fdf4', color: '#16a34a', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 600 }}>
+          Submitted
+        </span>
+      );
+    }
+    return (
+      <span style={{ backgroundColor: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 500 }}>
+        Not Submitted
+      </span>
+    );
+  };
+
+  if (loading && !refreshing && groups.length === 0 && ungroupedStudents.length === 0) {
+    return (
+      <div className="page-frame-container">
+        <PageHeader
+          title="Manage Project Groups"
+          subtitle="Review, approve, or provide revision feedback on student group formation requests."
+        />
         <ContentLoader label="Loading project groups..." />
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="page-frame-container">
       {/* Toast */}
       {toast.message && (
         <Toast
@@ -192,43 +422,96 @@ export const ManageGroupsPage = () => {
         title="Manage Project Groups"
         subtitle="Review, approve, or provide revision feedback on student group formation requests."
       >
-        <button
-          type="button"
-          onClick={() => fetchGroups(pagination.page, true)}
-          disabled={refreshing}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            fontSize: '13px',
-            fontWeight: 500,
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '6px',
-            color: '#334155',
-            cursor: refreshing ? 'not-allowed' : 'pointer',
-          }}
-        >
-          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-          <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
-        </button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {statusFilter === 'ungrouped' ? (
+            <button
+              type="button"
+              onClick={handleExportUngrouped}
+              disabled={exportLoading}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                fontSize: '13px',
+                fontWeight: 600,
+                backgroundColor: '#0073aa',
+                border: 'none',
+                borderRadius: '6px',
+                color: '#ffffff',
+                cursor: exportLoading ? 'not-allowed' : 'pointer',
+                opacity: exportLoading ? 0.75 : 1,
+              }}
+            >
+              {exportLoading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+              <span>Export Ungrouped Excel</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleDownloadReport}
+              disabled={downloadingReport}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                fontSize: '13px',
+                fontWeight: 600,
+                backgroundColor: '#0073aa',
+                border: 'none',
+                borderRadius: '6px',
+                color: '#ffffff',
+                cursor: downloadingReport ? 'not-allowed' : 'pointer',
+                opacity: downloadingReport ? 0.75 : 1,
+              }}
+            >
+              {downloadingReport ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+              <span>Download Group Report</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              if (statusFilter === 'ungrouped') {
+                fetchUngroupedStudents(false);
+              } else {
+                fetchGroups(pagination.page, true);
+              }
+            }}
+            disabled={refreshing || ungroupedLoading}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              fontSize: '13px',
+              fontWeight: 500,
+              backgroundColor: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '6px',
+              color: '#334155',
+              cursor: refreshing || ungroupedLoading ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <RefreshCw size={14} className={refreshing || ungroupedLoading ? 'animate-spin' : ''} />
+            <span>{refreshing || ungroupedLoading ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+        </div>
       </PageHeader>
 
       {/* Status Counters Tab Bar */}
       <div
+        className="scrollable-tabs-bar"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
           borderBottom: '2px solid #e2e8f0',
           marginBottom: '20px',
-          flexWrap: 'wrap',
         }}
       >
         <button
           type="button"
-          onClick={() => setStatusFilter('all')}
+          onClick={() => handleTabChange('all')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -261,7 +544,7 @@ export const ManageGroupsPage = () => {
 
         <button
           type="button"
-          onClick={() => setStatusFilter('pending')}
+          onClick={() => handleTabChange('pending')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -294,7 +577,7 @@ export const ManageGroupsPage = () => {
 
         <button
           type="button"
-          onClick={() => setStatusFilter('approved')}
+          onClick={() => handleTabChange('approved')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -327,7 +610,7 @@ export const ManageGroupsPage = () => {
 
         <button
           type="button"
-          onClick={() => setStatusFilter('rejected')}
+          onClick={() => handleTabChange('rejected')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -357,335 +640,631 @@ export const ManageGroupsPage = () => {
             {counts.rejected}
           </span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange('ungrouped')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 16px',
+            fontSize: '13.5px',
+            fontWeight: statusFilter === 'ungrouped' ? 700 : 500,
+            color: statusFilter === 'ungrouped' ? '#d97706' : '#64748b',
+            border: 'none',
+            borderBottom: statusFilter === 'ungrouped' ? '3px solid #d97706' : '3px solid transparent',
+            backgroundColor: 'transparent',
+            marginBottom: '-2px',
+            cursor: 'pointer',
+          }}
+        >
+          <UserX size={15} />
+          <span>Ungrouped Students</span>
+          <span
+            style={{
+              padding: '2px 7px',
+              borderRadius: '10px',
+              backgroundColor: ungroupedCount > 0 ? '#fef3c7' : '#f1f5f9',
+              color: ungroupedCount > 0 ? '#b45309' : '#64748b',
+              fontSize: '11px',
+              fontWeight: 700,
+            }}
+          >
+            {ungroupedCount}
+          </span>
+        </button>
       </div>
 
-      {/* Toolbar Filters */}
-      <div
-        className="toolbar-responsive"
-        style={{
-          backgroundColor: '#ffffff',
-          padding: '14px 18px',
-          borderRadius: '8px',
-          border: '1px solid #e2e8f0',
-          marginBottom: '18px',
-        }}
-      >
-        <div className="toolbar-group-left">
-          <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
-            <Search
-              size={16}
-              style={{
-                position: 'absolute',
-                left: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: '#94a3b8',
-              }}
-            />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search group name or project..."
-              style={{
-                width: '100%',
-                padding: '8px 12px 8px 36px',
-                fontSize: '13px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                outline: 'none',
-              }}
-            />
+      {statusFilter === 'ungrouped' ? (
+        /* Ungrouped Students Management View */
+        <div>
+          {/* Toolbar Filters & Action Buttons */}
+          <div
+            className="toolbar-responsive"
+            style={{
+              backgroundColor: '#ffffff',
+              padding: '14px 18px',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0',
+              marginBottom: '18px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '12px',
+            }}
+          >
+            <div className="toolbar-group-left" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', flex: 1 }}>
+              <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
+                <Search
+                  size={16}
+                  style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#94a3b8',
+                  }}
+                />
+                <input
+                  type="text"
+                  value={ungroupedSearch}
+                  onChange={(e) => setUngroupedSearch(e.target.value)}
+                  placeholder="Search roll, name, email..."
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px 8px 36px',
+                    fontSize: '13px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              <select
+                value={ungroupedDept}
+                onChange={(e) => setUngroupedDept(e.target.value)}
+                style={{
+                  padding: '8px 32px 8px 12px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  backgroundColor: '#ffffff',
+                  color: '#334155',
+                  outline: 'none',
+                }}
+              >
+                <option value="">All Departments</option>
+                {departments.map((d) => {
+                  const val = d.code || d.name || '';
+                  const label = d.code && d.name ? `${d.code} - ${d.name}` : (d.name || d.code);
+                  return (
+                    <option key={d.id || d._id || val} value={val}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+
+              <select
+                value={ungroupedCourse}
+                onChange={(e) => setUngroupedCourse(e.target.value)}
+                style={{
+                  padding: '8px 32px 8px 12px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  backgroundColor: '#ffffff',
+                  color: '#334155',
+                  outline: 'none',
+                }}
+              >
+                <option value="">All Courses</option>
+                {courses.map((c) => {
+                  const val = c.name || '';
+                  const label = c.dept ? `${c.name} (${c.dept})` : c.name;
+                  return (
+                    <option key={c.id || c._id || val} value={val}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={handleExportUngrouped}
+                disabled={exportLoading}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  color: '#334155',
+                  borderRadius: '6px',
+                  cursor: exportLoading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {exportLoading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                <span>Export Excel</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsNotifyModalOpen(true)}
+                disabled={filteredUngrouped.length === 0}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  backgroundColor: '#0073aa',
+                  border: 'none',
+                  color: '#ffffff',
+                  borderRadius: '6px',
+                  cursor: filteredUngrouped.length === 0 ? 'not-allowed' : 'pointer',
+                  opacity: filteredUngrouped.length === 0 ? 0.6 : 1,
+                }}
+              >
+                <Mail size={14} />
+                <span>Notify via Email</span>
+              </button>
+            </div>
           </div>
 
-          <select
-            value={selectedDept}
-            onChange={(e) => setSelectedDept(e.target.value)}
-            style={{
-              padding: '8px 32px 8px 12px',
-              fontSize: '13px',
-              fontWeight: 500,
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              backgroundColor: '#ffffff',
-              color: '#334155',
-              outline: 'none',
-            }}
-          >
-            <option value="">All Departments</option>
-            {departments.map((d) => {
-              const val = d.name || d.code || '';
-              const label = d.name && d.code ? `${d.name} (${d.code})` : (d.name || d.code);
-              return (
-                <option key={d.id || d._id || val} value={val}>
-                  {label}
-                </option>
-              );
-            })}
-          </select>
+          {/* Ungrouped Students Table Card */}
+          <div className="card-responsive" style={{ padding: 0, overflow: 'hidden' }}>
+            {ungroupedLoading ? (
+              <ContentLoader label="Loading ungrouped students..." />
+            ) : filteredUngrouped.length === 0 ? (
+              <EmptyState
+                icon={UserX}
+                title="No ungrouped students found"
+                description={
+                  ungroupedSearch || ungroupedDept || ungroupedCourse
+                    ? 'No ungrouped students match the active filter or search query.'
+                    : 'All students in the selected criteria have formed or joined groups.'
+                }
+              />
+            ) : (
+              <div className="table-responsive-container table-wide">
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '100px' }}>ROLL NO</th>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '130px' }}>STUDENT NAME</th>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '100px' }}>DEPARTMENT</th>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '80px' }}>SECTION</th>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '130px' }}>COURSE</th>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '160px' }}>EMAIL</th>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '80px' }}>STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUngrouped.map((s) => (
+                      <tr
+                        key={s.id || s._id || s.roll}
+                        style={{
+                          borderBottom: '1px solid #f1f5f9',
+                          transition: 'background-color 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafafa')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+                      >
+                        <td style={{ padding: '12px 16px', fontWeight: 600, color: '#0073aa', fontSize: '13px' }}>
+                          {s.roll}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontWeight: 500, color: '#1e293b', fontSize: '13px' }}>
+                          {s.name}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span
+                            style={{
+                              backgroundColor: '#eef6fb',
+                              color: '#0073aa',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                            }}
+                          >
+                            {s.dept || 'CS'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px', color: '#475569', fontSize: '13px' }}>
+                          {s.section || '-'}
+                        </td>
+                        <td style={{ padding: '12px 16px', color: '#475569', fontSize: '13px' }}>
+                          {s.course || '-'}
+                        </td>
+                        <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12.5px' }}>
+                          {s.email}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span
+                            style={{
+                              backgroundColor: '#fef3c7',
+                              color: '#b45309',
+                              padding: '3px 9px',
+                              borderRadius: '10px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                            }}
+                          >
+                            Ungrouped
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-          <select
-            value={selectedCourse}
-            onChange={(e) => setSelectedCourse(e.target.value)}
-            style={{
-              padding: '8px 32px 8px 12px',
-              fontSize: '13px',
-              fontWeight: 500,
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              backgroundColor: '#ffffff',
-              color: '#334155',
-              outline: 'none',
-            }}
-          >
-            <option value="">All Courses</option>
-            {courses.map((c) => {
-              const val = c.name || '';
-              const label = c.dept ? `${c.name} (${c.dept})` : c.name;
-              return (
-                <option key={c.id || c._id || val} value={val}>
-                  {label}
-                </option>
-              );
-            })}
-          </select>
+            {!ungroupedLoading && filteredUngrouped.length > 0 && (
+              <div
+                style={{
+                  padding: '12px 18px',
+                  borderTop: '1px solid #e2e8f0',
+                  backgroundColor: '#f8fafc',
+                  fontSize: '12.5px',
+                  color: '#64748b',
+                }}
+              >
+                Showing {filteredUngrouped.length} ungrouped student{filteredUngrouped.length === 1 ? '' : 's'}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Standard Groups View */
+        <>
+          {/* Toolbar Filters */}
+          <div
+            className="toolbar-responsive"
+            style={{
+              backgroundColor: '#ffffff',
+              padding: '14px 18px',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0',
+              marginBottom: '18px',
+            }}
+          >
+            <div className="toolbar-group-left">
+              <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
+                <Search
+                  size={16}
+                  style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#94a3b8',
+                  }}
+                />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search group name or project..."
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px 8px 36px',
+                    fontSize: '13px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
 
-      {/* Groups Table Card */}
-      <div className="card-responsive" style={{ padding: 0, overflow: 'hidden' }}>
-        {groups.length === 0 ? (
-          <EmptyState
-            icon={FolderGit2}
-            title="No project groups found"
-            description="No groups match the selected filters. Change status tabs or clear the search query."
-          />
-        ) : (
-          <div className="table-responsive-container">
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                  <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569' }}>
-                    GROUP / PROJECT
-                  </th>
-                  <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569' }}>
-                    LEADER
-                  </th>
-                  <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569' }}>
-                    COURSE & DEPT
-                  </th>
-                  <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569' }}>
-                    MEMBERS
-                  </th>
-                  <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569' }}>
-                    STATUS
-                  </th>
-                  <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569' }}>
-                    CREATED
-                  </th>
-                  <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', textAlign: 'right' }}>
-                    ACTIONS
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {groups.map((g) => (
-                  <tr
-                    key={g.id}
-                    style={{
-                      borderBottom: '1px solid #f1f5f9',
-                      transition: 'background-color 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafafa')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
-                  >
-                    <td style={{ padding: '14px 16px', minWidth: '220px' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>{g.name}</div>
-                      <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
-                        {g.project_title || 'Untitled Project'}
-                      </div>
-                    </td>
+              <select
+                value={selectedDept}
+                onChange={(e) => setSelectedDept(e.target.value)}
+                style={{
+                  padding: '8px 32px 8px 12px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  backgroundColor: '#ffffff',
+                  color: '#334155',
+                  outline: 'none',
+                }}
+              >
+                <option value="">All Departments</option>
+                {departments.map((d) => {
+                  const val = d.name || d.code || '';
+                  const label = d.name && d.code ? `${d.name} (${d.code})` : (d.name || d.code);
+                  return (
+                    <option key={d.id || d._id || val} value={val}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
 
-                    <td style={{ padding: '14px 16px', minWidth: '150px' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
-                        {g.leader_name || 'Group Leader'}
-                      </div>
-                      <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-                        Roll: <b>{g.leader_roll || 'N/A'}</b> {g.leader_section ? `(Sec ${g.leader_section})` : ''}
-                      </div>
-                    </td>
+              <select
+                value={selectedCourse}
+                onChange={(e) => setSelectedCourse(e.target.value)}
+                style={{
+                  padding: '8px 32px 8px 12px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  backgroundColor: '#ffffff',
+                  color: '#334155',
+                  outline: 'none',
+                }}
+              >
+                <option value="">All Courses</option>
+                {courses.map((c) => {
+                  const val = c.name || '';
+                  const label = c.dept ? `${c.name} (${c.dept})` : c.name;
+                  return (
+                    <option key={c.id || c._id || val} value={val}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
 
-                    <td style={{ padding: '14px 16px', minWidth: '160px' }}>
-                      <div style={{ fontSize: '13px', color: '#1e293b' }}>{g.course}</div>
-                      <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-                        {g.dept} • Sec {g.section || 'N/A'}
-                      </div>
-                    </td>
+          {/* Groups Table Card */}
+          <div className="card-responsive" style={{ padding: 0, overflow: 'hidden' }}>
+            {groups.length === 0 ? (
+              <EmptyState
+                icon={FolderGit2}
+                title="No project groups found"
+                description="No groups match the selected filters. Change status tabs or clear the search query."
+              />
+            ) : (
+              <div className="table-responsive-container table-wide">
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '160px' }}>
+                        GROUP / PROJECT
+                      </th>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '150px' }}>
+                        LEADER & SUPERVISOR
+                      </th>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '130px' }}>
+                        COURSE & DEPT
+                      </th>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569' }}>
+                        FORMATION
+                      </th>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569' }}>
+                        SUBMISSION
+                      </th>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569' }}>
+                        STATUS
+                      </th>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', textAlign: 'right' }}>
+                        ACTIONS
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {groups.map((g) => (
+                      <tr
+                        key={g.id}
+                        style={{
+                          borderBottom: '1px solid #f1f5f9',
+                          transition: 'background-color 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafafa')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+                      >
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '13.5px' }}>
+                            {g.name}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                            {g.project_title || 'Untitled Project'}
+                          </div>
+                        </td>
 
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Users size={14} color="#64748b" />
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
-                          {g.member_count || 1} / {g.max_group || 4}
-                        </span>
-                      </div>
-                    </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 500, color: '#334155' }}>
+                            {g.leader_name}
+                          </div>
+                          <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                            {g.leader_roll}
+                          </div>
+                          {g.supervisor_name && (
+                            <div style={{ fontSize: '11.5px', color: '#0073aa', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <UserCheck size={11} />
+                              <span>Sup: {g.supervisor_name}</span>
+                            </div>
+                          )}
+                        </td>
 
-                    <td style={{ padding: '14px 16px' }}>
-                      <StatusBadge status={g.status} size="small" />
-                    </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ fontSize: '13px', color: '#334155' }}>
+                            {g.course_name}
+                          </div>
+                          <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                            {g.dept}
+                          </div>
+                        </td>
 
-                    <td style={{ padding: '14px 16px', fontSize: '12px', color: '#64748b' }}>
-                      {formatDate(g.created_at)}
-                    </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          {renderFormationBadge(g.formation_status)}
+                        </td>
 
-                    <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenDetail(g)}
-                          style={{
-                            padding: '6px 10px',
-                            backgroundColor: '#ffffff',
-                            color: '#334155',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
-                          title="View full group details"
-                        >
-                          <Eye size={13} />
-                          <span>View</span>
-                        </button>
+                        <td style={{ padding: '14px 16px' }}>
+                          {renderSubmissionBadge(g.submission_status)}
+                        </td>
 
-                        {g.status === 'pending' && (
-                          <>
+                        <td style={{ padding: '14px 16px' }}>
+                          <StatusBadge status={g.status} />
+                        </td>
+
+                        <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', alignItems: 'center' }}>
                             <button
                               type="button"
-                              onClick={() => setGroupToApprove(g)}
-                              style={{
-                                padding: '6px 10px',
-                                backgroundColor: 'var(--success)',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                              }}
-                              title="Approve this group"
-                            >
-                              <CheckCircle2 size={13} />
-                              <span>Approve</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setGroupToReject(g);
-                                setRejectionReason('');
-                                setRejectError('');
-                              }}
+                              onClick={() => handleOpenDetail(g)}
                               style={{
                                 padding: '6px 10px',
                                 backgroundColor: '#ffffff',
-                                color: '#dc2626',
-                                border: '1px solid #fecaca',
+                                border: '1px solid #cbd5e1',
                                 borderRadius: '4px',
                                 fontSize: '12px',
-                                fontWeight: 500,
+                                color: '#475569',
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '4px',
                               }}
-                              title="Reject group with feedback"
+                              title="View group details"
                             >
-                              <XCircle size={13} />
-                              <span>Reject</span>
+                              <Eye size={13} />
+                              <span>View</span>
                             </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
 
-        {/* Pagination Footer */}
-        {pagination.pages > 1 && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '12px 18px',
-              borderTop: '1px solid #e2e8f0',
-              backgroundColor: '#f8fafc',
-              flexWrap: 'wrap',
-              gap: '10px',
-            }}
-          >
-            <div style={{ fontSize: '13px', color: '#64748b' }}>
-              Showing {groups.length} of {pagination.total} groups (Page {pagination.page} of {pagination.pages})
-            </div>
+                            {g.status === 'pending' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setGroupToApprove(g)}
+                                  style={{
+                                    padding: '6px 10px',
+                                    backgroundColor: 'var(--success)',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                  }}
+                                  title="Approve this group"
+                                >
+                                  <CheckCircle2 size={13} />
+                                  <span>Approve</span>
+                                </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <button
-                type="button"
-                onClick={() => fetchGroups(pagination.page - 1)}
-                disabled={pagination.page <= 1}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setGroupToReject(g);
+                                    setRejectionReason('');
+                                    setRejectError('');
+                                  }}
+                                  style={{
+                                    padding: '6px 10px',
+                                    backgroundColor: '#ffffff',
+                                    color: '#dc2626',
+                                    border: '1px solid #fecaca',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                  }}
+                                  title="Reject group with feedback"
+                                >
+                                  <XCircle size={13} />
+                                  <span>Reject</span>
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Pagination Footer */}
+            {pagination.pages > 1 && (
+              <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '4px',
-                  color: '#334155',
-                  cursor: pagination.page <= 1 ? 'not-allowed' : 'pointer',
-                  opacity: pagination.page <= 1 ? 0.5 : 1,
+                  justifyContent: 'space-between',
+                  padding: '12px 18px',
+                  borderTop: '1px solid #e2e8f0',
+                  backgroundColor: '#f8fafc',
+                  flexWrap: 'wrap',
+                  gap: '10px',
                 }}
               >
-                <ChevronLeft size={14} />
-                <span>Prev</span>
-              </button>
+                <div style={{ fontSize: '13px', color: '#64748b' }}>
+                  Showing {groups.length} of {pagination.total} groups (Page {pagination.page} of {pagination.pages})
+                </div>
 
-              <button
-                type="button"
-                onClick={() => fetchGroups(pagination.page + 1)}
-                disabled={pagination.page >= pagination.pages}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '4px',
-                  color: '#334155',
-                  cursor: pagination.page >= pagination.pages ? 'not-allowed' : 'pointer',
-                  opacity: pagination.page >= pagination.pages ? 0.5 : 1,
-                }}
-              >
-                <span>Next</span>
-                <ChevronRight size={14} />
-              </button>
-            </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => fetchGroups(pagination.page - 1)}
+                    disabled={pagination.page <= 1}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '4px',
+                      color: '#334155',
+                      cursor: pagination.page <= 1 ? 'not-allowed' : 'pointer',
+                      opacity: pagination.page <= 1 ? 0.5 : 1,
+                    }}
+                  >
+                    <ChevronLeft size={14} />
+                    <span>Prev</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => fetchGroups(pagination.page + 1)}
+                    disabled={pagination.page >= pagination.pages}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '4px',
+                      color: '#334155',
+                      cursor: pagination.page >= pagination.pages ? 'not-allowed' : 'pointer',
+                      opacity: pagination.page >= pagination.pages ? 0.5 : 1,
+                    }}
+                  >
+                    <span>Next</span>
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {/* APPROVE CONFIRMATION MODAL */}
       <Modal
@@ -917,8 +1496,51 @@ export const ManageGroupsPage = () => {
               <div>Course: <b>{selectedGroupDetail.course}</b></div>
               <div>Department: <b>{selectedGroupDetail.dept}</b></div>
               <div>Section: <b>Sec {selectedGroupDetail.section}</b></div>
+              <div>Supervisor: <b>{selectedGroupDetail.supervisor_name || 'Not Assigned'}</b></div>
+              <div>Formation: <b>{selectedGroupDetail.formation_status === 'on_time' ? 'On Time' : selectedGroupDetail.formation_status === 'on_deadline' ? 'On Deadline' : selectedGroupDetail.formation_status === 'late' ? 'Late' : 'N/A'}</b></div>
+              <div>Submission: <b>{selectedGroupDetail.submission_status === 'submitted' ? 'Submitted' : 'Not Submitted'}</b></div>
               <div>Created: <b>{formatDate(selectedGroupDetail.created_at)}</b></div>
             </div>
+
+            {/* Proposal Document Link if attached */}
+            {selectedGroupDetail.proposal_download_url && (
+              <div
+                style={{
+                  padding: '12px 14px',
+                  backgroundColor: '#f0f9ff',
+                  border: '1px solid #bae6fd',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#0369a1' }}>
+                  <FileText size={18} />
+                  <span><strong>Project Proposal Document</strong> attached</span>
+                </div>
+                <a
+                  href={selectedGroupDetail.proposal_download_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '6px 12px',
+                    backgroundColor: '#0073aa',
+                    color: '#ffffff',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                  }}
+                >
+                  <Download size={13} />
+                  <span>Download Proposal</span>
+                </a>
+              </div>
+            )}
 
             <div>
               <h4 style={{ margin: '0 0 8px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>
@@ -970,6 +1592,83 @@ export const ManageGroupsPage = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Modal: Notify Ungrouped Students Email */}
+      <Modal
+        isOpen={isNotifyModalOpen}
+        onClose={() => setIsNotifyModalOpen(false)}
+        title="Email Reminder to Ungrouped Students"
+        maxWidth="520px"
+      >
+        <form onSubmit={handleSendUngroupedNotification}>
+          <div style={{ marginBottom: '14px', fontSize: '13.5px', color: '#475569', lineHeight: 1.5 }}>
+            You are about to dispatch an email notification to{' '}
+            <strong>{filteredUngrouped.length} ungrouped student(s)</strong> reminding them to complete their group formation before the course deadline.
+          </div>
+
+          <div style={{ marginBottom: '18px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+              Custom Note / Message (Optional)
+            </label>
+            <textarea
+              rows={3}
+              value={notifyCustomMessage}
+              onChange={(e) => setNotifyCustomMessage(e.target.value)}
+              placeholder="e.g. Please note that groups created after the deadline will be marked as late submissions."
+              style={{
+                width: '100%',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                fontSize: '13px',
+                outline: 'none',
+                resize: 'vertical',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => setIsNotifyModalOpen(false)}
+              style={{
+                padding: '8px 14px',
+                fontSize: '13px',
+                fontWeight: 500,
+                border: '1px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                color: '#475569',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={notifyLoading || filteredUngrouped.length === 0}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: 600,
+                border: 'none',
+                backgroundColor: '#0073aa',
+                color: '#ffffff',
+                borderRadius: '6px',
+                cursor: notifyLoading || filteredUngrouped.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: notifyLoading || filteredUngrouped.length === 0 ? 0.7 : 1,
+              }}
+            >
+              {notifyLoading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              <span>{notifyLoading ? 'Sending Emails...' : 'Send Notification'}</span>
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

@@ -6,6 +6,9 @@ import {
   Info,
   AlertCircle,
   Loader2,
+  FileText,
+  UploadCloud,
+  CheckCircle2,
 } from 'lucide-react';
 import { studentGroupApi } from '../../../api/studentGroupApi';
 import { studentDashboardApi } from '../../../api/studentDashboardApi';
@@ -13,11 +16,13 @@ import { Toast } from '../../../components/ui/Toast';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
 
 export const CreateGroupPage = () => {
-  const [formData, setFormData] = useState({ name: '', project_title: '' });
+  const [projectTitle, setProjectTitle] = useState('');
+  const [proposalFile, setProposalFile] = useState(null);
   const [existingGroup, setExistingGroup] = useState(null);
   const [studentInfo, setStudentInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [createdGroup, setCreatedGroup] = useState(null);
   const [error, setError] = useState('');
   const [toast, setToast] = useState({ message: '', type: 'success' });
   const navigate = useNavigate();
@@ -47,43 +52,35 @@ export const CreateGroupPage = () => {
     };
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setError('');
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const name = formData.name.trim();
-    const project_title = formData.project_title.trim();
+    const cleanTitle = projectTitle.trim();
 
-    if (!name) {
-      setError('Please enter a group name.');
+    if (!cleanTitle) {
+      setError('Please enter a project title / idea.');
       return;
     }
-    if (name.length < 2) {
-      setError('Group name must be at least 2 characters.');
-      return;
-    }
-    if (!project_title) {
-      setError('Please enter a project title.');
-      return;
-    }
-    if (project_title.length < 3) {
+    if (cleanTitle.length < 3) {
       setError('Project title must be at least 3 characters.');
+      return;
+    }
+    if (!proposalFile) {
+      setError('A Project Proposal document (PDF or Word, max 10MB) is required.');
       return;
     }
 
     try {
       setSubmitting(true);
       setError('');
-      const res = await studentGroupApi.createGroup({ name, project_title });
-      if (res.success) {
-        setToast({ message: 'Project group created successfully!', type: 'success' });
-        setTimeout(() => {
-          navigate('/student/group/my');
-        }, 800);
+
+      const formData = new FormData();
+      formData.append('project_title', cleanTitle);
+      formData.append('proposal', proposalFile);
+
+      const res = await studentGroupApi.createGroup(formData);
+      if (res.success && res.data) {
+        setCreatedGroup(res.data);
+        setToast({ message: `Group '${res.data.name}' created successfully!`, type: 'success' });
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to create group');
@@ -164,6 +161,72 @@ export const CreateGroupPage = () => {
     );
   }
 
+  if (createdGroup) {
+    return (
+      <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
+            padding: '36px 28px',
+            textAlign: 'center',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+          }}
+        >
+          <CheckCircle2 size={52} color="#16a34a" style={{ margin: '0 auto 14px' }} />
+          <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#1e293b', margin: '0 0 8px' }}>
+            Project Group Registered!
+          </h2>
+          <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '24px' }}>
+            Your group has been registered with auto-assigned identifier:
+          </p>
+
+          <div
+            style={{
+              display: 'inline-block',
+              backgroundColor: '#eff6ff',
+              border: '2px dashed #93c5fd',
+              borderRadius: '8px',
+              padding: '12px 28px',
+              marginBottom: '20px',
+            }}
+          >
+            <div style={{ fontSize: '24px', fontWeight: 800, color: '#0073aa', letterSpacing: '1px' }}>
+              {createdGroup.name}
+            </div>
+            <div style={{ fontSize: '13px', color: '#475569', marginTop: '4px' }}>
+              {createdGroup.project_title}
+            </div>
+          </div>
+
+          <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '28px' }}>
+            You can now browse and request supervisors, and invite peers from your section to join your team.
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+            <button
+              type="button"
+              onClick={() => navigate('/student/group/my')}
+              style={{
+                padding: '10px 22px',
+                backgroundColor: '#0073aa',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '13.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Go to Group Management
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ maxWidth: '780px', margin: '0 auto' }}>
       {/* Toast */}
@@ -201,7 +264,7 @@ export const CreateGroupPage = () => {
             Create Project Group
           </h1>
           <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--muted)' }}>
-            Register your group and start inviting section peers as team members.
+            Enter your project proposal details to generate your official FYP group.
           </p>
         </div>
       </div>
@@ -228,7 +291,7 @@ export const CreateGroupPage = () => {
             You are creating a group for <b>{studentInfo?.course || 'Course'}</b> (Department of <b>{studentInfo?.dept}</b>, Section <b>{studentInfo?.section}</b>).
           </div>
           <div style={{ marginTop: '4px', fontSize: '12px', color: '#3b82f6' }}>
-            As group creator, you will be assigned as <b>Group Leader</b> with permission to invite peers, manage members, and submit project work.
+            The system will <strong>automatically generate your Group Name</strong> (e.g. <code>GRP-2026-001</code>) and record your creation status against the course deadline.
           </div>
         </div>
       </div>
@@ -255,45 +318,7 @@ export const CreateGroupPage = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          <div>
-            <label
-              htmlFor="name"
-              style={{
-                display: 'block',
-                fontSize: '13px',
-                fontWeight: 600,
-                color: '#334155',
-                marginBottom: '6px',
-              }}
-            >
-              Group Name <span style={{ color: '#dc2626' }}>*</span>
-            </label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              placeholder="e.g. CodeCraft Innovators, Team Alpha"
-              value={formData.name}
-              onChange={handleChange}
-              disabled={submitting}
-              maxLength={50}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                fontSize: '13.5px',
-                borderRadius: '6px',
-                border: '1px solid #cbd5e1',
-                outline: 'none',
-                backgroundColor: '#ffffff',
-              }}
-            />
-            <div style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '4px' }}>
-              Between 2 and 50 characters.
-            </div>
-          </div>
-
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
             <label
               htmlFor="project_title"
@@ -312,10 +337,10 @@ export const CreateGroupPage = () => {
               name="project_title"
               type="text"
               placeholder="e.g. AI-Powered Smart Attendance and Surveillance System"
-              value={formData.project_title}
-              onChange={handleChange}
+              value={projectTitle}
+              onChange={(e) => { setProjectTitle(e.target.value); setError(''); }}
               disabled={submitting}
-              maxLength={120}
+              maxLength={150}
               required
               style={{
                 width: '100%',
@@ -328,7 +353,68 @@ export const CreateGroupPage = () => {
               }}
             />
             <div style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '4px' }}>
-              Between 3 and 120 characters. Can be updated later by the leader.
+              A concise descriptive title for your final year project.
+            </div>
+          </div>
+
+          <div>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: '#334155',
+                marginBottom: '6px',
+              }}
+            >
+              Attach Project Proposal Document <span style={{ color: '#dc2626' }}>*</span>
+            </label>
+
+            <div
+              style={{
+                border: '2px dashed #cbd5e1',
+                borderRadius: '8px',
+                padding: '24px 20px',
+                textAlign: 'center',
+                backgroundColor: '#f8fafc',
+                cursor: 'pointer',
+              }}
+              onClick={() => document.getElementById('proposal_upload')?.click()}
+            >
+              <input
+                id="proposal_upload"
+                type="file"
+                accept=".pdf,.docx,.doc"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setProposalFile(file);
+                  setError('');
+                }}
+              />
+              {proposalFile ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                  <FileText size={24} color="#0073aa" />
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#1e293b' }}>
+                      {proposalFile.name}
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                      {(proposalFile.size / 1024 / 1024).toFixed(2)} MB • Click to replace file
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <UploadCloud size={32} color="#94a3b8" style={{ margin: '0 auto 8px' }} />
+                  <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>
+                    Click to upload Project Proposal (PDF or Word)
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                    Supported formats: .pdf, .docx (Max 10 MB)
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -380,7 +466,7 @@ export const CreateGroupPage = () => {
               {submitting ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  <span>Creating Group...</span>
+                  <span>Submitting Proposal & Creating Group...</span>
                 </>
               ) : (
                 <>

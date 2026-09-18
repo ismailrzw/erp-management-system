@@ -173,15 +173,15 @@ export const TeacherTrashPage = () => {
           overflow: 'hidden',
         }}
       >
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-responsive-container table-wide" style={{ borderRadius: 0 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
             <thead>
               <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Name</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Email</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Dept</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Faculty Type</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, textAlign: 'right' }}>Actions</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '130px' }}>Name</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '160px' }}>Email</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '70px' }}>Dept</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '110px' }}>Faculty Type</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, textAlign: 'right', minWidth: '120px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>

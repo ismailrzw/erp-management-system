@@ -13,6 +13,7 @@ import { coursesApi } from '../../../api/coursesApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
+import { PageHeader } from '../../../components/ui/PageHeader';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { formatDate } from '../../../utils/dateUtils';
 
@@ -33,7 +34,7 @@ export const CourseListPage = () => {
     dept: '',
     min_group: 1,
     max_group: 4,
-    deadline: '',
+    group_formation_deadline: '',
   });
   const [courseToDelete, setCourseToDelete] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -103,13 +104,14 @@ export const CourseListPage = () => {
   };
 
   const handleOpenEdit = (course) => {
+    const rawDeadline = course.group_formation_deadline || course.deadline;
     setEditFormData({
       id: course.id || course._id,
       name: course.name,
       dept: course.dept,
       min_group: course.min_group || 1,
       max_group: course.max_group || 4,
-      deadline: course.deadline ? course.deadline.split('T')[0] : '',
+      group_formation_deadline: rawDeadline ? rawDeadline.split('T')[0] : '',
     });
     setIsEditModalOpen(true);
   };
@@ -123,7 +125,7 @@ export const CourseListPage = () => {
         dept: editFormData.dept,
         min_group: parseInt(editFormData.min_group, 10),
         max_group: parseInt(editFormData.max_group, 10),
-        deadline: editFormData.deadline || undefined,
+        group_formation_deadline: editFormData.group_formation_deadline || undefined,
       });
       setToast({ message: 'Course updated successfully', type: 'success' });
       setIsEditModalOpen(false);
@@ -156,39 +158,42 @@ export const CourseListPage = () => {
     }
   };
 
-  return loading ? (
-    <div><ContentLoader label="Loading courses..." /></div>
-  ) : (
-    <div>
+  if (loading && !refreshing && courses.length === 0) {
+    return (
+      <div className="page-frame-container">
+        <PageHeader
+          title="Courses Management"
+          subtitle="Manage course offerings, credit hours, and department affiliations."
+          breadcrumbs={[
+            { label: 'Home', to: '/manager/dashboard' },
+            { label: 'Courses', to: '/manager/courses' },
+            { label: 'View All Courses' },
+          ]}
+        />
+        <ContentLoader label="Loading courses..." />
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-frame-container">
       <Toast
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '20px',
-          flexWrap: 'wrap',
-          gap: '12px',
-        }}
+      {/* Unified Page Header */}
+      <PageHeader
+        title="Courses Management"
+        subtitle="Manage course offerings, credit hours, and department affiliations."
+        breadcrumbs={[
+          { label: 'Home', to: '/manager/dashboard' },
+          { label: 'Courses', to: '/manager/courses' },
+          { label: 'View All Courses' },
+        ]}
       >
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-            Courses Management
-          </h1>
-          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-            <span>Home</span> <span style={{ margin: '0 4px' }}>/</span>{' '}
-            <span>Courses</span> <span style={{ margin: '0 4px' }}>/</span>{' '}
-            <span style={{ color: '#0073aa', fontWeight: 500 }}>View All Courses</span>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             type="button"
             onClick={() => navigate('/manager/courses/add')}
@@ -202,9 +207,12 @@ export const CourseListPage = () => {
               backgroundColor: '#0073aa',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '4px',
+              borderRadius: '6px',
               cursor: 'pointer',
+              transition: 'background-color 0.15s ease',
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#006291')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0073aa')}
           >
             <Plus size={15} />
             <span>Add New Course</span>
@@ -222,15 +230,42 @@ export const CourseListPage = () => {
               backgroundColor: '#ffffff',
               border: '1px solid #cbd5e1',
               color: '#64748b',
-              borderRadius: '4px',
+              borderRadius: '6px',
               cursor: 'pointer',
+              transition: 'all 0.15s ease',
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
           >
             <Trash2 size={15} />
             <span>Recycle Bin</span>
           </button>
+          <button
+            type="button"
+            onClick={() => fetchCourses(true)}
+            disabled={refreshing}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              padding: '8px 14px',
+              backgroundColor: '#ffffff',
+              border: '1px solid #cbd5e1',
+              borderRadius: '6px',
+              color: '#334155',
+              cursor: refreshing ? 'not-allowed' : 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+          >
+            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Filter / Search Bar */}
       <div
@@ -343,15 +378,15 @@ export const CourseListPage = () => {
           overflow: 'hidden',
         }}
       >
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-responsive-container table-wide" style={{ borderRadius: 0 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
             <thead>
               <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Course Name</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Dept</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Group Limits</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Submission Deadline</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, textAlign: 'right' }}>Actions</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '160px' }}>Course Name</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '70px' }}>Dept</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '110px' }}>Group Limits</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '180px' }}>Group Formation Deadline</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, textAlign: 'right', minWidth: '100px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -391,7 +426,7 @@ export const CourseListPage = () => {
                     <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12.5px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Calendar size={13} />
-                        <span>{formatDate(c.deadline) || 'No deadline'}</span>
+                        <span>{formatDate(c.group_formation_deadline || c.deadline) || 'No deadline'}</span>
                       </div>
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
@@ -509,12 +544,12 @@ export const CourseListPage = () => {
 
           <div style={{ marginBottom: '18px' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
-              Submission Deadline (YYYY-MM-DD)
+              Group Formation Deadline (YYYY-MM-DD)
             </label>
             <input
               type="date"
-              value={editFormData.deadline}
-              onChange={(e) => setEditFormData({ ...editFormData, deadline: e.target.value })}
+              value={editFormData.group_formation_deadline}
+              onChange={(e) => setEditFormData({ ...editFormData, group_formation_deadline: e.target.value })}
               style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 12px', fontSize: '13.5px', outline: 'none' }}
             />
           </div>

@@ -26,6 +26,8 @@ export const IterationFormModal = ({
     document_url: '',
     document_name: '',
     rubric_template_id: '',
+    is_group_formation: false,
+    late_penalty_percent: 10,
   });
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -50,6 +52,8 @@ export const IterationFormModal = ({
         document_url: currentIteration.document_url || '',
         document_name: currentIteration.document_name || '',
         rubric_template_id: currentIteration.rubric_template_id || '',
+        is_group_formation: !!currentIteration.is_group_formation,
+        late_penalty_percent: currentIteration.late_penalty_percent !== undefined ? currentIteration.late_penalty_percent : 10,
       });
     } else {
       // BUG FIX: default course to '' so manager must explicitly choose
@@ -61,6 +65,8 @@ export const IterationFormModal = ({
         document_url: '',
         document_name: '',
         rubric_template_id: '',
+        is_group_formation: false,
+        late_penalty_percent: 10,
       });
     }
     setError('');
@@ -77,7 +83,11 @@ export const IterationFormModal = ({
 
     setLoading(true);
     try {
-      const payload = { ...formData };
+      const payload = {
+        ...formData,
+        is_group_formation: Boolean(formData.is_group_formation),
+        late_penalty_percent: Number(formData.late_penalty_percent) || 0,
+      };
       // Only send rubric_template_id if selected and creating new
       if (!payload.rubric_template_id) {
         delete payload.rubric_template_id;
@@ -264,6 +274,72 @@ export const IterationFormModal = ({
             </Select>
           </div>
         )}
+
+        {/* Group Formation & Late Penalty Configuration */}
+        <div
+          style={{
+            padding: '12px 14px',
+            backgroundColor: formData.is_group_formation ? '#f0fdf4' : '#f8fafc',
+            border: `1px solid ${formData.is_group_formation ? '#bbf7d0' : '#e2e8f0'}`,
+            borderRadius: '8px',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+            <input
+              type="checkbox"
+              id="is_group_formation"
+              checked={formData.is_group_formation}
+              onChange={(e) => setFormData({ ...formData, is_group_formation: e.target.checked })}
+              style={{ marginTop: '3px', cursor: 'pointer', accentColor: '#16a34a' }}
+            />
+            <div style={{ flex: 1 }}>
+              <label
+                htmlFor="is_group_formation"
+                style={{
+                  display: 'block',
+                  fontSize: '13.5px',
+                  fontWeight: 600,
+                  color: formData.is_group_formation ? '#166534' : '#334155',
+                  cursor: 'pointer',
+                }}
+              >
+                Designate as Group Formation & Proposal Cutoff
+              </label>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>
+                Establishes this milestone deadline as the official group formation cutoff for students enrolled in this course. Groups formed after this date will be tracked and penalized.
+              </p>
+            </div>
+          </div>
+
+          {formData.is_group_formation && (
+            <div style={{ marginTop: '12px', paddingLeft: '24px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#166534' }}>
+                Late Group Formation Penalty (%):
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={formData.late_penalty_percent}
+                onChange={(e) => setFormData({ ...formData, late_penalty_percent: e.target.value })}
+                style={{
+                  width: '80px',
+                  padding: '5px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid #86efac',
+                  fontSize: '13px',
+                  backgroundColor: '#ffffff',
+                  color: '#166534',
+                  fontWeight: 700,
+                }}
+              />
+              <span style={{ fontSize: '11.5px', color: '#15803d' }}>
+                Deducted automatically from milestone rubric score
+              </span>
+            </div>
+          )}
+        </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
           <button

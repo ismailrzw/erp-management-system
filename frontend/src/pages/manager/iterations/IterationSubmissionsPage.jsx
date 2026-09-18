@@ -52,6 +52,9 @@ export const IterationSubmissionsPage = () => {
   const [selectedIterationId, setSelectedIterationId] = useState(id || '');
   const [summary, setSummary] = useState(null);
   const [submissions, setSubmissions] = useState([]);
+  const [ungroupedStudents, setUngroupedStudents] = useState([]);
+  const [isGroupFormation, setIsGroupFormation] = useState(false);
+  const [latePenaltyPercent, setLatePenaltyPercent] = useState(0);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -61,6 +64,9 @@ export const IterationSubmissionsPage = () => {
     if (!iterId) {
       setSummary(null);
       setSubmissions([]);
+      setUngroupedStudents([]);
+      setIsGroupFormation(false);
+      setLatePenaltyPercent(0);
       return;
     }
     setLoading(true);
@@ -70,6 +76,9 @@ export const IterationSubmissionsPage = () => {
       const data = res.data || res;
       setSummary(data.summary || null);
       setSubmissions(data.submissions || []);
+      setUngroupedStudents(data.ungrouped_students || []);
+      setIsGroupFormation(Boolean(data.is_group_formation ?? data.summary?.is_group_formation));
+      setLatePenaltyPercent(data.late_penalty_percent ?? data.summary?.late_penalty_percent ?? 0);
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to load submissions.');
     } finally {
@@ -108,9 +117,15 @@ export const IterationSubmissionsPage = () => {
           const data = subRes.data || subRes;
           setSummary(data.summary || null);
           setSubmissions(data.submissions || []);
+          setUngroupedStudents(data.ungrouped_students || []);
+          setIsGroupFormation(Boolean(data.is_group_formation ?? data.summary?.is_group_formation));
+          setLatePenaltyPercent(data.late_penalty_percent ?? data.summary?.late_penalty_percent ?? 0);
         } else {
           setSummary(null);
           setSubmissions([]);
+          setUngroupedStudents([]);
+          setIsGroupFormation(false);
+          setLatePenaltyPercent(0);
         }
       } catch (err) {
         if (isCurrent) {
@@ -225,6 +240,49 @@ export const IterationSubmissionsPage = () => {
         )}
       </PageHeader>
 
+      {/* Group Formation Cutoff Milestone Banner */}
+      {isGroupFormation && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            padding: '12px 16px',
+            backgroundColor: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderRadius: '10px',
+            marginBottom: '20px',
+            color: '#166534',
+            fontSize: '13.5px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Users size={18} style={{ color: '#16a34a', flexShrink: 0 }} />
+            <span>
+              <strong>Group Formation & Proposal Cutoff Milestone:</strong> Student groups formed after{' '}
+              <strong>{fmt(summary?.iteration_deadline)}</strong> incur a <strong>{latePenaltyPercent}%</strong> rubric penalty deduction.
+            </span>
+          </div>
+          {ungroupedStudents.length > 0 && (
+            <span
+              style={{
+                backgroundColor: '#fee2e2',
+                color: '#b91c1c',
+                border: '1px solid #fecaca',
+                padding: '3px 9px',
+                borderRadius: '12px',
+                fontSize: '12px',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {ungroupedStudents.length} Defaulter{ungroupedStudents.length === 1 ? '' : 's'} Ungrouped
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Top Filter Bar: Select Course & Milestone */}
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px 16px' }}>
         <div style={{ flex: '1 1 200px' }}>
@@ -268,7 +326,7 @@ export const IterationSubmissionsPage = () => {
             ) : (
               availableIterations.map((it) => (
                 <option key={it._id} value={it._id}>
-                  {it.title} ({it.course})
+                  {it.title} ({it.course}){it.is_group_formation ? ' — 👥 Formation Cutoff' : ''}
                 </option>
               ))
             )}
@@ -313,11 +371,15 @@ export const IterationSubmissionsPage = () => {
                   ['Total Groups', summary.total_groups, '#1e293b'],
                   ['Submitted', summary.submitted_count, '#16a34a'],
                   ['Not Submitted', summary.total_groups - summary.submitted_count, '#dc2626'],
-                  ['Late', summary.late_count, '#d97706'],
+                  ['Late Submissions', summary.late_count, '#d97706'],
+                  ...(isGroupFormation ? [
+                    ['Late Formations', summary.late_formation_count || 0, '#ea580c'],
+                    ['Ungrouped Defaulters', ungroupedStudents.length, '#b91c1c'],
+                  ] : []),
                 ].map(([label, value, color]) => (
-                  <div key={label} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '18px 24px', minWidth: '140px', flex: '1 1 140px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                    <div style={{ fontSize: '28px', fontWeight: 700, color }}>{value}</div>
-                    <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '4px' }}>{label}</div>
+                  <div key={label} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px 20px', minWidth: '130px', flex: '1 1 130px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                    <div style={{ fontSize: '26px', fontWeight: 700, color }}>{value}</div>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>{label}</div>
                   </div>
                 ))}
               </div>
@@ -372,7 +434,7 @@ export const IterationSubmissionsPage = () => {
               description={searchQuery || statusFilter !== 'all' ? 'Try adjusting your search or filter.' : 'No approved groups are enrolled in this course yet.'}
             />
           ) : (
-            <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <div className="table-responsive-container table-wide" style={{ borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
@@ -392,6 +454,13 @@ export const IterationSubmissionsPage = () => {
                         <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '13.5px' }}>{row.group_name}</div>
                         {row.project_title && (
                           <div style={{ fontSize: '12px', color: '#64748b', marginTop: '1px' }}>{row.project_title}</div>
+                        )}
+                        {row.is_formation_late && (
+                          <div style={{ marginTop: '4px' }}>
+                            <span style={bdg('#fef2f2', '#b91c1c', '#fecaca')}>
+                              <AlertTriangle size={11} /> Late Formation {latePenaltyPercent ? `(-${latePenaltyPercent}%)` : ''}
+                            </span>
+                          </div>
                         )}
                       </td>
                       <td style={tdS}>
@@ -424,6 +493,75 @@ export const IterationSubmissionsPage = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Ungrouped Students / Defaulters Section */}
+          {isGroupFormation && ungroupedStudents.length > 0 && (
+            <div style={{ marginTop: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                <div>
+                  <h2 style={{ fontSize: '17px', fontWeight: 700, color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Users size={18} style={{ color: '#dc2626' }} />
+                    Ungrouped Students / Defaulters
+                    <span style={{ fontSize: '12px', fontWeight: 600, backgroundColor: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', padding: '2px 8px', borderRadius: '12px' }}>
+                      {ungroupedStudents.length} Students
+                    </span>
+                  </h2>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>
+                    Students enrolled in {summary?.course || 'this course'} who have not formed or joined any group by the cutoff deadline.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/manager/groups?tab=ungrouped')}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#ffffff',
+                    color: '#2563eb',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Manage Ungrouped Students &rarr;
+                </button>
+              </div>
+
+              <div className="table-responsive-container" style={{ borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#fff1f2', borderBottom: '2px solid #fecdd3' }}>
+                      <th style={thS}>Roll Number</th>
+                      <th style={thS}>Student Name</th>
+                      <th style={thS}>Email</th>
+                      <th style={thS}>Dept / Section</th>
+                      <th style={thS}>Defaulter Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ungroupedStudents.map((st) => (
+                      <tr key={st.id || st.roll} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={tdS}><span style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px' }}>{st.roll}</span></td>
+                        <td style={tdS}><span style={{ color: '#334155', fontSize: '13px' }}>{st.name}</span></td>
+                        <td style={tdS}><span style={{ color: '#64748b', fontSize: '12.5px' }}>{st.email}</span></td>
+                        <td style={tdS}>
+                          <span style={{ fontSize: '12px', color: '#475569' }}>
+                            {st.dept || '-'} {st.section ? `(${st.section})` : ''}
+                          </span>
+                        </td>
+                        <td style={tdS}>
+                          <span style={bdg('#fee2e2', '#b91c1c', '#fecaca')}>
+                            <AlertTriangle size={12} /> Formation Defaulter
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>

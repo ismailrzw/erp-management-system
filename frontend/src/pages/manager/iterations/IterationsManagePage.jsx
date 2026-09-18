@@ -320,29 +320,20 @@ export const IterationsManagePage = () => {
           onAction={handleCreateNew}
         />
       ) : (
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '10px',
-            border: '1px solid #e2e8f0',
-            overflow: 'hidden',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-            marginBottom: '24px',
-          }}
-        >
+        <div className="table-responsive-container table-wide" style={{ borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)', marginBottom: '24px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', width: '40%' }}>
+                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '220px' }}>
                   Milestone & Deliverable
                 </th>
-                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', width: '25%' }}>
+                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '160px' }}>
                   Status & Schedule
                 </th>
-                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', width: '20%' }}>
+                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '160px' }}>
                   Deliverable Progress
                 </th>
-                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', width: '15%', textAlign: 'right' }}>
+                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '100px', textAlign: 'right' }}>
                   Actions
                 </th>
               </tr>
@@ -409,6 +400,21 @@ export const IterationsManagePage = () => {
                                 }}
                               >
                                 {item.course}
+                              </span>
+                            )}
+                            {item.is_group_formation && (
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  padding: '1px 7px',
+                                  borderRadius: '10px',
+                                  backgroundColor: '#ecfdf5',
+                                  color: '#059669',
+                                  border: '1px solid #a7f3d0',
+                                }}
+                              >
+                                👥 Formation Cutoff {item.late_penalty_percent ? `(-${item.late_penalty_percent}%)` : ''}
                               </span>
                             )}
                           </div>

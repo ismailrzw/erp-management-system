@@ -238,16 +238,20 @@ export const BrowseGroupsPage = () => {
 
   const pendingSentRequestsCount = !loading ? sentRequests.filter((r) => r.status === 'pending').length : 0;
 
-  if (loading) {
+  if (loading && !refreshing && groups.length === 0 && !studentInfo) {
     return (
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div className="page-frame-container">
+        <PageHeader
+          title="Group Discovery & Collaboration"
+          subtitle="Loading available groups, requests, and invitations..."
+        />
         <ContentLoader label="Loading groups, requests & invitations..." />
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="page-frame-container">
       {/* Toast Notification */}
       {toast.message && (
         <Toast
@@ -354,13 +358,10 @@ export const BrowseGroupsPage = () => {
 
       {/* Tabs Navigation */}
       <div
+        className="scrollable-tabs-bar"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
           borderBottom: '2px solid #e2e8f0',
           marginBottom: '20px',
-          flexWrap: 'wrap',
         }}
       >
         <button

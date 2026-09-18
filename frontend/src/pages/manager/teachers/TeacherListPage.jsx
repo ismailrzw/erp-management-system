@@ -10,10 +10,11 @@ import {
 } from 'lucide-react';
 import { teachersApi } from '../../../api/teachersApi';
 import { departmentsApi } from '../../../api/departmentsApi';
+import { supervisorsApi } from '../../../api/supervisorsApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
+import { PageHeader } from '../../../components/ui/PageHeader';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
-import { formatDate } from '../../../utils/dateUtils';
 
 export const TeacherListPage = () => {
   const [teachers, setTeachers] = useState([]);
@@ -32,6 +33,7 @@ export const TeacherListPage = () => {
     name: '',
     dept: '',
     type: 'Internal Faculty',
+    domainsInput: '',
   });
   const [teacherToDelete, setTeacherToDelete] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -102,11 +104,13 @@ export const TeacherListPage = () => {
   };
 
   const handleOpenEdit = (teacher) => {
+    const rawDomains = teacher.domains || [];
     setEditFormData({
       id: teacher.id || teacher._id,
       name: teacher.name,
       dept: teacher.dept || 'CS',
       type: teacher.type || 'Internal Faculty',
+      domainsInput: Array.isArray(rawDomains) ? rawDomains.join(', ') : '',
     });
     setIsEditModalOpen(true);
   };
@@ -120,7 +124,14 @@ export const TeacherListPage = () => {
         dept: editFormData.dept,
         type: editFormData.type,
       });
-      setToast({ message: 'Teacher profile updated successfully', type: 'success' });
+
+      const parsedDomains = editFormData.domainsInput
+        .split(',')
+        .map((d) => d.trim())
+        .filter(Boolean);
+      await supervisorsApi.updateTeacherDomains(editFormData.id, parsedDomains);
+
+      setToast({ message: 'Teacher profile and expertise domains updated', type: 'success' });
       setIsEditModalOpen(false);
       fetchTeachers(true);
     } catch (err) {
@@ -151,39 +162,42 @@ export const TeacherListPage = () => {
     }
   };
 
-  return loading ? (
-    <div><ContentLoader label="Loading teachers..." /></div>
-  ) : (
-    <div>
+  if (loading && !refreshing && teachers.length === 0) {
+    return (
+      <div className="page-frame-container">
+        <PageHeader
+          title="Teachers & Evaluators Management"
+          subtitle="Manage faculty members, evaluators, and supervisory capacity."
+          breadcrumbs={[
+            { label: 'Home', to: '/manager/dashboard' },
+            { label: 'Teachers', to: '/manager/teachers' },
+            { label: 'View All Faculty' },
+          ]}
+        />
+        <ContentLoader label="Loading teachers..." />
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-frame-container">
       <Toast
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '20px',
-          flexWrap: 'wrap',
-          gap: '12px',
-        }}
+      {/* Unified Page Header */}
+      <PageHeader
+        title="Teachers & Evaluators Management"
+        subtitle="Manage faculty members, evaluators, and supervisory capacity."
+        breadcrumbs={[
+          { label: 'Home', to: '/manager/dashboard' },
+          { label: 'Teachers', to: '/manager/teachers' },
+          { label: 'View All Faculty' },
+        ]}
       >
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-            Teachers & Evaluators Management
-          </h1>
-          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-            <span>Home</span> <span style={{ margin: '0 4px' }}>/</span>{' '}
-            <span>Teachers</span> <span style={{ margin: '0 4px' }}>/</span>{' '}
-            <span style={{ color: '#0073aa', fontWeight: 500 }}>View All Teachers</span>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             type="button"
             onClick={() => navigate('/manager/teachers/add')}
@@ -197,9 +211,12 @@ export const TeacherListPage = () => {
               backgroundColor: '#0073aa',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '4px',
+              borderRadius: '6px',
               cursor: 'pointer',
+              transition: 'background-color 0.15s ease',
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#006291')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0073aa')}
           >
             <Plus size={15} />
             <span>Add New Teacher</span>
@@ -217,15 +234,42 @@ export const TeacherListPage = () => {
               backgroundColor: '#ffffff',
               border: '1px solid #cbd5e1',
               color: '#64748b',
-              borderRadius: '4px',
+              borderRadius: '6px',
               cursor: 'pointer',
+              transition: 'all 0.15s ease',
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
           >
             <Trash2 size={15} />
             <span>Recycle Bin</span>
           </button>
+          <button
+            type="button"
+            onClick={() => fetchTeachers(true)}
+            disabled={refreshing}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              padding: '8px 14px',
+              backgroundColor: '#ffffff',
+              border: '1px solid #cbd5e1',
+              borderRadius: '6px',
+              color: '#334155',
+              cursor: refreshing ? 'not-allowed' : 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+          >
+            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Filter / Search Bar */}
       <div
@@ -260,7 +304,7 @@ export const TeacherListPage = () => {
             />
           </div>
 
-          <div style={{ flex: '0 1 160px' }}>
+          <div style={{ flex: '0 1 180px' }}>
             <select
               value={selectedDept}
               onChange={(e) => setSelectedDept(e.target.value)}
@@ -361,22 +405,23 @@ export const TeacherListPage = () => {
           overflow: 'hidden',
         }}
       >
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-responsive-container table-wide" style={{ borderRadius: 0 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
             <thead>
               <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Name</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Email</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Dept</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Faculty Type</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Registered</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, textAlign: 'right' }}>Actions</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '130px' }}>Name</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '160px' }}>Email</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '70px' }}>Dept</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '110px' }}>Faculty Type</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '150px' }}>Expertise / Domains</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '100px' }}>Supervising</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, textAlign: 'right', minWidth: '100px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {teachers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: '36px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                  <td colSpan={7} style={{ padding: '36px 20px', textAlign: 'center', color: '#94a3b8' }}>
                     <GraduationCap size={36} style={{ margin: '0 auto 10px', opacity: 0.5 }} />
                     <div style={{ fontWeight: 600, color: '#475569', fontSize: '14px' }}>No teachers or evaluators found</div>
                   </td>
@@ -419,8 +464,42 @@ export const TeacherListPage = () => {
                         {t.type || 'Internal Faculty'}
                       </span>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12.5px' }}>
-                      {formatDate(t.created_at)}
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', maxWidth: '240px' }}>
+                        {t.domains && t.domains.length > 0 ? (
+                          t.domains.map((dom, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                backgroundColor: '#f1f5f9',
+                                color: '#334155',
+                                padding: '2px 7px',
+                                borderRadius: '12px',
+                                fontSize: '11px',
+                                border: '1px solid #e2e8f0',
+                              }}
+                            >
+                              {dom}
+                            </span>
+                          ))
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: '12px', fontStyle: 'italic' }}>None set</span>
+                        )}
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span
+                        style={{
+                          backgroundColor: (t.active_supervision_count || 0) >= 4 ? '#fee2e2' : '#f0fdf4',
+                          color: (t.active_supervision_count || 0) >= 4 ? '#b91c1c' : '#15803d',
+                          padding: '3px 8px',
+                          borderRadius: '12px',
+                          fontSize: '11.5px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {t.active_supervision_count || 0} / 4
+                      </span>
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
@@ -506,9 +585,9 @@ export const TeacherListPage = () => {
             </select>
           </div>
 
-          <div style={{ marginBottom: '18px' }}>
+          <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
-              Faculty Type *
+              Faculty / Evaluator Type *
             </label>
             <select
               value={editFormData.type}
@@ -519,6 +598,22 @@ export const TeacherListPage = () => {
               <option value="Internal Faculty">Internal Faculty</option>
               <option value="External Industry">External Industry</option>
             </select>
+          </div>
+
+          <div style={{ marginBottom: '18px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+              Expertise & Domains (Comma-separated)
+            </label>
+            <input
+              type="text"
+              value={editFormData.domainsInput}
+              onChange={(e) => setEditFormData({ ...editFormData, domainsInput: e.target.value })}
+              placeholder="e.g. Machine Learning, Cloud Computing, Web Systems"
+              style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '8px 12px', fontSize: '13.5px', outline: 'none' }}
+            />
+            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+              These domain tags allow students to filter and discover suitable supervisors for their FYP.
+            </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
@@ -543,7 +638,7 @@ export const TeacherListPage = () => {
       {/* Modal: Delete Confirmation */}
       <Modal isOpen={!!teacherToDelete} onClose={() => setTeacherToDelete(null)} title="Move to Recycle Bin" maxWidth="420px">
         <div style={{ fontSize: '13.5px', color: '#475569', lineHeight: 1.5, marginBottom: '20px' }}>
-          Are you sure you want to delete evaluator <strong>{teacherToDelete?.name}</strong>?
+          Are you sure you want to delete teacher <strong>{teacherToDelete?.name}</strong>?
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
           <button
