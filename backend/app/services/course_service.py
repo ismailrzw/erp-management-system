@@ -1,4 +1,4 @@
-# backend/app/services/course_service.py
+﻿# backend/app/services/course_service.py
 """Business logic for course CRUD operations."""
 
 from datetime import date, datetime, timezone
@@ -29,7 +29,7 @@ def _serialize(document: dict | None) -> dict | None:
         return None
     result = dict(document)
     result["id"] = str(result.pop(course_model.Field.ID))
-    
+
     # Normalize group_formation_deadline and deadline fields
     dl = result.get("group_formation_deadline") or result.get("deadline")
     result["group_formation_deadline"] = dl
@@ -99,7 +99,6 @@ def create_course(name: str, dept: str, min_group: int, max_group: int, group_fo
     return _serialize(document)
 
 
-
 def list_courses(deleted: bool = False, dept: str | None = None, search: str | None = None) -> list[dict]:
     """List courses, optionally filtered by deleted status, department, and search term."""
     query = {course_model.Field.DELETED: True if deleted else {"$ne": True}}
@@ -161,7 +160,7 @@ def update_course(
         updates[course_model.Field.MIN_GROUP] = min_group
     if max_group is not None:
         updates[course_model.Field.MAX_GROUP] = max_group
-    
+
     effective_deadline = group_formation_deadline if group_formation_deadline is not None else deadline
     if effective_deadline is not None:
         parsed_dl = _parse_deadline(effective_deadline)
@@ -174,7 +173,6 @@ def update_course(
         return_document=True,
     )
     return _serialize(result)
-
 
 
 def soft_delete_course(course_id: str) -> dict | None:

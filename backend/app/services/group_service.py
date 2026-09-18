@@ -1,4 +1,4 @@
-# backend/app/services/group_service.py
+﻿# backend/app/services/group_service.py
 """
 Business logic for student group formation and the invitation workflow.
 
@@ -46,6 +46,7 @@ from app.models.user import Role, UserFields
 # ══════════════════════════════════════════════════════════════════════════════
 # Internal helpers
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 def _oid(value: str) -> ObjectId:
     """Convert a string to ObjectId, raising ValueError on failure."""
@@ -287,12 +288,13 @@ def compute_formation_status(course_name: str, dept: str, created_at: datetime) 
 # Group CRUD
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def create_group(student_id: str, project_title: str, name: str | None = None, proposal_file=None) -> dict:
     """
     Create a new pending group with auto-generated group name, proposal attachment,
     and formation_status tracking.
     """
-    from app.models.group import FormationStatus, SubmissionStatus
+    from app.models.group import SubmissionStatus
     from app.services.attachment_service import upload_attachment
 
     _ensure_indexes()
@@ -373,7 +375,6 @@ def create_group(student_id: str, project_title: str, name: str | None = None, p
         "max_group":    constraints["max_group"],
     })
     return serialized
-
 
 
 def get_my_group(student_id: str) -> dict | None:
@@ -655,6 +656,7 @@ def remove_member(group_id: str, leader_id: str, member_id: str) -> dict:
 # ══════════════════════════════════════════════════════════════════════════════
 # Invitation workflow
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 def invite_member(group_id: str, leader_id: str, roll: str) -> dict:
     """
@@ -953,6 +955,7 @@ def respond_to_invitation(invitation_id: str, student_id: str, accept: bool) -> 
 # Peer discovery and Group browsing
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def search_students(query_fragment: str, course: str, dept: str = "", current_student_id: str | None = None) -> list[dict]:
     """
     Search for students in the same course by roll number or name (cross-section allowed).
@@ -1134,6 +1137,7 @@ def list_groups_for_student(student_id: str, search: str = "", status_filter: st
 # ══════════════════════════════════════════════════════════════════════════════
 # Join Requests (Student ➔ Group)
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 def send_join_request(student_id: str, group_id: str, message: str = "") -> dict:
     """
@@ -1483,4 +1487,3 @@ def reject_join_request(leader_id: str, request_id: str) -> dict:
         {"$set": {JoinRequestField.STATUS: JoinRequestStatus.REJECTED, JoinRequestField.RESPONDED_AT: now}},
     )
     return {"message": "Join request declined."}
-

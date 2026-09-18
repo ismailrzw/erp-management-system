@@ -1,4 +1,4 @@
-# backend/app/services/auth_service.py
+﻿# backend/app/services/auth_service.py
 """
 Auth Service — business logic for authentication.
 
@@ -341,4 +341,4 @@ class AuthService:
             return False, "Invalid user ID format."
         except Exception as exc:  # noqa: BLE001
             current_app.logger.error("Change password error: %s", exc)
-            return False, "Failed to change password."
+            return False, "Failed to change password."

@@ -1,4 +1,4 @@
-# backend/app/services/user_service.py
+﻿# backend/app/services/user_service.py
 """
 User Service — general user management operations.
 

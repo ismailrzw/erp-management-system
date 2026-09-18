@@ -1,4 +1,4 @@
-# backend/app/services/report_service.py
+﻿# backend/app/services/report_service.py
 """
 Report generation service for Manager exports.
 Supports generating group-wise reports as Excel (.xlsx) files via openpyxl.
@@ -6,7 +6,6 @@ Supports generating group-wise reports as Excel (.xlsx) files via openpyxl.
 
 import io
 import re
-from datetime import datetime
 
 import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -24,7 +23,7 @@ def generate_group_report_excel(
 ) -> io.BytesIO:
     """
     Generate a 12-column Excel (.xlsx) workbook report of project groups.
-    
+
     Columns:
     1. Serial No.
     2. Group Name
@@ -138,7 +137,7 @@ def generate_group_report_excel(
 
         sup_id_str = str(g.get(GroupField.SUPERVISOR_ID)) if g.get(GroupField.SUPERVISOR_ID) else None
         sup_name = g.get(GroupField.SUPERVISOR_NAME) or "Not Assigned"
-        
+
         # Domain determination
         core_domain = "General"
         if sup_id_str and sup_id_str in supervisor_map:

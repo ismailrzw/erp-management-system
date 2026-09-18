@@ -1,4 +1,4 @@
-import random
+﻿import random
 import re
 import string
 from datetime import datetime, timezone
@@ -111,7 +111,6 @@ def create_student(data: dict) -> dict:
     }
 
 
-
 def get_student_by_id(student_id: str) -> dict | None:
     """Get a student by ID."""
     try:
@@ -128,9 +127,9 @@ def list_students(filters: dict | None = None, page: int = 1, limit: int = 20) -
     """List students with pagination and filters."""
     if filters is None:
         filters = {}
-    
+
     query = {UserFields.ROLE: Role.STUDENT}
-    
+
     if filters.get("dept"):
         query[UserFields.DEPT] = filters["dept"].upper()
     if filters.get("section"):
@@ -146,17 +145,17 @@ def list_students(filters: dict | None = None, page: int = 1, limit: int = 20) -
             {UserFields.NAME: pattern},
             {UserFields.ROLL: pattern}
         ]
-    
+
     skip = (page - 1) * limit
     total = mongo.db.users.count_documents(query)
-    
+
     items = list(mongo.db.users.find(
         query,
         {UserFields.PASSWORD_HASH: 0}
     ).skip(skip).limit(limit))
-    
+
     serialized_items = [_serialize_doc(item) for item in items]
-    
+
     return {
         "items": serialized_items,
         "total": total,
@@ -171,40 +170,40 @@ def update_student(student_id: str, data: dict) -> dict:
     protected = [UserFields.EMAIL, UserFields.ROLL, UserFields.PASSWORD_HASH, UserFields.ROLE]
     for field in protected:
         data.pop(field, None)
-    
+
     if not data:
         raise ValueError("No updatable fields provided.")
-    
+
     data[UserFields.UPDATED_AT] = datetime.now(timezone.utc)
-    
+
     result = mongo.db.users.update_one(
         {"_id": ObjectId(student_id), UserFields.ROLE: Role.STUDENT},
         {"$set": data}
     )
-    
+
     if result.matched_count == 0:
         raise ValueError("Student not found.")
-    
+
     return {"updated": True, "student_id": student_id}
 
 
 def soft_delete_student(student_id: str) -> dict:
     """Soft delete a student."""
     now = datetime.now(timezone.utc)
-    
+
     result = mongo.db.users.update_one(
         {"_id": ObjectId(student_id), UserFields.ROLE: Role.STUDENT, UserFields.DELETED: {"$ne": True}},
         {"$set": {UserFields.DELETED: True, UserFields.DELETED_AT: now, UserFields.UPDATED_AT: now}}
     )
-    
+
     if result.matched_count == 0:
         raise ValueError("Student not found or already deleted.")
-    
+
     mongo.db.groups.update_many(
         {"member_ids": ObjectId(student_id)},
         {"$pull": {"member_ids": ObjectId(student_id)}}
     )
-    
+
     return {"deleted": True, "student_id": student_id}
 
 
@@ -214,10 +213,10 @@ def restore_student(student_id: str) -> dict:
         {"_id": ObjectId(student_id), UserFields.ROLE: Role.STUDENT, UserFields.DELETED: True},
         {"$set": {UserFields.DELETED: False, UserFields.DELETED_AT: None, UserFields.UPDATED_AT: datetime.now(timezone.utc)}}
     )
-    
+
     if result.matched_count == 0:
         raise ValueError("Student not found or not deleted.")
-    
+
     return {"restored": True, "student_id": student_id}
 
 
@@ -228,12 +227,12 @@ def permanent_delete_student(student_id: str) -> dict:
         UserFields.ROLE: Role.STUDENT,
         UserFields.DELETED: True
     })
-    
+
     if not student:
         raise ValueError("Student not found or must be soft-deleted first.")
-    
+
     mongo.db.users.delete_one({"_id": ObjectId(student_id)})
-    
+
     return {"deleted": True, "student_id": student_id}
 
 
@@ -374,4 +373,3 @@ def notify_ungrouped_students(dept: str | None = None, course: str | None = None
         "sent_count": sent_count,
         "total_ungrouped": len(students),
     }
-

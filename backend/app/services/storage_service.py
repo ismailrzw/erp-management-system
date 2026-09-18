@@ -1,4 +1,4 @@
-import os
+﻿import os
 from datetime import datetime, timezone
 
 from werkzeug.utils import secure_filename
@@ -6,6 +6,7 @@ from werkzeug.utils import secure_filename
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "uploads")
 ALLOWED_EXTENSIONS = {"pdf", "docx", "xlsx", "zip"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
 
 def upload_file(file, subfolder: str = "submissions") -> str:
     """

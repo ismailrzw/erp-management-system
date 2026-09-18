@@ -1,4 +1,4 @@
-"""Validation and atomic-style bulk creation of student accounts."""
+﻿"""Validation and atomic-style bulk creation of student accounts."""
 
 import csv
 from datetime import datetime, timezone
@@ -84,7 +84,7 @@ def parse_excel(file: FileStorage) -> tuple[list[dict], list[dict]]:
     rows = _read_rows(file)
     if not rows:
         raise ValueError("The import file has no data rows.")
-    
+
     # Map raw headers to canonical column names using HEADER_ALIASES
     raw_header_map = {}
     for key in rows[0]:

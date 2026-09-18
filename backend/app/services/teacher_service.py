@@ -1,4 +1,4 @@
-"""Business logic for teacher/evaluator operations."""
+﻿"""Business logic for teacher/evaluator operations."""
 
 import random
 import string
@@ -30,7 +30,7 @@ def _serialize(doc: dict | None) -> dict | None:
     result["id"] = str(result.pop(UserFields.ID))
     result.pop(UserFields.PASSWORD_HASH, None)
     result["domains"] = result.get(UserFields.DOMAINS) or []
-    
+
     # Calculate real-time active groups supervised by this teacher
     supervision_by_course = []
     try:
@@ -90,7 +90,6 @@ def create_teacher(name: str, email: str, dept: str, type_: str, domains: list[s
     serialized = _serialize(document)
     serialized["initial_password"] = password  # returned once, for the manager to relay if needed
     return serialized
-
 
 
 def list_teachers(deleted: bool = False, dept: str | None = None) -> list[dict]:

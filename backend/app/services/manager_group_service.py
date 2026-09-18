@@ -1,4 +1,4 @@
-# backend/app/services/manager_group_service.py
+﻿# backend/app/services/manager_group_service.py
 """
 Business logic for manager-facing Project Group approval and management.
 

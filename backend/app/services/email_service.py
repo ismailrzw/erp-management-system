@@ -1,4 +1,4 @@
-# backend/app/services/email_service.py
+﻿# backend/app/services/email_service.py
 """
 Email Service Module — PBL Management System.
 
@@ -13,7 +13,6 @@ import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from flask import current_app
 
 from app.config import Config
 
@@ -139,7 +138,7 @@ Beaconhouse National University
       <h2 style="font-size: 17px; color: #0f172a; margin-top: 0;">Welcome, {student_name}!</h2>
       <p>An official student account has been created for you on the PBL Management System.</p>
       <p>To access your dashboard, submit deliverables, and participate in project group activities, please click the button below to set your password:</p>
-      
+
       <div style="text-align: center; margin: 28px 0;">
         <a href="{set_link}" target="_blank" style="background-color: #2563eb; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block;">
           Set Your Password
@@ -207,7 +206,7 @@ Beaconhouse National University
     <div style="padding: 24px;">
       <p style="font-size: 15px; font-weight: 600; color: #0f172a; margin-top: 0;">Dear {student_name},</p>
       <p>Our records indicate that you have not joined or formed a project group yet for your enrolled course.</p>
-      
+
       <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 14px; margin: 18px 0; color: #92400e; font-size: 13.5px;">
         <strong>Deadline Notice:</strong> {deadline if deadline else 'Please form your group as soon as possible.'}
       </div>

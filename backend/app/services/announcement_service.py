@@ -1,6 +1,5 @@
-"""Business logic for announcement CRUD operations and user view tracking."""
+﻿"""Business logic for announcement CRUD operations and user view tracking."""
 
-import re
 from datetime import datetime, timezone
 
 from bson import ObjectId
