@@ -36,10 +36,32 @@ export const studentsApi = {
     return response.data;
   },
 
+  resendPasswordEmail: async (id) => {
+    const response = await api.post(`/manager/students/${id}/resend-password-email`);
+    return response.data;
+  },
+
+  getUngrouped: async (params = {}) => {
+    const response = await api.get('/manager/students/ungrouped', { params });
+    return response.data;
+  },
+
+  exportUngrouped: async (params = {}) => {
+    const response = await api.get('/manager/students/ungrouped/export', {
+      params,
+      responseType: 'blob',
+    });
+    return response;
+  },
+
+  notifyUngrouped: async (data = {}) => {
+    const response = await api.post('/manager/students/notify-ungrouped', data);
+    return response.data;
+  },
+
   bulkImport: async (file) => {
     const formData = new FormData();
     formData.append('file', file);
-    // Let axios automatically set the correct multipart/form-data headers with boundary
     const response = await api.post('/manager/students/bulk-import', formData);
     return response.data;
   },

@@ -49,6 +49,13 @@ def _serialize_manager_group(doc: dict) -> dict:
         result[Field.APPROVED_BY] = str(result[Field.APPROVED_BY])
     if result.get(Field.REJECTED_BY):
         result[Field.REJECTED_BY] = str(result[Field.REJECTED_BY])
+    if result.get(Field.SUPERVISOR_ID):
+        result[Field.SUPERVISOR_ID] = str(result[Field.SUPERVISOR_ID])
+    if result.get(Field.PROPOSAL_ATTACHMENT_ID):
+        result[Field.PROPOSAL_ATTACHMENT_ID] = str(result[Field.PROPOSAL_ATTACHMENT_ID])
+        result["proposal_download_url"] = f"/api/attachments/{result[Field.PROPOSAL_ATTACHMENT_ID]}/download"
+    else:
+        result["proposal_download_url"] = None
 
     for key, value in list(result.items()):
         if isinstance(value, datetime):
