@@ -1,11 +1,13 @@
 """Business logic for announcement CRUD operations and user view tracking."""
 
+import re
 from datetime import datetime, timezone
 
 from bson import ObjectId
 
 from app.extensions import mongo
-from app.models.announcement import AnnouncementFields, AnnouncementViewFields
+from app.models.announcement import AnnouncementFields, AnnouncementScope, AnnouncementViewFields
+from app.models.group import Field as GroupField
 from app.models.user import Role, UserFields
 
 
@@ -30,17 +32,32 @@ def _serialize(document: dict | None) -> dict | None:
                 str(v) if isinstance(v, ObjectId) else v.isoformat() if isinstance(v, datetime) else v
                 for v in value
             ]
+    if AnnouncementFields.SCOPE not in result or not result[AnnouncementFields.SCOPE]:
+        result[AnnouncementFields.SCOPE] = AnnouncementScope.BROADCAST
+    if AnnouncementFields.TARGET_IDS not in result or result[AnnouncementFields.TARGET_IDS] is None:
+        result[AnnouncementFields.TARGET_IDS] = []
     return result
 
 
-def create_announcement(title: str, content: str, posted_by: str, date: str | None = None) -> dict:
-    """Create a new announcement."""
+def create_announcement(
+    title: str,
+    content: str,
+    posted_by: str,
+    date: str | None = None,
+    scope: str = AnnouncementScope.BROADCAST,
+    target_ids: list[str] | None = None,
+) -> dict:
+    """Create a new announcement with targeting scope."""
     now = datetime.now(timezone.utc)
+    target_ids_clean = [t.strip() for t in (target_ids or []) if t and t.strip()]
+
     document = {
         AnnouncementFields.TITLE: title.strip(),
         AnnouncementFields.CONTENT: content,
         AnnouncementFields.DATE: date or now.isoformat(),
         AnnouncementFields.POSTED_BY: posted_by,
+        AnnouncementFields.SCOPE: scope if scope in AnnouncementScope.ALL else AnnouncementScope.BROADCAST,
+        AnnouncementFields.TARGET_IDS: target_ids_clean,
         AnnouncementFields.CREATED_AT: now,
         AnnouncementFields.UPDATED_AT: now,
     }
@@ -60,32 +77,55 @@ def list_announcements() -> list[dict]:
 
 def list_announcements_for_user(user_id: str | None = None, role: str | None = None, limit: int | None = None) -> list[dict]:
     """
-    List announcements enriched with user-specific `is_recent` boolean flags.
-
-    - If role != 'student' (e.g. manager): `is_recent` is always False.
-    - If role == 'student': `is_recent` is True if the announcement is in user's
-      recent_announcements or was created after user's last login, AND has not
-      yet been marked as viewed by this student.
+    List announcements enriched with user-specific `is_recent` boolean flags
+    and filtered by targeting scope for students.
     """
-    query = mongo.db[AnnouncementFields.COLLECTION].find().sort(AnnouncementFields.CREATED_AT, -1)
+    find_filter = {}
+
+    user_doc = None
+    user_oid = None
+    if user_id:
+        try:
+            user_oid = _object_id(user_id)
+            user_doc = mongo.db.users.find_one({"_id": user_oid})
+        except Exception:  # noqa: BLE001
+            user_doc = None
+            user_oid = None
+
+    # Filter for student role based on targeting scope
+    if role == Role.STUDENT and user_doc:
+        student_dept = user_doc.get(UserFields.DEPT, "")
+        student_group_id = user_doc.get(GroupField.GROUP_ID)
+        dept_patterns = [student_dept.upper(), student_dept.lower(), student_dept] if student_dept else []
+
+        or_conditions = [
+            {AnnouncementFields.SCOPE: AnnouncementScope.BROADCAST},
+            {AnnouncementFields.SCOPE: {"$exists": False}},
+            {AnnouncementFields.SCOPE: None},
+        ]
+
+        if dept_patterns:
+            or_conditions.append({
+                AnnouncementFields.SCOPE: AnnouncementScope.DEPARTMENT,
+                AnnouncementFields.TARGET_IDS: {"$in": dept_patterns},
+            })
+
+        if student_group_id:
+            or_conditions.append({
+                AnnouncementFields.SCOPE: AnnouncementScope.GROUP,
+                AnnouncementFields.TARGET_IDS: {"$in": [str(student_group_id)]},
+            })
+
+        find_filter = {"$or": or_conditions}
+
+    query = mongo.db[AnnouncementFields.COLLECTION].find(find_filter).sort(AnnouncementFields.CREATED_AT, -1)
     if limit and limit > 0:
         query = query.limit(limit)
     documents = list(query)
     serialized = [_serialize(doc) for doc in documents]
 
     # Non-student roles (e.g. manager) should never see 'Recent' tags
-    if not user_id or role != Role.STUDENT:
-        for item in serialized:
-            item["is_recent"] = False
-        return serialized
-
-    try:
-        user_oid = _object_id(user_id)
-        user_doc = mongo.db.users.find_one({"_id": user_oid})
-    except Exception:  # noqa: BLE001
-        user_doc = None
-
-    if not user_doc:
+    if not user_id or role != Role.STUDENT or not user_doc:
         for item in serialized:
             item["is_recent"] = False
         return serialized
@@ -206,9 +246,15 @@ def get_announcement_by_id(announcement_id: str) -> dict | None:
     return _serialize(document)
 
 
-def update_announcement(announcement_id: str, title: str | None = None,
-                         content: str | None = None, date: str | None = None) -> dict | None:
-    """Update an announcement's title, content, and/or date."""
+def update_announcement(
+    announcement_id: str,
+    title: str | None = None,
+    content: str | None = None,
+    date: str | None = None,
+    scope: str | None = None,
+    target_ids: list[str] | None = None,
+) -> dict | None:
+    """Update an announcement's title, content, date, scope, and/or target_ids."""
     updates = {AnnouncementFields.UPDATED_AT: datetime.now(timezone.utc)}
     if title is not None:
         updates[AnnouncementFields.TITLE] = title.strip()
@@ -216,6 +262,10 @@ def update_announcement(announcement_id: str, title: str | None = None,
         updates[AnnouncementFields.CONTENT] = content
     if date is not None:
         updates[AnnouncementFields.DATE] = date
+    if scope is not None and scope in AnnouncementScope.ALL:
+        updates[AnnouncementFields.SCOPE] = scope
+    if target_ids is not None:
+        updates[AnnouncementFields.TARGET_IDS] = [t.strip() for t in target_ids if t and t.strip()]
 
     result = mongo.db[AnnouncementFields.COLLECTION].find_one_and_update(
         {AnnouncementFields.ID: _object_id(announcement_id)},

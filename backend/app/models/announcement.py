@@ -1,6 +1,13 @@
 """Announcement Model - field constants for announcements and announcement views."""
 
 
+class AnnouncementScope:
+    BROADCAST = "broadcast"
+    DEPARTMENT = "department"
+    GROUP = "group"
+    ALL = [BROADCAST, DEPARTMENT, GROUP]
+
+
 class AnnouncementFields:
     """Field name constants to prevent typos."""
     COLLECTION = "announcements"
@@ -9,6 +16,8 @@ class AnnouncementFields:
     CONTENT = "content"
     DATE = "date"
     POSTED_BY = "posted_by"
+    SCOPE = "scope"
+    TARGET_IDS = "target_ids"
     CREATED_AT = "created_at"
     UPDATED_AT = "updated_at"
 
