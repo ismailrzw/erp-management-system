@@ -120,26 +120,30 @@ export const StudentDashboard = () => {
     }
   };
 
-  const student = !loading ? (data?.student || {}) : {};
-  const group = !loading ? data?.group : null;
-  const isLeader = !loading && (group?.members?.find((m) => m.id === student?.id)?.is_leader || group?.is_leader);
-  const isApproved = !loading && group?.status === 'approved';
-  const isRejected = !loading && group?.status === 'rejected';
-  const pendingInvitesCount = !loading ? (data?.pending_invitations_count || 0) : 0;
-  const announcements = !loading ? (data?.announcements || []) : [];
-  const recentAnnouncementsCount = !loading ? (data?.recent_announcements_count ?? announcements.filter((a) => a.is_recent).length) : 0;
-  const attachments = !loading ? (data?.attachments || []) : [];
+  const student = data?.student || {};
+  const group = data?.group || null;
+  const isLeader = group?.members?.find((m) => m.id === student?.id)?.is_leader || group?.is_leader;
+  const isApproved = group?.status === 'approved';
+  const isRejected = group?.status === 'rejected';
+  const pendingInvitesCount = data?.pending_invitations_count || 0;
+  const announcements = data?.announcements || [];
+  const recentAnnouncementsCount = data?.recent_announcements_count ?? announcements.filter((a) => a.is_recent).length;
+  const attachments = data?.attachments || [];
 
-  if (loading) {
+  if (loading && !refreshing && !data) {
     return (
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+      <div className="page-frame-container">
+        <PageHeader
+          title="Student Dashboard"
+          subtitle="Loading your student profile and academic metrics..."
+        />
         <ContentLoader label="Loading student dashboard..." />
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="page-frame-container">
       {/* Toast Feedback */}
       {toast.message && (
         <Toast

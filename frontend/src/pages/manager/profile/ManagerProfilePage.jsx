@@ -3,8 +3,14 @@ import {
   ShieldCheck,
   CheckCircle2,
   KeyRound,
+  GraduationCap,
+  Plus,
+  X,
+  Loader2,
+  Save,
 } from 'lucide-react';
 import { authApi } from '../../../api/authApi';
+import { supervisorsApi } from '../../../api/supervisorsApi';
 import { useAuth } from '../../../context/useAuth';
 import { Toast } from '../../../components/ui/Toast';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
@@ -15,6 +21,11 @@ export const ManagerProfilePage = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ message: '', type: 'success' });
+
+  // Evaluator Domain Tags
+  const [domains, setDomains] = useState([]);
+  const [domainInput, setDomainInput] = useState('');
+  const [savingDomains, setSavingDomains] = useState(false);
 
   // Modal State
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -60,13 +71,16 @@ export const ManagerProfilePage = () => {
         const res = await authApi.getMe();
         if (isMounted && res.success && res.data) {
           setProfile(res.data);
+          setDomains(res.data.domains || []);
         } else if (isMounted && user) {
           setProfile(user);
+          setDomains(user.domains || []);
         }
       } catch (err) {
         if (isMounted) {
           if (user) {
             setProfile(user);
+            setDomains(user.domains || []);
           } else {
             setToast({
               message: err.response?.data?.message || 'Failed to load manager profile',
@@ -83,6 +97,38 @@ export const ManagerProfilePage = () => {
       isMounted = false;
     };
   }, [user]);
+
+  const handleAddDomain = () => {
+    const val = domainInput.trim();
+    if (!val) return;
+    if (domains.includes(val)) {
+      setToast({ message: 'Domain tag already added.', type: 'info' });
+      return;
+    }
+    setDomains([...domains, val]);
+    setDomainInput('');
+  };
+
+  const handleRemoveDomain = (idx) => {
+    setDomains(domains.filter((_, i) => i !== idx));
+  };
+
+  const handleSaveDomains = async () => {
+    try {
+      setSavingDomains(true);
+      const res = await supervisorsApi.updateEvaluatorDomains(domains);
+      if (res.success) {
+        setToast({ message: 'Supervision & research domains updated successfully!', type: 'success' });
+      }
+    } catch (err) {
+      setToast({
+        message: err.response?.data?.message || 'Failed to update domains.',
+        type: 'error',
+      });
+    } finally {
+      setSavingDomains(false);
+    }
+  };
 
   const managerData = profile || user || {};
 
@@ -205,7 +251,7 @@ export const ManagerProfilePage = () => {
           </div>
         </div>
 
-        {/* Account Settings / Password Row (Classroom style) */}
+        {/* Account Settings / Password Row */}
         <div
           style={{
             display: 'flex',
@@ -317,6 +363,154 @@ export const ManagerProfilePage = () => {
           </div>
         </div>
       </div>
+
+      {/* CARD: EVALUATOR RESEARCH & SUPERVISION DOMAINS (Only for Evaluators) */}
+      {managerData?.role === 'evaluator' && (
+        <div
+          className="card-responsive"
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '10px',
+            border: '1px solid #e2e8f0',
+            padding: '24px',
+            marginBottom: '24px',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
+          }}
+        >
+          <div style={{ paddingBottom: '16px', borderBottom: '1px solid #f1f5f9', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <GraduationCap size={20} color="#7c3aed" />
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--heading)' }}>
+                Research & Supervision Domains
+              </h2>
+            </div>
+            <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--body-text)' }}>
+              Specify your areas of expertise so students can discover and request your supervision for relevant projects.
+            </p>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>
+              Domain Tags & Specialties
+            </label>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                placeholder="e.g. Machine Learning, Cloud Computing, Mobile Apps, IoT..."
+                value={domainInput}
+                onChange={(e) => setDomainInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddDomain();
+                  }
+                }}
+                style={{
+                  flex: '1 1 240px',
+                  padding: '8px 12px',
+                  fontSize: '13px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  outline: 'none',
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleAddDomain}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  backgroundColor: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  color: '#334155',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e2e8f0')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
+              >
+                <Plus size={15} />
+                <span>Add Tag</span>
+              </button>
+            </div>
+
+            {/* Tags display */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', minHeight: '36px', marginBottom: '18px' }}>
+              {domains.length === 0 ? (
+                <span style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic' }}>
+                  No domain tags added yet. Add domain tags above to help students find you.
+                </span>
+              ) : (
+                domains.map((dom, idx) => (
+                  <span
+                    key={idx}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 10px',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      backgroundColor: '#f5f3ff',
+                      color: '#7c3aed',
+                      border: '1px solid #ddd6fe',
+                      borderRadius: '16px',
+                    }}
+                  >
+                    <span>{dom}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveDomain(idx)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        color: '#a78bfa',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = '#dc2626')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = '#a78bfa')}
+                    >
+                      <X size={13} />
+                    </button>
+                  </span>
+                ))
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
+              <button
+                type="button"
+                onClick={handleSaveDomains}
+                disabled={savingDomains}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 20px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  backgroundColor: '#7c3aed',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: savingDomains ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {savingDomains ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                <span>{savingDomains ? 'Saving...' : 'Save Domains'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CARD 2: NOTIFICATIONS (Google Classroom Style) */}
       <div
