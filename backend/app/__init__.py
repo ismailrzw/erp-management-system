@@ -104,6 +104,9 @@ def create_app(config_class=Config):
     from app.blueprints.manager.groups import manager_groups_ns
     api.add_namespace(manager_groups_ns, path="/api/manager/groups")
 
+    from app.blueprints.manager.reports import manager_reports_ns
+    api.add_namespace(manager_reports_ns, path="/api/manager/reports")
+
     # ── Iterations Namespaces (Sprint 3) ─────────────────
     from app.blueprints.manager.iterations import iterations_ns
     api.add_namespace(iterations_ns, path='/api/manager/iterations')
@@ -136,8 +139,23 @@ def create_app(config_class=Config):
     from app.blueprints.student.iterations import student_iterations_ns
     api.add_namespace(student_iterations_ns, path='/api/student/iterations')
 
+    from app.blueprints.student.supervisors import (
+        student_supervisors_ns,
+        student_supervisor_requests_ns,
+    )
+    api.add_namespace(student_supervisors_ns, path="/api/student/supervisors")
+    api.add_namespace(student_supervisor_requests_ns, path="/api/student/supervisor-requests")
+
     # ── Evaluator Blueprint (Sprint 4) ───────────────────────────────────────
     from app.blueprints.evaluator import evaluator_bp
     app.register_blueprint(evaluator_bp, url_prefix='/api/evaluator')
 
-    return app
+    # Ensure database indexes for fast point-lookup
+    try:
+        with app.app_context():
+            mongo.db.users.create_index("email", unique=True)
+            mongo.db.users.create_index("roll", sparse=True)
+    except Exception:  # noqa: BLE001
+        pass
+
+    return app

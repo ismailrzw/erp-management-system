@@ -12,9 +12,14 @@ from marshmallow import Schema, fields, validate, validates
 class LoginSchema(Schema):
     """Validates the payload for POST /api/auth/login."""
 
-    email = fields.Email(
-        required=True,
-        error_messages={"required": "Email is required.", "null": "Email must not be null."},
+    # Supports either email_or_roll or legacy email field
+    email_or_roll = fields.Str(
+        required=False,
+        load_default=None,
+    )
+    email = fields.Str(
+        required=False,
+        load_default=None,
     )
     password = fields.Str(
         required=True,
@@ -22,10 +27,28 @@ class LoginSchema(Schema):
         error_messages={"required": "Password is required."},
     )
 
-    @validates("email")
-    def normalise_email(self, value: str) -> str:
-        """Lowercase and strip the email so the service layer receives a clean value."""
-        return value.strip().lower()
+    @validates("password")
+    def validate_identity(self, _):
+        # Validation handled at load step or in route
+        pass
+
+
+class SetPasswordSchema(Schema):
+    """Validates the payload for POST /api/auth/set-password."""
+
+    token = fields.Str(
+        required=True,
+        validate=validate.Length(min=10),
+        error_messages={"required": "Token is required."},
+    )
+    new_password = fields.Str(
+        required=True,
+        validate=validate.Length(
+            min=6,
+            error="New password must be at least 6 characters.",
+        ),
+        error_messages={"required": "New password is required."},
+    )
 
 
 class ChangePasswordSchema(Schema):
@@ -45,7 +68,3 @@ class ChangePasswordSchema(Schema):
         error_messages={"required": "newPassword is required."},
     )
 
-    @validates("newPassword")
-    def new_password_not_same_field(self, value: str) -> None:
-        """Placeholder hook — extend here for 'must differ from current' logic."""
-        # Currently a no-op; validation is purely length-based at the schema layer.

@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
-import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { User, Lock, AlertCircle, Loader2 } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
-  { role: 'PBL Manager', email: 'zamanaziz@bnu.edu.pk', pass: '11223344' },
-  { role: 'Evaluator — Dr. Imran', email: 'evaluator1@bnu.edu.pk', pass: '11223344' },
-  { role: 'Student — Haroon Ibrahim', email: 'F2020-909@bnu.edu.pk', pass: '11223344' },
-  { role: 'Student — Muhammad Ismail', email: 'student1@bnu.edu.pk', pass: '11223344' },
+  { role: 'PBL Manager', login: 'zamanaziz@bnu.edu.pk', pass: '11223344' },
+  { role: 'Evaluator — Saif Ali Khan', login: 'saifali@bnu.edu.pk', pass: '11223344' },
+  { role: 'Student - Abrar Ahmed', login: 'F2023-111@bnu.edu.pk', pass: '11223344' },
+  { role: 'Student - Ismail', login: 'F2023-551@bnu.edu.pk', pass: '11223344' },
+  { role: 'Student 2', login: 'F2023-990@bnu.edu.pk', pass: '11223344' },
 ];
 
 export const SignInPage = () => {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
@@ -32,14 +33,14 @@ export const SignInPage = () => {
     e.preventDefault();
     setError('');
 
-    if (!email.trim() || !password) {
-      setError('Please enter both email and password.');
+    if (!identifier.trim() || !password) {
+      setError('Please enter both roll number/email and password.');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const user = await login(email.trim(), password, rememberMe);
+      const user = await login(identifier.trim(), password, rememberMe);
       
       if (user.role === 'student') {
         navigate('/student/dashboard', { replace: true });
@@ -52,7 +53,7 @@ export const SignInPage = () => {
         navigate(fallback, { replace: true });
       }
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Invalid email or password. Please try again.';
+      const msg = err.response?.data?.message || err.message || 'Invalid roll number/email or password. Please try again.';
       setError(msg);
     } finally {
       setIsSubmitting(false);
@@ -60,7 +61,7 @@ export const SignInPage = () => {
   };
 
   const handleAutofill = (acc) => {
-    setEmail(acc.email);
+    setIdentifier(acc.login);
     setPassword(acc.pass);
     setError('');
   };
@@ -80,12 +81,13 @@ export const SignInPage = () => {
       <div
         style={{
           backgroundColor: '#ffffff',
-          width: '400px',
-          maxWidth: '100%',
-          borderRadius: '6px',
+          width: '100%',
+          maxWidth: '420px',
+          borderRadius: '8px',
           borderTop: '4px solid #0073aa',
           boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04)',
-          padding: '36px 32px 28px',
+          padding: '32px 24px 24px',
+          boxSizing: 'border-box',
         }}
       >
         <div
@@ -160,14 +162,14 @@ export const SignInPage = () => {
                 marginBottom: '6px',
               }}
             >
-              Email Address
+              Roll Number or Email
             </label>
             <div style={{ position: 'relative' }}>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="e.g. zamanaziz@bnu.edu.pk"
+                type="text"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="e.g. f2023-551 or email@bnu.edu.pk"
                 autoComplete="username"
                 required
                 style={{
@@ -180,7 +182,7 @@ export const SignInPage = () => {
                   outline: 'none',
                 }}
               />
-              <Mail
+              <User
                 size={16}
                 style={{
                   position: 'absolute',
@@ -332,7 +334,7 @@ export const SignInPage = () => {
             >
               <span style={{ fontWeight: 500 }}>{acc.role}</span>
               <span style={{ fontFamily: 'monospace', fontSize: '11px', wordBreak: 'break-all' }}>
-                {acc.email}
+                {acc.login}
               </span>
             </div>
           ))}
