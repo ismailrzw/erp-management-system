@@ -131,22 +131,7 @@ export function EvaluatorDashboard() {
           type="button"
           onClick={() => fetchData(true)}
           disabled={refreshing}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            fontSize: '13px',
-            fontWeight: 500,
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '6px',
-            color: '#334155',
-            cursor: refreshing ? 'not-allowed' : 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+          className="btn btn-ghost btn-sm"
         >
           <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
           <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
@@ -161,16 +146,16 @@ export function EvaluatorDashboard() {
             alignItems: 'center',
             gap: '10px',
             padding: '12px 16px',
-            backgroundColor: '#eff6ff',
-            border: '1px solid #bfdbfe',
+            backgroundColor: 'var(--primary-light)',
+            border: '1px solid rgba(0, 115, 170, 0.25)',
             borderRadius: '8px',
-            color: '#1e40af',
+            color: 'var(--primary)',
             fontSize: '13.5px',
             fontWeight: 500,
             marginBottom: '20px',
           }}
         >
-          <AlertCircle size={18} color="#2563eb" style={{ flexShrink: 0 }} />
+          <AlertCircle size={18} color="var(--primary)" style={{ flexShrink: 0 }} />
           <span>
             You have reached your maximum supervision capacity (<b>4 / 4 groups</b>) for{' '}
             <b>{coursesAtCap.join(', ')}</b>. You can still accept supervisor requests for other courses.
@@ -381,19 +366,7 @@ export function EvaluatorDashboard() {
                           onClick={() => handleAcceptRequest(req.id)}
                           disabled={isProcessing || isAtMaxSupervision}
                           title={isAtMaxSupervision ? 'You have reached maximum 4 groups limit' : 'Accept supervision request'}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            padding: '8px 16px',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            backgroundColor: isAtMaxSupervision ? '#94a3b8' : '#16a34a',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: isAtMaxSupervision || isProcessing ? 'not-allowed' : 'pointer',
-                          }}
+                          className="btn btn-success"
                         >
                           {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                           <span>Accept</span>
@@ -406,21 +379,7 @@ export function EvaluatorDashboard() {
                             setRejectionReason('');
                           }}
                           disabled={isProcessing}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            padding: '8px 14px',
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            backgroundColor: '#ffffff',
-                            color: '#dc2626',
-                            border: '1px solid #fca5a5',
-                            borderRadius: '6px',
-                            cursor: isProcessing ? 'not-allowed' : 'pointer',
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+                          className="btn btn-danger-outline"
                         >
                           <X size={14} />
                           <span>Decline</span>
@@ -482,15 +441,7 @@ export function EvaluatorDashboard() {
             <button
               type="button"
               onClick={() => setRejectingRequest(null)}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                color: '#475569',
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
@@ -498,19 +449,7 @@ export function EvaluatorDashboard() {
               type="button"
               onClick={handleRejectConfirm}
               disabled={processingId === rejectingRequest?.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 18px',
-                fontSize: '13px',
-                fontWeight: 600,
-                backgroundColor: '#dc2626',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: processingId === rejectingRequest?.id ? 'not-allowed' : 'pointer',
-              }}
+              className="btn btn-danger"
             >
               {processingId === rejectingRequest?.id ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
               <span>Decline Request</span>

@@ -20,6 +20,7 @@ export function ExhibitionPage() {
       .finally(() => setLoading(false));
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadExhibitionData();
   }, []);
@@ -113,19 +114,8 @@ export function ExhibitionPage() {
                         <button
                           type="button"
                           onClick={() => setSelectedGroup(g)}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '6px 12px',
-                            borderRadius: '6px',
-                            background: isSelected ? '#1e40af' : '#2563eb',
-                            color: '#ffffff',
-                            border: 'none',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
+                          className="btn btn-primary btn-sm"
+                          style={{ background: isSelected ? 'var(--primary-hover)' : undefined }}
                         >
                           <span>{g.evaluated ? 'View Score' : 'Evaluate'}</span>
                           <ChevronRight size={14} />

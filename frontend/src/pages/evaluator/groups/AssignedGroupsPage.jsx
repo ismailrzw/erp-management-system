@@ -102,19 +102,7 @@ export function AssignedGroupsPage() {
                     <button
                       type="button"
                       onClick={() => navigate(`/evaluator/groups/${g.id}`)}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '8px 14px',
-                        borderRadius: '6px',
-                        background: '#2563eb',
-                        color: '#ffffff',
-                        border: 'none',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                      className="btn btn-primary btn-sm"
                     >
                       <span>View & Evaluate</span>
                       <ChevronRight size={15} />

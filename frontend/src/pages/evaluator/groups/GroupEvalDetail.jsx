@@ -30,9 +30,8 @@ export function GroupEvalDetail() {
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => {
-    loadGroupDetail();
-  }, [groupId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadGroupDetail(); }, [groupId]);
 
   if (loading) {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading group details...</div>;
@@ -48,19 +47,9 @@ export function GroupEvalDetail() {
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <button
         type="button"
+        className="btn btn-back"
+        style={{ marginBottom: '16px' }}
         onClick={() => navigate('/evaluator/groups')}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-          background: 'none',
-          border: 'none',
-          color: '#64748b',
-          fontSize: '13px',
-          fontWeight: 600,
-          cursor: 'pointer',
-          marginBottom: '16px',
-        }}
       >
         <ArrowLeft size={16} />
         <span>Back to Groups</span>
@@ -131,8 +120,8 @@ export function GroupEvalDetail() {
             border: 'none',
             background: 'none',
             cursor: 'pointer',
-            color: activeTab === 'iterations' ? '#2563eb' : '#64748b',
-            borderBottom: activeTab === 'iterations' ? '2px solid #2563eb' : '2px solid transparent',
+            color: activeTab === 'iterations' ? 'var(--primary)' : '#64748b',
+            borderBottom: activeTab === 'iterations' ? '2px solid var(--primary)' : '2px solid transparent',
           }}
         >
           Milestone Iterations ({group.iterations?.length || 0})
@@ -147,8 +136,8 @@ export function GroupEvalDetail() {
             border: 'none',
             background: 'none',
             cursor: 'pointer',
-            color: activeTab === 'meetings' ? '#2563eb' : '#64748b',
-            borderBottom: activeTab === 'meetings' ? '2px solid #2563eb' : '2px solid transparent',
+            color: activeTab === 'meetings' ? 'var(--primary)' : '#64748b',
+            borderBottom: activeTab === 'meetings' ? '2px solid var(--primary)' : '2px solid transparent',
           }}
         >
           Supervision Meetings ({group.meetings?.length || 0})
@@ -169,14 +158,14 @@ export function GroupEvalDetail() {
                   style={{
                     padding: '14px 16px',
                     borderRadius: '8px',
-                    border: isSelected ? '2px solid #2563eb' : '1px solid #e2e8f0',
-                    background: isSelected ? '#eff6ff' : '#ffffff',
+                    border: isSelected ? '2px solid var(--primary)' : '1px solid #e2e8f0',
+                    background: isSelected ? 'var(--primary-light)' : '#ffffff',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '13.5px', color: isSelected ? '#1e40af' : '#1e293b' }}>
+                    <span style={{ fontWeight: 600, fontSize: '13.5px', color: isSelected ? 'var(--primary)' : '#1e293b' }}>
                       {it.title}
                     </span>
                     {it.evaluated ? (
@@ -217,7 +206,7 @@ export function GroupEvalDetail() {
                       borderRadius: '8px',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <FileText size={20} color="#2563eb" />
+                        <FileText size={20} color="var(--primary)" />
                         <div>
                           <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
                             {selectedIteration.submission.file_name || 'Submission File'}
@@ -232,18 +221,8 @@ export function GroupEvalDetail() {
                           href={selectedIteration.submission.file_url}
                           target="_blank"
                           rel="noreferrer"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            background: '#eff6ff',
-                            color: '#2563eb',
-                            padding: '6px 12px',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            textDecoration: 'none',
-                          }}
+                          className="btn btn-ghost btn-sm"
+                          style={{ textDecoration: 'none' }}
                         >
                           <Download size={14} />
                           <span>Download</span>
@@ -282,20 +261,8 @@ export function GroupEvalDetail() {
             </h3>
             <button
               type="button"
+              className="btn btn-primary btn-sm"
               onClick={() => setShowMeetingModal(true)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: '#2563eb',
-                color: '#ffffff',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
             >
               <Plus size={16} />
               <span>Log Meeting</span>

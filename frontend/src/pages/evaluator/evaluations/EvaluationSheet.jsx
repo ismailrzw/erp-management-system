@@ -125,8 +125,8 @@ export function EvaluationSheet({ groupId, iterationId, rubrics = [], existingEv
                     {idx + 1}. {r.question}
                   </span>
                   <span style={{
-                    background: '#eff6ff',
-                    color: '#2563eb',
+                    background: 'var(--primary-light)',
+                    color: 'var(--primary)',
                     fontSize: '12px',
                     fontWeight: 700,
                     padding: '3px 10px',
@@ -149,8 +149,8 @@ export function EvaluationSheet({ groupId, iterationId, rubrics = [], existingEv
                           alignItems: 'center',
                           padding: '10px 4px',
                           borderRadius: '6px',
-                          border: isSelected ? '2px solid #2563eb' : '1px solid #cbd5e1',
-                          background: isSelected ? '#eff6ff' : '#ffffff',
+                          border: isSelected ? '2px solid var(--primary)' : '1px solid #cbd5e1',
+                          background: isSelected ? 'var(--primary-light)' : '#ffffff',
                           cursor: isLocked ? 'not-allowed' : 'pointer',
                           opacity: isLocked && !isSelected ? 0.4 : 1,
                           transition: 'all 0.15s ease',
@@ -166,7 +166,7 @@ export function EvaluationSheet({ groupId, iterationId, rubrics = [], existingEv
                           disabled={isLocked}
                           style={{ marginBottom: '6px' }}
                         />
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: isSelected ? '#1e40af' : '#334155' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: isSelected ? 'var(--primary)' : '#334155' }}>
                           {lvl} / 5
                         </span>
                         <span style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', lineHeight: '1.2' }}>
@@ -228,8 +228,8 @@ export function EvaluationSheet({ groupId, iterationId, rubrics = [], existingEv
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              background: saving ? '#93c5fd' : '#2563eb',
-              color: '#ffffff',
+              background: saving ? 'var(--primary-light)' : 'var(--primary)',
+              color: saving ? 'var(--primary)' : '#ffffff',
               padding: '10px 24px',
               borderRadius: '6px',
               border: 'none',
