@@ -92,19 +92,7 @@ export const RubricTemplatesPage = () => {
         <button
           type="button"
           onClick={handleCreate}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            backgroundColor: '#2563eb',
-            color: '#ffffff',
-            padding: '8px 16px',
-            borderRadius: '6px',
-            fontSize: '13.5px',
-            fontWeight: 600,
-            border: 'none',
-            cursor: 'pointer',
-          }}
+          className="btn btn-primary"
         >
           <Plus size={16} />
           Create Template
@@ -156,15 +144,15 @@ export const RubricTemplatesPage = () => {
                         width: '40px',
                         height: '40px',
                         borderRadius: '10px',
-                        backgroundColor: '#eff6ff',
-                        border: '1px solid #bfdbfe',
+                        backgroundColor: 'var(--primary-light)',
+                        border: '1px solid rgba(0, 115, 170, 0.2)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         flexShrink: 0,
                       }}
                     >
-                      <Layers size={20} style={{ color: '#2563eb' }} />
+                      <Layers size={20} style={{ color: 'var(--primary)' }} />
                     </div>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tpl.name}</h3>
@@ -206,19 +194,7 @@ export const RubricTemplatesPage = () => {
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handleEdit(tpl); }}
                       title="Edit Template"
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: '6px',
-                        border: '1px solid #e2e8f0',
-                        backgroundColor: '#ffffff',
-                        color: '#475569',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
+                      className="btn btn-secondary btn-sm"
                     >
                       <Edit2 size={14} />
                       Edit
@@ -227,16 +203,7 @@ export const RubricTemplatesPage = () => {
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setTemplateToDelete(tpl); }}
                       title="Delete Template"
-                      style={{
-                        padding: '6px',
-                        borderRadius: '6px',
-                        border: '1px solid #fecaca',
-                        backgroundColor: '#fef2f2',
-                        color: '#dc2626',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
+                      className="btn btn-danger-outline btn-sm"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -266,11 +233,11 @@ export const RubricTemplatesPage = () => {
                               style={{
                                 fontSize: '12px',
                                 fontWeight: 600,
-                                color: '#1d4ed8',
-                                backgroundColor: '#eff6ff',
+                                color: 'var(--primary)',
+                                backgroundColor: 'var(--primary-light)',
                                 padding: '2px 8px',
                                 borderRadius: '12px',
-                                border: '1px solid #bfdbfe',
+                                border: '1px solid rgba(0, 115, 170, 0.2)',
                               }}
                             >
                               Weight: {c.weight}%
@@ -371,12 +338,12 @@ export const RubricTemplatesPage = () => {
 
           <div
             style={{
-              backgroundColor: '#eff6ff',
-              border: '1px solid #dbeafe',
+              backgroundColor: 'var(--primary-light)',
+              border: '1px solid rgba(0, 115, 170, 0.2)',
               borderRadius: '6px',
               padding: '8px 12px',
               fontSize: '11.5px',
-              color: '#1e40af',
+              color: 'var(--primary)',
             }}
           >
             ℹ️ Note: If any iteration is currently linked to this template, deletion will be blocked by the system to preserve rubric integrity.
@@ -387,16 +354,7 @@ export const RubricTemplatesPage = () => {
               type="button"
               disabled={deleteLoading}
               onClick={() => setTemplateToDelete(null)}
-              style={{
-                padding: '8px 14px',
-                fontSize: '13px',
-                fontWeight: 500,
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#475569',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
@@ -404,19 +362,7 @@ export const RubricTemplatesPage = () => {
               type="button"
               disabled={deleteLoading}
               onClick={handleConfirmDelete}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: 600,
-                border: 'none',
-                backgroundColor: '#dc2626',
-                color: '#ffffff',
-                borderRadius: '4px',
-                cursor: deleteLoading ? 'not-allowed' : 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
+              className="btn btn-danger"
             >
               <Trash2 size={14} />
               <span>{deleteLoading ? 'Deleting...' : 'Delete Template'}</span>

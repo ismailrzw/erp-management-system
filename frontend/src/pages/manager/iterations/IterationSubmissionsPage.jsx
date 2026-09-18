@@ -36,9 +36,9 @@ const tabStyle = (active) => ({
   fontSize: '12.5px',
   fontWeight: 600,
   cursor: 'pointer',
-  border: active ? '1px solid #2563eb' : '1px solid #e2e8f0',
-  backgroundColor: active ? '#eff6ff' : '#ffffff',
-  color: active ? '#1d4ed8' : '#64748b',
+  border: active ? '1px solid var(--primary)' : '1px solid #e2e8f0',
+  backgroundColor: active ? 'var(--primary-light)' : '#ffffff',
+  color: active ? 'var(--primary)' : '#64748b',
   transition: 'all 0.15s ease',
 });
 
@@ -220,19 +220,7 @@ export const IterationSubmissionsPage = () => {
           <button
             type="button"
             onClick={handleExportCSV}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              borderRadius: '6px',
-              border: '1px solid #cbd5e1',
-              backgroundColor: '#ffffff',
-              color: '#334155',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            className="btn btn-secondary btn-sm"
           >
             <FileDown size={15} />
             Export CSV
@@ -357,7 +345,7 @@ export const IterationSubmissionsPage = () => {
                     style={{
                       width: `${progressPct}%`,
                       height: '100%',
-                      backgroundColor: progressPct === 100 ? '#16a34a' : progressPct > 50 ? '#2563eb' : '#d97706',
+                      backgroundColor: progressPct === 100 ? '#16a34a' : progressPct > 50 ? 'var(--primary)' : '#d97706',
                       borderRadius: '4px',
                       transition: 'width 0.4s ease',
                     }}
@@ -479,7 +467,7 @@ export const IterationSubmissionsPage = () => {
                       <td style={tdS}>
                         {row.file_url
                           ? (
-                            <a href={row.file_url} target="_blank" rel="noreferrer" download={row.file_name} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#2563eb', fontSize: '13px', textDecoration: 'none', fontWeight: 500 }}>
+                            <a href={row.file_url} target="_blank" rel="noreferrer" download={row.file_name} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--primary)', fontSize: '13px', textDecoration: 'none', fontWeight: 500 }}>
                               <Download size={13} />{row.file_name}
                               {row.file_size ? <span style={{ color: '#94a3b8', fontWeight: 400, fontSize: '11px' }}>({fmtBytes(row.file_size)})</span> : null}
                             </a>
@@ -515,16 +503,7 @@ export const IterationSubmissionsPage = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/manager/groups?tab=ungrouped')}
-                  style={{
-                    padding: '6px 12px',
-                    fontSize: '12.5px',
-                    fontWeight: 600,
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    backgroundColor: '#ffffff',
-                    color: '#2563eb',
-                    cursor: 'pointer',
-                  }}
+                  className="btn btn-ghost btn-sm"
                 >
                   Manage Ungrouped Students &rarr;
                 </button>

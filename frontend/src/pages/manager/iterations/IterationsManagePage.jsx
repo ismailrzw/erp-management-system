@@ -281,23 +281,7 @@ export const IterationsManagePage = () => {
           <button
             type="button"
             onClick={handleCreateNew}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: '#2563eb',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '7px',
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(37,99,235,0.2)',
-              transition: 'background-color 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1d4ed8')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#2563eb')}
+            className="btn btn-primary"
           >
             <Plus size={16} />
             <span>Add Iteration</span>
@@ -355,8 +339,6 @@ export const IterationsManagePage = () => {
                       borderBottom: '1px solid #f1f5f9',
                       transition: 'background-color 0.15s ease',
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafafa')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
                   >
                     {/* 1. Milestone & Deliverable */}
                     <td style={{ padding: '16px 18px', verticalAlign: 'top' }}>
@@ -367,9 +349,9 @@ export const IterationsManagePage = () => {
                             width: '36px',
                             height: '36px',
                             borderRadius: '8px',
-                            backgroundColor: isCompleted ? '#f1f5f9' : '#eff6ff',
+                            backgroundColor: isCompleted ? '#f1f5f9' : 'var(--primary-light)',
                             border: `1px solid ${isCompleted ? '#e2e8f0' : '#bfdbfe'}`,
-                            color: isCompleted ? '#64748b' : '#2563eb',
+                            color: isCompleted ? '#64748b' : 'var(--primary)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -516,7 +498,7 @@ export const IterationsManagePage = () => {
                             style={{
                               width: `${pct}%`,
                               height: '100%',
-                              backgroundColor: pct === 100 ? '#10b981' : '#2563eb',
+                              backgroundColor: pct === 100 ? '#10b981' : 'var(--primary)',
                               borderRadius: '3px',
                               transition: 'width 0.3s ease',
                             }}
@@ -533,27 +515,7 @@ export const IterationsManagePage = () => {
                           type="button"
                           onClick={() => navigate(`/manager/iterations/${item._id}/submissions`)}
                           title="View Group Submissions"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '6px',
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            color: '#64748b',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#eff6ff';
-                            e.currentTarget.style.color = '#2563eb';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = '#64748b';
-                          }}
+                          className="btn btn-ghost btn-sm"
                         >
                           <Eye size={17} />
                         </button>
@@ -563,27 +525,8 @@ export const IterationsManagePage = () => {
                           type="button"
                           onClick={() => handleOpenRubrics(item)}
                           title={rubricCount > 0 ? `Configure Rubrics (${rubricCount} criteria)` : 'Configure Rubrics'}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '6px',
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            color: rubricCount > 0 ? '#2563eb' : '#64748b',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#eff6ff';
-                            e.currentTarget.style.color = '#1d4ed8';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = rubricCount > 0 ? '#2563eb' : '#64748b';
-                          }}
+                          className="btn btn-ghost btn-sm"
+                          style={{ color: rubricCount > 0 ? 'var(--primary)' : undefined }}
                         >
                           <Sliders size={17} />
                         </button>
@@ -593,27 +536,7 @@ export const IterationsManagePage = () => {
                           type="button"
                           onClick={() => handleEdit(item)}
                           title="Edit Milestone"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '6px',
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            color: '#64748b',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#f1f5f9';
-                            e.currentTarget.style.color = '#0f172a';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = '#64748b';
-                          }}
+                          className="btn btn-ghost btn-sm"
                         >
                           <Edit2 size={16} />
                         </button>
@@ -623,27 +546,7 @@ export const IterationsManagePage = () => {
                           type="button"
                           onClick={() => setIterationToDelete(item)}
                           title="Delete Milestone"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '6px',
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            color: '#94a3b8',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#fef2f2';
-                            e.currentTarget.style.color = '#dc2626';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = '#94a3b8';
-                          }}
+                          className="btn btn-danger-outline btn-sm"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -707,16 +610,7 @@ export const IterationsManagePage = () => {
               type="button"
               onClick={() => setIterationToDelete(null)}
               disabled={deleteLoading}
-              style={{
-                padding: '7px 14px',
-                borderRadius: '6px',
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#475569',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
@@ -724,16 +618,7 @@ export const IterationsManagePage = () => {
               type="button"
               onClick={handleConfirmDelete}
               disabled={deleteLoading}
-              style={{
-                padding: '7px 14px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: '#dc2626',
-                color: '#ffffff',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              className="btn btn-danger"
             >
               {deleteLoading ? 'Deleting...' : 'Delete Milestone'}
             </button>

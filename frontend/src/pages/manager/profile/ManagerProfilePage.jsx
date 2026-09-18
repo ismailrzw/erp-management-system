@@ -274,22 +274,7 @@ export const ManagerProfilePage = () => {
           <button
             type="button"
             onClick={() => setIsPasswordModalOpen(true)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              color: 'var(--primary, #0073aa)',
-              backgroundColor: '#eaf5fb',
-              border: '1px solid #bae6fd',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#dbeafe')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#eaf5fb')}
+            className="btn btn-secondary"
           >
             <KeyRound size={15} />
             <span>Change Password</span>
@@ -418,21 +403,7 @@ export const ManagerProfilePage = () => {
               <button
                 type="button"
                 onClick={handleAddDomain}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  backgroundColor: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  color: '#334155',
-                  cursor: 'pointer',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e2e8f0')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
+                className="btn btn-secondary"
               >
                 <Plus size={15} />
                 <span>Add Tag</span>
@@ -466,17 +437,7 @@ export const ManagerProfilePage = () => {
                     <button
                       type="button"
                       onClick={() => handleRemoveDomain(idx)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        padding: 0,
-                        cursor: 'pointer',
-                        color: '#a78bfa',
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = '#dc2626')}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = '#a78bfa')}
+                      className="btn btn-back"
                     >
                       <X size={13} />
                     </button>
@@ -490,19 +451,7 @@ export const ManagerProfilePage = () => {
                 type="button"
                 onClick={handleSaveDomains}
                 disabled={savingDomains}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 20px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  backgroundColor: '#7c3aed',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: savingDomains ? 'not-allowed' : 'pointer',
-                }}
+                className="btn btn-primary"
               >
                 {savingDomains ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                 <span>{savingDomains ? 'Saving...' : 'Save Domains'}</span>

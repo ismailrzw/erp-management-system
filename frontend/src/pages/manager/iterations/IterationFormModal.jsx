@@ -191,7 +191,7 @@ export const IterationFormModal = ({
           {formData.document_url ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e293b', fontWeight: 500 }}>
-                <Paperclip size={15} style={{ color: '#2563eb' }} />
+                <Paperclip size={15} style={{ color: 'var(--primary)' }} />
                 <span>{formData.document_name || 'Attached Document'}</span>
               </div>
               <button
@@ -248,7 +248,7 @@ export const IterationFormModal = ({
                   transition: 'all 0.15s ease',
                 }}
               >
-                <Upload size={15} style={{ color: '#2563eb' }} />
+                <Upload size={15} style={{ color: 'var(--primary)' }} />
                 <span>{uploadingDoc ? 'Uploading document...' : 'Click to attach PDF, DOCX, XLSX, or ZIP document for students'}</span>
               </label>
             </div>
@@ -345,14 +345,14 @@ export const IterationFormModal = ({
           <button
             type="button"
             onClick={onClose}
-            style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}
+            className="btn btn-secondary"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', backgroundColor: '#2563eb', color: '#ffffff', fontSize: '13px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer' }}
+            className="btn btn-primary"
           >
             {loading ? 'Saving...' : initialData ? 'Update Iteration' : 'Create Iteration'}
           </button>

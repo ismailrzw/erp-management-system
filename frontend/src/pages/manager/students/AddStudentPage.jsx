@@ -181,18 +181,8 @@ export const AddStudentPage = () => {
         <button
           type="button"
           onClick={() => navigate('/manager/students/view')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'none',
-            border: 'none',
-            color: '#64748b',
-            cursor: 'pointer',
-            fontSize: '13px',
-            padding: 0,
-            marginBottom: '10px',
-          }}
+          className="btn btn-back"
+          style={{ marginBottom: '10px' }}
         >
           <ArrowLeft size={16} />
           <span>Back to Students List</span>
@@ -207,19 +197,7 @@ export const AddStudentPage = () => {
           <button
             type="button"
             onClick={() => { setImportReport(null); setImportFile(null); setIsImportModalOpen(true); }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13px',
-              fontWeight: 600,
-              padding: '8px 16px',
-              backgroundColor: '#0073aa',
-              border: 'none',
-              color: '#ffffff',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
+            className="btn btn-primary"
           >
             <Upload size={15} />
             <span>Bulk Import Students</span>
@@ -275,32 +253,14 @@ export const AddStudentPage = () => {
                 <button
                   type="button"
                   onClick={() => { setImportReport(null); setImportFile(null); }}
-                  style={{
-                    padding: '8px 14px',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    border: '1px solid #cbd5e1',
-                    backgroundColor: '#ffffff',
-                    color: '#475569',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
+                  className="btn btn-secondary"
                 >
                   Import Another File
                 </button>
                 <button
                   type="button"
                   onClick={() => { setIsImportModalOpen(false); navigate('/manager/students/view'); }}
-                  style={{
-                    padding: '8px 16px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    border: 'none',
-                    backgroundColor: '#0073aa',
-                    color: '#ffffff',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
+                  className="btn btn-primary"
                 >
                   View All Students
                 </button>
@@ -362,36 +322,14 @@ export const AddStudentPage = () => {
                 <button
                   type="button"
                   onClick={() => setIsImportModalOpen(false)}
-                  style={{
-                    padding: '8px 14px',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    border: '1px solid #cbd5e1',
-                    backgroundColor: '#ffffff',
-                    color: '#475569',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
+                  className="btn btn-secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={importLoading || !importFile}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 16px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    border: 'none',
-                    backgroundColor: '#0073aa',
-                    color: '#ffffff',
-                    borderRadius: '4px',
-                    cursor: importLoading || !importFile ? 'not-allowed' : 'pointer',
-                    opacity: importLoading || !importFile ? 0.7 : 1,
-                  }}
+                  className="btn btn-primary"
                 >
                   {importLoading ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={14} />}
                   <span>{importLoading ? 'Importing...' : 'Upload and Import'}</span>
@@ -497,32 +435,14 @@ export const AddStudentPage = () => {
                   recovery_email: '',
                 });
               }}
-              style={{
-                padding: '9px 18px',
-                backgroundColor: '#0073aa',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              className="btn btn-primary"
             >
               Add Another Student
             </button>
             <button
               type="button"
               onClick={() => navigate('/manager/students/view')}
-              style={{
-                padding: '9px 18px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                color: '#334155',
-                borderRadius: '4px',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               View All Students
             </button>
@@ -670,36 +590,14 @@ export const AddStudentPage = () => {
               <button
                 type="button"
                 onClick={() => navigate('/manager/students/view')}
-                style={{
-                  padding: '9px 16px',
-                  fontSize: '13.5px',
-                  fontWeight: 500,
-                  border: '1px solid #cbd5e1',
-                  backgroundColor: '#ffffff',
-                  color: '#475569',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                }}
+                className="btn btn-secondary"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '9px 20px',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
-                  border: 'none',
-                  backgroundColor: '#0073aa',
-                  color: '#ffffff',
-                  borderRadius: '4px',
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                  opacity: isSubmitting ? 0.7 : 1,
-                }}
+                className="btn btn-primary"
               >
                 <UserPlus size={16} />
                 <span>{isSubmitting ? 'Creating Student...' : 'Create Student'}</span>

@@ -317,7 +317,7 @@ export const RubricBuilderModal = ({
                       max="1000"
                       value={r.weight}
                       onChange={(e) => updateRubric(index, 'weight', e.target.value)}
-                      style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 600, color: '#2563eb' }}
+                      style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 600, color: 'var(--primary)' }}
                     />
                   </div>
 
@@ -326,17 +326,8 @@ export const RubricBuilderModal = ({
                       type="button"
                       onClick={() => handleRemoveCriterion(index)}
                       title="Delete Criterion"
-                      style={{
-                        marginTop: '18px',
-                        backgroundColor: '#fef2f2',
-                        color: '#dc2626',
-                        border: '1px solid #fecaca',
-                        padding: '7px 10px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
+                      className="btn btn-danger-outline btn-sm"
+                      style={{ marginTop: '18px' }}
                     >
                       <Trash2 size={16} />
                     </button>
@@ -355,7 +346,7 @@ export const RubricBuilderModal = ({
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: '#2563eb',
+                        color: 'var(--primary)',
                         fontSize: '12px',
                         fontWeight: 600,
                         cursor: 'pointer',
@@ -401,9 +392,9 @@ export const RubricBuilderModal = ({
             gap: '6px',
             padding: '8px 14px',
             borderRadius: '6px',
-            border: '1px dashed #2563eb',
-            backgroundColor: '#eff6ff',
-            color: '#2563eb',
+            border: '1px dashed var(--primary)',
+            backgroundColor: 'var(--primary-light)',
+            color: 'var(--primary)',
             fontSize: '13px',
             fontWeight: 600,
             cursor: 'pointer',
@@ -417,7 +408,7 @@ export const RubricBuilderModal = ({
           <button
             type="button"
             onClick={onClose}
-            style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}
+            className="btn btn-secondary"
           >
             Cancel
           </button>
@@ -425,16 +416,7 @@ export const RubricBuilderModal = ({
             type="button"
             onClick={handleSave}
             disabled={saving || !isValidTotal}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: 'none',
-              backgroundColor: isValidTotal ? '#2563eb' : '#94a3b8',
-              color: '#ffffff',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: isValidTotal && !saving ? 'pointer' : 'not-allowed',
-            }}
+            className="btn btn-primary"
           >
             {saving ? 'Saving...' : isTemplateOperation ? 'Save Template' : 'Save Rubrics'}
           </button>

@@ -428,20 +428,7 @@ export const ManageGroupsPage = () => {
               type="button"
               onClick={handleExportUngrouped}
               disabled={exportLoading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                fontSize: '13px',
-                fontWeight: 600,
-                backgroundColor: '#0073aa',
-                border: 'none',
-                borderRadius: '6px',
-                color: '#ffffff',
-                cursor: exportLoading ? 'not-allowed' : 'pointer',
-                opacity: exportLoading ? 0.75 : 1,
-              }}
+              className="btn btn-primary"
             >
               {exportLoading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
               <span>Export Ungrouped Excel</span>
@@ -451,20 +438,7 @@ export const ManageGroupsPage = () => {
               type="button"
               onClick={handleDownloadReport}
               disabled={downloadingReport}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                fontSize: '13px',
-                fontWeight: 600,
-                backgroundColor: '#0073aa',
-                border: 'none',
-                borderRadius: '6px',
-                color: '#ffffff',
-                cursor: downloadingReport ? 'not-allowed' : 'pointer',
-                opacity: downloadingReport ? 0.75 : 1,
-              }}
+              className="btn btn-primary"
             >
               {downloadingReport ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
               <span>Download Group Report</span>
@@ -481,19 +455,7 @@ export const ManageGroupsPage = () => {
               }
             }}
             disabled={refreshing || ungroupedLoading}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              fontSize: '13px',
-              fontWeight: 500,
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '6px',
-              color: '#334155',
-              cursor: refreshing || ungroupedLoading ? 'not-allowed' : 'pointer',
-            }}
+            className="btn btn-ghost btn-sm"
           >
             <RefreshCw size={14} className={refreshing || ungroupedLoading ? 'animate-spin' : ''} />
             <span>{refreshing || ungroupedLoading ? 'Refreshing...' : 'Refresh'}</span>
@@ -781,19 +743,7 @@ export const ManageGroupsPage = () => {
                 type="button"
                 onClick={handleExportUngrouped}
                 disabled={exportLoading}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 14px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  color: '#334155',
-                  borderRadius: '6px',
-                  cursor: exportLoading ? 'not-allowed' : 'pointer',
-                }}
+                className="btn btn-secondary btn-sm"
               >
                 {exportLoading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                 <span>Export Excel</span>
@@ -803,20 +753,7 @@ export const ManageGroupsPage = () => {
                 type="button"
                 onClick={() => setIsNotifyModalOpen(true)}
                 disabled={filteredUngrouped.length === 0}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 14px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  backgroundColor: '#0073aa',
-                  border: 'none',
-                  color: '#ffffff',
-                  borderRadius: '6px',
-                  cursor: filteredUngrouped.length === 0 ? 'not-allowed' : 'pointer',
-                  opacity: filteredUngrouped.length === 0 ? 0.6 : 1,
-                }}
+                className="btn btn-primary btn-sm"
               >
                 <Mail size={14} />
                 <span>Notify via Email</span>
@@ -860,8 +797,6 @@ export const ManageGroupsPage = () => {
                           borderBottom: '1px solid #f1f5f9',
                           transition: 'background-color 0.15s ease',
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafafa')}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
                       >
                         <td style={{ padding: '12px 16px', fontWeight: 600, color: '#0073aa', fontSize: '13px' }}>
                           {s.roll}
@@ -1068,8 +1003,6 @@ export const ManageGroupsPage = () => {
                           borderBottom: '1px solid #f1f5f9',
                           transition: 'background-color 0.15s ease',
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafafa')}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
                       >
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '13.5px' }}>
@@ -1121,18 +1054,7 @@ export const ManageGroupsPage = () => {
                             <button
                               type="button"
                               onClick={() => handleOpenDetail(g)}
-                              style={{
-                                padding: '6px 10px',
-                                backgroundColor: '#ffffff',
-                                border: '1px solid #cbd5e1',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                color: '#475569',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                              }}
+                              className="btn btn-ghost btn-sm"
                               title="View group details"
                             >
                               <Eye size={13} />
@@ -1144,19 +1066,7 @@ export const ManageGroupsPage = () => {
                                 <button
                                   type="button"
                                   onClick={() => setGroupToApprove(g)}
-                                  style={{
-                                    padding: '6px 10px',
-                                    backgroundColor: 'var(--success)',
-                                    color: '#ffffff',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    fontSize: '12px',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                  }}
+                                  className="btn btn-success btn-sm"
                                   title="Approve this group"
                                 >
                                   <CheckCircle2 size={13} />
@@ -1170,19 +1080,7 @@ export const ManageGroupsPage = () => {
                                     setRejectionReason('');
                                     setRejectError('');
                                   }}
-                                  style={{
-                                    padding: '6px 10px',
-                                    backgroundColor: '#ffffff',
-                                    color: '#dc2626',
-                                    border: '1px solid #fecaca',
-                                    borderRadius: '4px',
-                                    fontSize: '12px',
-                                    fontWeight: 500,
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                  }}
+                                  className="btn btn-danger-outline btn-sm"
                                   title="Reject group with feedback"
                                 >
                                   <XCircle size={13} />
@@ -1222,18 +1120,7 @@ export const ManageGroupsPage = () => {
                     type="button"
                     onClick={() => fetchGroups(pagination.page - 1)}
                     disabled={pagination.page <= 1}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '6px 12px',
-                      fontSize: '12px',
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '4px',
-                      color: '#334155',
-                      cursor: pagination.page <= 1 ? 'not-allowed' : 'pointer',
-                      opacity: pagination.page <= 1 ? 0.5 : 1,
-                    }}
+                    className="btn btn-secondary btn-sm"
                   >
                     <ChevronLeft size={14} />
                     <span>Prev</span>
@@ -1243,18 +1130,7 @@ export const ManageGroupsPage = () => {
                     type="button"
                     onClick={() => fetchGroups(pagination.page + 1)}
                     disabled={pagination.page >= pagination.pages}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '6px 12px',
-                      fontSize: '12px',
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '4px',
-                      color: '#334155',
-                      cursor: pagination.page >= pagination.pages ? 'not-allowed' : 'pointer',
-                      opacity: pagination.page >= pagination.pages ? 0.5 : 1,
-                    }}
+                    className="btn btn-secondary btn-sm"
                   >
                     <span>Next</span>
                     <ChevronRight size={14} />
@@ -1308,15 +1184,7 @@ export const ManageGroupsPage = () => {
             <button
               type="button"
               onClick={() => setGroupToApprove(null)}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                color: '#475569',
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
@@ -1324,19 +1192,7 @@ export const ManageGroupsPage = () => {
               type="button"
               onClick={handleApprove}
               disabled={actionLoading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 18px',
-                fontSize: '13px',
-                fontWeight: 600,
-                backgroundColor: 'var(--success)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: actionLoading ? 'not-allowed' : 'pointer',
-              }}
+              className="btn btn-success"
             >
               {actionLoading ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
               <span>{actionLoading ? 'Approving...' : 'Approve Group'}</span>
@@ -1409,34 +1265,14 @@ export const ManageGroupsPage = () => {
             <button
               type="button"
               onClick={() => setGroupToReject(null)}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                color: '#475569',
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={actionLoading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 18px',
-                fontSize: '13px',
-                fontWeight: 600,
-                backgroundColor: '#dc2626',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: actionLoading ? 'not-allowed' : 'pointer',
-              }}
+              className="btn btn-danger"
             >
               {actionLoading ? <Loader2 size={15} className="animate-spin" /> : <XCircle size={15} />}
               <span>{actionLoading ? 'Rejecting...' : 'Reject with Feedback'}</span>
@@ -1555,7 +1391,7 @@ export const ManageGroupsPage = () => {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '8px 12px',
-                      backgroundColor: m.is_leader ? '#eff6ff' : '#ffffff',
+                      backgroundColor: m.is_leader ? 'var(--primary-light)' : '#ffffff',
                       border: '1px solid #e2e8f0',
                       borderRadius: '6px',
                     }}
@@ -1577,15 +1413,7 @@ export const ManageGroupsPage = () => {
               <button
                 type="button"
                 onClick={() => setSelectedGroupDetail(null)}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  color: '#475569',
-                  cursor: 'pointer',
-                }}
+                className="btn btn-secondary"
               >
                 Close
               </button>
@@ -1633,36 +1461,14 @@ export const ManageGroupsPage = () => {
             <button
               type="button"
               onClick={() => setIsNotifyModalOpen(false)}
-              style={{
-                padding: '8px 14px',
-                fontSize: '13px',
-                fontWeight: 500,
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#475569',
-                borderRadius: '6px',
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={notifyLoading || filteredUngrouped.length === 0}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: 600,
-                border: 'none',
-                backgroundColor: '#0073aa',
-                color: '#ffffff',
-                borderRadius: '6px',
-                cursor: notifyLoading || filteredUngrouped.length === 0 ? 'not-allowed' : 'pointer',
-                opacity: notifyLoading || filteredUngrouped.length === 0 ? 0.7 : 1,
-              }}
+              className="btn btn-primary"
             >
               {notifyLoading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               <span>{notifyLoading ? 'Sending Emails...' : 'Send Notification'}</span>

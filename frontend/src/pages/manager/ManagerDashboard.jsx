@@ -302,23 +302,7 @@ export const ManagerDashboard = () => {
           type="button"
           onClick={() => fetchDashboardData(true)}
           disabled={refreshing}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '13px',
-            fontWeight: 500,
-            padding: '8px 14px',
-            backgroundColor: '#ffffff',
-            border: '1px solid #cbd5e1',
-            borderRadius: '6px',
-            color: '#334155',
-            cursor: refreshing ? 'not-allowed' : 'pointer',
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+          className="btn btn-ghost btn-sm"
         >
           <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
           <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
@@ -437,22 +421,7 @@ export const ManagerDashboard = () => {
                   <button
                     type="button"
                     onClick={handleOpenNewAnnouncement}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      padding: '5px 12px',
-                      backgroundColor: '#0073aa',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      transition: 'background-color 0.15s ease',
-                    }}
-                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#005f8d')}
-                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#0073aa')}
+                    className="btn btn-primary btn-sm"
                   >
                     <Plus size={14} />
                     <span>New</span>
@@ -600,15 +569,7 @@ export const ManagerDashboard = () => {
                               e.stopPropagation();
                               handleOpenEditAnnouncement(ann);
                             }}
-                            style={{
-                              border: 'none',
-                              background: 'none',
-                              color: '#64748b',
-                              padding: '4px',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                            }}
+                            className="btn btn-ghost btn-sm"
                             title="Edit Announcement"
                           >
                             <Edit2 size={13} />
@@ -619,15 +580,7 @@ export const ManagerDashboard = () => {
                               e.stopPropagation();
                               setAnnToDelete(ann);
                             }}
-                            style={{
-                              border: 'none',
-                              background: 'none',
-                              color: '#dc2626',
-                              padding: '4px',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                            }}
+                            className="btn btn-danger-outline btn-sm"
                             title="Delete Announcement"
                           >
                             <Trash2 size={13} />
@@ -689,19 +642,7 @@ export const ManagerDashboard = () => {
                 setAttFormData({ title: '', file: null });
                 setIsAttModalOpen(true);
               }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                fontSize: '12px',
-                fontWeight: 600,
-                padding: '5px 12px',
-                backgroundColor: '#16a34a',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="btn btn-success btn-sm"
             >
               <Upload size={14} />
               <span>Upload</span>
@@ -765,15 +706,7 @@ export const ManagerDashboard = () => {
                     <button
                       type="button"
                       onClick={() => handleOpenEditAttachment(att)}
-                      style={{
-                        border: 'none',
-                        background: 'none',
-                        color: '#64748b',
-                        padding: '6px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                      }}
+                      className="btn btn-ghost btn-sm"
                       title="Rename Attachment"
                     >
                       <Edit2 size={16} />
@@ -781,15 +714,7 @@ export const ManagerDashboard = () => {
                     <button
                       type="button"
                       onClick={() => setAttToDelete(att)}
-                      style={{
-                        border: 'none',
-                        background: 'none',
-                        color: '#dc2626',
-                        padding: '6px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                      }}
+                      className="btn btn-danger-outline btn-sm"
                       title="Delete Attachment"
                     >
                       <Trash2 size={16} />
@@ -931,33 +856,14 @@ export const ManagerDashboard = () => {
             <button
               type="button"
               onClick={() => setIsAnnModalOpen(false)}
-              style={{
-                padding: '8px 14px',
-                fontSize: '13px',
-                fontWeight: 500,
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#475569',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={annLoading}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: 600,
-                border: 'none',
-                backgroundColor: '#0073aa',
-                color: '#ffffff',
-                borderRadius: '4px',
-                cursor: annLoading ? 'not-allowed' : 'pointer',
-                opacity: annLoading ? 0.7 : 1,
-              }}
+              className="btn btn-primary"
             >
               {annLoading ? 'Saving...' : annFormData.id ? 'Save Changes' : 'Publish'}
             </button>
@@ -980,16 +886,7 @@ export const ManagerDashboard = () => {
           <button
             type="button"
             onClick={() => setAnnToDelete(null)}
-            style={{
-              padding: '8px 14px',
-              fontSize: '13px',
-              fontWeight: 500,
-              border: '1px solid #cbd5e1',
-              backgroundColor: '#ffffff',
-              color: '#475569',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
+            className="btn btn-secondary"
           >
             Cancel
           </button>
@@ -997,16 +894,7 @@ export const ManagerDashboard = () => {
             type="button"
             onClick={handleConfirmDeleteAnnouncement}
             disabled={annLoading}
-            style={{
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              border: 'none',
-              backgroundColor: '#dc2626',
-              color: '#ffffff',
-              borderRadius: '4px',
-              cursor: annLoading ? 'not-allowed' : 'pointer',
-            }}
+            className="btn btn-danger"
           >
             {annLoading ? 'Removing...' : 'Remove'}
           </button>
@@ -1065,33 +953,14 @@ export const ManagerDashboard = () => {
             <button
               type="button"
               onClick={() => setIsAttModalOpen(false)}
-              style={{
-                padding: '8px 14px',
-                fontSize: '13px',
-                fontWeight: 500,
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#475569',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={attLoading}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: 600,
-                border: 'none',
-                backgroundColor: '#0073aa',
-                color: '#ffffff',
-                borderRadius: '4px',
-                cursor: attLoading ? 'not-allowed' : 'pointer',
-                opacity: attLoading ? 0.7 : 1,
-              }}
+              className="btn btn-primary"
             >
               {attLoading ? 'Uploading...' : 'Upload'}
             </button>
@@ -1114,16 +983,7 @@ export const ManagerDashboard = () => {
           <button
             type="button"
             onClick={() => setAttToDelete(null)}
-            style={{
-              padding: '8px 14px',
-              fontSize: '13px',
-              fontWeight: 500,
-              border: '1px solid #cbd5e1',
-              backgroundColor: '#ffffff',
-              color: '#475569',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
+            className="btn btn-secondary"
           >
             Cancel
           </button>
@@ -1131,16 +991,7 @@ export const ManagerDashboard = () => {
             type="button"
             onClick={handleConfirmDeleteAttachment}
             disabled={attLoading}
-            style={{
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              border: 'none',
-              backgroundColor: '#dc2626',
-              color: '#ffffff',
-              borderRadius: '4px',
-              cursor: attLoading ? 'not-allowed' : 'pointer',
-            }}
+            className="btn btn-danger"
           >
             {attLoading ? 'Deleting...' : 'Delete'}
           </button>
@@ -1201,33 +1052,14 @@ export const ManagerDashboard = () => {
             <button
               type="button"
               onClick={() => setAttToEdit(null)}
-              style={{
-                padding: '8px 14px',
-                fontSize: '13px',
-                fontWeight: 500,
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#475569',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={attEditLoading}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: 600,
-                border: 'none',
-                backgroundColor: '#0073aa',
-                color: '#ffffff',
-                borderRadius: '4px',
-                cursor: attEditLoading ? 'not-allowed' : 'pointer',
-                opacity: attEditLoading ? 0.7 : 1,
-              }}
+              className="btn btn-primary"
             >
               {attEditLoading ? 'Saving...' : 'Save Changes'}
             </button>

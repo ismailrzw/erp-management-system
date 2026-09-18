@@ -66,7 +66,7 @@ export const IterationsTabBar = () => {
                 gap: '6px',
                 fontSize: '13.5px',
                 fontWeight: tab.active ? 600 : 500,
-                color: tab.active ? '#2563eb' : '#64748b',
+                color: tab.active ? 'var(--primary)' : '#64748b',
                 background: 'none',
                 border: 'none',
                 cursor: tab.active ? 'default' : 'pointer',
@@ -74,12 +74,6 @@ export const IterationsTabBar = () => {
                 position: 'relative',
                 transition: 'color 0.15s ease',
                 whiteSpace: 'nowrap',
-              }}
-              onMouseEnter={(e) => {
-                if (!tab.active) e.currentTarget.style.color = '#1e293b';
-              }}
-              onMouseLeave={(e) => {
-                if (!tab.active) e.currentTarget.style.color = '#64748b';
               }}
             >
               <Icon size={tab.active ? 16 : 15} strokeWidth={tab.active ? 2.2 : 1.8} />
@@ -92,7 +86,7 @@ export const IterationsTabBar = () => {
                     left: 0,
                     right: 0,
                     height: '2px',
-                    backgroundColor: '#2563eb',
+                    backgroundColor: 'var(--primary)',
                     borderRadius: '2px',
                   }}
                 />

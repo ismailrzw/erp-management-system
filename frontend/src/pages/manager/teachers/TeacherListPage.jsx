@@ -201,22 +201,7 @@ export const TeacherListPage = () => {
           <button
             type="button"
             onClick={() => navigate('/manager/teachers/add')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13px',
-              fontWeight: 600,
-              padding: '8px 14px',
-              backgroundColor: '#0073aa',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              transition: 'background-color 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#006291')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0073aa')}
+            className="btn btn-primary"
           >
             <Plus size={15} />
             <span>Add New Teacher</span>
@@ -224,22 +209,7 @@ export const TeacherListPage = () => {
           <button
             type="button"
             onClick={() => navigate('/manager/teachers/trash')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13px',
-              fontWeight: 500,
-              padding: '8px 14px',
-              backgroundColor: '#ffffff',
-              border: '1px solid #cbd5e1',
-              color: '#64748b',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+            className="btn btn-secondary"
           >
             <Trash2 size={15} />
             <span>Recycle Bin</span>
@@ -248,22 +218,7 @@ export const TeacherListPage = () => {
             type="button"
             onClick={() => fetchTeachers(true)}
             disabled={refreshing}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13px',
-              fontWeight: 500,
-              padding: '8px 14px',
-              backgroundColor: '#ffffff',
-              border: '1px solid #cbd5e1',
-              borderRadius: '6px',
-              color: '#334155',
-              cursor: refreshing ? 'not-allowed' : 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+            className="btn btn-ghost btn-sm"
           >
             <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
             <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
@@ -353,16 +308,7 @@ export const TeacherListPage = () => {
 
           <button
             type="submit"
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#0073aa',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            className="btn btn-primary btn-sm"
           >
             Search
           </button>
@@ -376,18 +322,7 @@ export const TeacherListPage = () => {
               fetchTeachers(true);
             }}
             disabled={refreshing}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 12px',
-              backgroundColor: '#ffffff',
-              border: '1px solid #cbd5e1',
-              color: '#475569',
-              borderRadius: '4px',
-              fontSize: '13px',
-              cursor: 'pointer',
-            }}
+            className="btn btn-secondary btn-sm"
           >
             <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
             <span>Reset</span>
@@ -431,8 +366,6 @@ export const TeacherListPage = () => {
                   <tr
                     key={t.id || t._id || t.email}
                     style={{ borderBottom: '1px solid #f1f5f9' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
                     <td style={{ padding: '12px 16px', fontWeight: 600, color: '#1e293b' }}>{t.name}</td>
                     <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12.5px' }}>{t.email}</td>
@@ -506,18 +439,7 @@ export const TeacherListPage = () => {
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(t)}
-                          style={{
-                            border: '1px solid #cbd5e1',
-                            backgroundColor: '#ffffff',
-                            color: '#334155',
-                            padding: '5px 8px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '12px',
-                          }}
+                          className="btn btn-ghost btn-sm"
                         >
                           <Edit2 size={13} />
                           <span>Edit</span>
@@ -525,18 +447,7 @@ export const TeacherListPage = () => {
                         <button
                           type="button"
                           onClick={() => setTeacherToDelete(t)}
-                          style={{
-                            border: 'none',
-                            backgroundColor: '#fdecea',
-                            color: '#dc2626',
-                            padding: '5px 8px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '12px',
-                          }}
+                          className="btn btn-danger-outline btn-sm"
                         >
                           <Trash2 size={13} />
                           <span>Delete</span>
@@ -620,14 +531,14 @@ export const TeacherListPage = () => {
             <button
               type="button"
               onClick={() => setIsEditModalOpen(false)}
-              style={{ padding: '8px 14px', fontSize: '13px', fontWeight: 500, border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569', borderRadius: '4px', cursor: 'pointer' }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={actionLoading}
-              style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, border: 'none', backgroundColor: '#0073aa', color: '#ffffff', borderRadius: '4px', cursor: actionLoading ? 'not-allowed' : 'pointer' }}
+              className="btn btn-primary"
             >
               {actionLoading ? 'Saving...' : 'Save Changes'}
             </button>
@@ -644,7 +555,7 @@ export const TeacherListPage = () => {
           <button
             type="button"
             onClick={() => setTeacherToDelete(null)}
-            style={{ padding: '8px 14px', fontSize: '13px', fontWeight: 500, border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569', borderRadius: '4px', cursor: 'pointer' }}
+            className="btn btn-secondary"
           >
             Cancel
           </button>
@@ -652,7 +563,7 @@ export const TeacherListPage = () => {
             type="button"
             onClick={handleConfirmDelete}
             disabled={actionLoading}
-            style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, border: 'none', backgroundColor: '#dc2626', color: '#ffffff', borderRadius: '4px', cursor: actionLoading ? 'not-allowed' : 'pointer' }}
+            className="btn btn-danger"
           >
             {actionLoading ? 'Deleting...' : 'Move to Trash'}
           </button>

@@ -117,18 +117,8 @@ export const StudentTrashPage = () => {
           <button
             type="button"
             onClick={() => navigate('/manager/students/view')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'none',
-              border: 'none',
-              color: '#64748b',
-              cursor: 'pointer',
-              fontSize: '13px',
-              padding: 0,
-              marginBottom: '10px',
-            }}
+            className="btn btn-back"
+            style={{ marginBottom: '10px' }}
           >
             <ArrowLeft size={16} />
             <span>Back to Active Students</span>
@@ -145,19 +135,7 @@ export const StudentTrashPage = () => {
           type="button"
           onClick={() => fetchDeleted(true)}
           disabled={refreshing}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            backgroundColor: '#ffffff',
-            border: '1px solid #cbd5e1',
-            borderRadius: '4px',
-            color: '#334155',
-            fontSize: '13px',
-            fontWeight: 500,
-            cursor: refreshing ? 'not-allowed' : 'pointer',
-          }}
+          className="btn btn-secondary btn-sm"
         >
           <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
           <span>Refresh</span>
@@ -208,19 +186,7 @@ export const StudentTrashPage = () => {
                           type="button"
                           disabled={actionLoading}
                           onClick={() => handleRestore(stu)}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '5px 10px',
-                            backgroundColor: '#eafbf1',
-                            color: '#16a34a',
-                            border: '1px solid #bcf0d2',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
+                          className="btn btn-success btn-sm"
                         >
                           <RotateCcw size={13} />
                           <span>Restore</span>
@@ -229,19 +195,7 @@ export const StudentTrashPage = () => {
                           type="button"
                           disabled={actionLoading}
                           onClick={() => setStudentToPermanentDelete(stu)}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '5px 10px',
-                            backgroundColor: '#fdecea',
-                            color: '#dc2626',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
+                          className="btn btn-danger-outline btn-sm"
                         >
                           <Trash2 size={13} />
                           <span>Permanent Delete</span>
@@ -277,7 +231,7 @@ export const StudentTrashPage = () => {
           <button
             type="button"
             onClick={() => setStudentToPermanentDelete(null)}
-            style={{ padding: '8px 14px', fontSize: '13px', fontWeight: 500, border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569', borderRadius: '4px', cursor: 'pointer' }}
+            className="btn btn-secondary"
           >
             Cancel
           </button>
@@ -285,7 +239,7 @@ export const StudentTrashPage = () => {
             type="button"
             onClick={handleConfirmPermanentDelete}
             disabled={actionLoading}
-            style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, border: 'none', backgroundColor: '#dc2626', color: '#ffffff', borderRadius: '4px', cursor: actionLoading ? 'not-allowed' : 'pointer' }}
+            className="btn btn-danger"
           >
             {actionLoading ? 'Deleting...' : 'Permanently Delete'}
           </button>
