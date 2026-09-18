@@ -36,12 +36,28 @@ import { ManageGroupsPage } from './pages/manager/groups/ManageGroupsPage';
 // Manager Profile
 import { ManagerProfilePage } from './pages/manager/profile/ManagerProfilePage';
 
+// Manager Iterations (Sprint 3)
+import { IterationsManagePage } from './pages/manager/iterations/IterationsManagePage';
+import { IterationSubmissionsPage } from './pages/manager/iterations/IterationSubmissionsPage';
+import { RubricTemplatesPage } from './pages/manager/iterations/RubricTemplatesPage';
+
 // Student Pages
 import { StudentDashboard } from './pages/student/StudentDashboard';
 import { MyGroupPage } from './pages/student/groups/MyGroupPage';
 import { CreateGroupPage } from './pages/student/groups/CreateGroupPage';
 import { BrowseGroupsPage } from './pages/student/groups/BrowseGroupsPage';
 import { StudentProfilePage } from './pages/student/profile/StudentProfilePage';
+
+// Student Iterations (Sprint 3)
+import { StudentIterationsPage } from './pages/student/iterations/StudentIterationsPage';
+import { IterationDetailPage } from './pages/student/iterations/IterationDetailPage';
+
+// Evaluator Pages (Sprint 4)
+import { EvaluatorDashboard } from './pages/evaluator/EvaluatorDashboard';
+import { AssignedGroupsPage } from './pages/evaluator/groups/AssignedGroupsPage';
+import { GroupEvalDetail } from './pages/evaluator/groups/GroupEvalDetail';
+import { ExhibitionPage } from './pages/evaluator/exhibition/ExhibitionPage';
+import { MeetingsPage } from './pages/evaluator/meetings/MeetingsPage';
 
 // Fallback
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -64,6 +80,7 @@ const RootRedirect = () => {
 
   if (!isAuthed) return <Navigate to="/login" replace />;
   if (effectiveUser?.role === 'student') return <Navigate to="/student/dashboard" replace />;
+  if (effectiveUser?.role === 'evaluator') return <Navigate to="/evaluator/dashboard" replace />;
   return <Navigate to="/manager/dashboard" replace />;
 };
 
@@ -117,6 +134,12 @@ export default function App() {
             <Route path="groups" element={<ManageGroupsPage />} />
             <Route path="groups/manage" element={<ManageGroupsPage />} />
 
+            {/* Iterations Management (Manager) */}
+            <Route path="iterations" element={<IterationsManagePage />} />
+            <Route path="iterations/submissions" element={<IterationSubmissionsPage />} />
+            <Route path="iterations/:id/submissions" element={<IterationSubmissionsPage />} />
+            <Route path="rubric-templates" element={<RubricTemplatesPage />} />
+
             {/* Profile & Security */}
             <Route path="profile" element={<ManagerProfilePage />} />
 
@@ -138,6 +161,29 @@ export default function App() {
             <Route path="group/create" element={<CreateGroupPage />} />
             <Route path="group/browse" element={<BrowseGroupsPage />} />
             <Route path="profile" element={<StudentProfilePage />} />
+
+            {/* Iterations (Student) */}
+            <Route path="iterations" element={<StudentIterationsPage />} />
+            <Route path="iterations/:id" element={<IterationDetailPage />} />
+
+            {/* Fallback for other subpages */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+
+          {/* Protected Evaluator Routes (Sprint 4) */}
+          <Route
+            path="/evaluator"
+            element={
+              <ProtectedRoute allowedRoles={['evaluator']}>
+                <AppShell />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="dashboard" element={<EvaluatorDashboard />} />
+            <Route path="groups" element={<AssignedGroupsPage />} />
+            <Route path="groups/:groupId" element={<GroupEvalDetail />} />
+            <Route path="exhibition" element={<ExhibitionPage />} />
+            <Route path="meetings" element={<MeetingsPage />} />
 
             {/* Fallback for other subpages */}
             <Route path="*" element={<NotFoundPage />} />

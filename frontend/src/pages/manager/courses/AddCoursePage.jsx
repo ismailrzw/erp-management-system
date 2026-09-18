@@ -235,14 +235,14 @@ export const AddCoursePage = () => {
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
                 Department *
               </label>
               <select
                 value={formData.dept}
                 onChange={(e) => setFormData({ ...formData, dept: e.target.value })}
                 required
-                style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
+                style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 34px 9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
               >
                 {departments.length === 0 ? (
                   <option value="CS">CS - Computer Science</option>
@@ -258,7 +258,7 @@ export const AddCoursePage = () => {
 
             <div style={{ display: 'flex', gap: '14px', marginBottom: '16px' }}>
               <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
                   Min Group Size *
                 </label>
                 <input
@@ -267,12 +267,12 @@ export const AddCoursePage = () => {
                   value={formData.min_group}
                   onChange={(e) => setFormData({ ...formData, min_group: e.target.value })}
                   required
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
                 />
               </div>
 
               <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
                   Max Group Size *
                 </label>
                 <input
@@ -281,20 +281,20 @@ export const AddCoursePage = () => {
                   value={formData.max_group}
                   onChange={(e) => setFormData({ ...formData, max_group: e.target.value })}
                   required
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
                 />
               </div>
             </div>
 
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
                 Final Project Submission Deadline
               </label>
               <input
                 type="date"
                 value={formData.deadline}
                 onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
+                style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
               />
             </div>
 

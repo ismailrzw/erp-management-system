@@ -5,11 +5,9 @@ import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
   { role: 'PBL Manager', email: 'zamanaziz@bnu.edu.pk', pass: '11223344' },
+  { role: 'Evaluator — Dr. Imran', email: 'evaluator1@bnu.edu.pk', pass: '11223344' },
   { role: 'Student — Haroon Ibrahim', email: 'F2020-909@bnu.edu.pk', pass: '11223344' },
-  { role: 'Student — Muhammad Ismail', email: 'F2023-551@bnu.edu.pk', pass: 'pbl123*' },
-  { role: 'Evaluator (Internal)', email: 'ahmed.khan@bnu.edu.pk', pass: 'pbl123*' },
-  { role: 'Evaluator (External)', email: 'sarah.ali@industry.com', pass: 'pbl123*' },
-  { role: 'HOD', email: 'hod@superior.edu.pk', pass: 'pbl123*' },
+  { role: 'Student — Muhammad Ismail', email: 'student1@bnu.edu.pk', pass: '11223344' },
 ];
 
 export const SignInPage = () => {
@@ -30,8 +28,6 @@ export const SignInPage = () => {
     }
   }, [location.search]);
 
-  const from = location.state?.from?.pathname || '/manager/dashboard';
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -47,10 +43,13 @@ export const SignInPage = () => {
       
       if (user.role === 'student') {
         navigate('/student/dashboard', { replace: true });
+      } else if (user.role === 'evaluator') {
+        navigate('/evaluator/dashboard', { replace: true });
       } else if (user.role === 'pbl_manager') {
         navigate('/manager/dashboard', { replace: true });
       } else {
-        navigate(from, { replace: true });
+        const fallback = location.state?.from?.pathname || '/manager/dashboard';
+        navigate(fallback, { replace: true });
       }
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Invalid email or password. Please try again.';

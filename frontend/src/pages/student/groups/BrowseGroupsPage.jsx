@@ -507,10 +507,11 @@ export const BrowseGroupsPage = () => {
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 style={{
-                  padding: '8px 12px',
+                  padding: '8px 32px 8px 12px',
                   fontSize: '13px',
+                  fontWeight: 500,
                   border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   backgroundColor: '#ffffff',
                   color: '#334155',
                   outline: 'none',
