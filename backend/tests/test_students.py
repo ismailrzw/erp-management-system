@@ -3,11 +3,11 @@ import pytest
 STUDENTS_URL = "/api/manager/students/"
 
 
-def student_payload(roll="2024-CS-001"):
+def student_payload(roll="f2024-001"):
     return {"name": "Ada Lovelace", "roll": roll, "dept": "CS", "section": "A", "session": "2024", "course": "PBL", "teacher": "Dr. Turing", "recovery_email": "ada@example.com"}
 
 
-def create_student(client, manager_headers, roll="2024-CS-001"):
+def create_student(client, manager_headers, roll="f2024-001"):
     response = client.post(STUDENTS_URL, json=student_payload(roll), headers=manager_headers)
     assert response.status_code == 201, response.get_json()
     return response.get_json()["data"]
@@ -16,8 +16,8 @@ def create_student(client, manager_headers, roll="2024-CS-001"):
 def test_create_student_returns_generated_credentials(client, manager_headers):
     data = create_student(client, manager_headers)
     assert data["student_id"]
-    assert data["email"] == "2024-CS-001@bnu.edu.pk"
-    assert data["password"].startswith("BNU@2024-CS-")
+    assert data["email"] == "f2024-001@bnu.edu.pk"
+    assert "password_set_email_sent" in data
 
 
 def test_create_student_rejects_duplicate_roll(client, manager_headers):
@@ -34,7 +34,7 @@ def test_list_students_returns_paginated_structure(client, manager_headers):
     data = response.get_json()["data"]
     assert {"items", "total", "page", "limit", "pages"} <= data.keys()
     assert data["total"] == 1
-    assert data["items"][0]["roll"] == "2024-CS-001"
+    assert data["items"][0]["roll"] == "f2024-001"
     assert "password_hash" not in data["items"][0]
 
 

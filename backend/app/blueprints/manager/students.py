@@ -28,11 +28,15 @@ from app.services.student_service import (
     create_student,
     get_student_by_id,
     list_students,
+    list_ungrouped_students,
+    notify_ungrouped_students,
     permanent_delete_student,
+    resend_password_set_email,
     restore_student,
     soft_delete_student,
     update_student,
 )
+
 from app.utils.audit import log_audit
 from app.utils.decorators import role_required
 
@@ -268,3 +272,147 @@ class StudentBulkImport(Resource):
             import logging
             logging.getLogger(__name__).exception("Bulk import exception")
             return {"success": False, "message": f"Unable to import students: {exc!s}"}, 500
+
+
+@students_ns.route("/<student_id>/resend-password-email")
+class StudentResendPasswordEmail(Resource):
+    @students_ns.doc(security="Bearer Auth")
+    @role_required(Role.MANAGER)
+    def post(self, student_id):
+        """Regenerate and resend one-time password setup email to student."""
+        try:
+            result = resend_password_set_email(student_id)
+            user_id = get_jwt_identity()
+            log_audit(mongo.db, user_id, Role.MANAGER, "users", "resend_password_email", target_id=student_id)
+            return {"success": True, "message": "Password setup email has been dispatched.", "data": result}, 200
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, 404
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
+
+
+@students_ns.route("/ungrouped")
+class UngroupedStudentsList(Resource):
+    @students_ns.doc(security="Bearer Auth")
+    @role_required(Role.MANAGER)
+    def get(self):
+        """List active students who do not belong to any project group."""
+        try:
+            dept = request.args.get("dept")
+            course = request.args.get("course")
+            items = list_ungrouped_students(dept=dept, course=course)
+            return {
+                "success": True,
+                "message": "Ungrouped students retrieved.",
+                "data": {
+                    "items": items,
+                    "total": len(items),
+                },
+            }, 200
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
+
+
+@students_ns.route("/ungrouped/export")
+class UngroupedStudentsExport(Resource):
+    @students_ns.doc(security="Bearer Auth")
+    @role_required(Role.MANAGER)
+    def get(self):
+        """Export ungrouped students as an Excel (.xlsx) spreadsheet."""
+        import io
+        from datetime import datetime
+        from flask import send_file
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+        try:
+            dept = request.args.get("dept")
+            course = request.args.get("course")
+            students = list_ungrouped_students(dept=dept, course=course)
+
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Ungrouped Students"
+
+            headers = ["Serial No.", "Roll Number", "Name", "Department", "Section", "Course", "Session", "Teacher", "Email"]
+            ws.append(headers)
+
+            # Styling header
+            header_fill = PatternFill(start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
+            header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+            thin_border = Border(
+                left=Side(style="thin", color="CBD5E1"),
+                right=Side(style="thin", color="CBD5E1"),
+                top=Side(style="thin", color="CBD5E1"),
+                bottom=Side(style="thin", color="CBD5E1"),
+            )
+
+            for col_idx in range(1, len(headers) + 1):
+                cell = ws.cell(row=1, column=col_idx)
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+
+            for idx, s in enumerate(students, start=1):
+                ws.append([
+                    idx,
+                    s.get("roll", ""),
+                    s.get("name", ""),
+                    s.get("dept", ""),
+                    s.get("section", ""),
+                    s.get("course", ""),
+                    s.get("session", ""),
+                    s.get("teacher", ""),
+                    s.get("email", ""),
+                ])
+
+            # Adjust column widths & cell styling
+            for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=len(headers)):
+                for cell in row:
+                    cell.border = thin_border
+                    cell.font = Font(name="Calibri", size=10)
+
+            for col in ws.columns:
+                max_len = max(len(str(cell.value or "")) for cell in col)
+                col_letter = openpyxl.utils.get_column_letter(col[0].column)
+                ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
+
+            output = io.BytesIO()
+            wb.save(output)
+            output.seek(0)
+
+            filename = f"ungrouped_students_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            return send_file(
+                output,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                as_attachment=True,
+                download_name=filename,
+            )
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
+
+
+@students_ns.route("/notify-ungrouped")
+class NotifyUngroupedStudents(Resource):
+    @students_ns.doc(security="Bearer Auth")
+    @role_required(Role.MANAGER)
+    def post(self):
+        """Send reminder email notifications to ungrouped students."""
+        try:
+            body = request.get_json() or {}
+            dept = body.get("dept")
+            course = body.get("course")
+            custom_message = body.get("message")
+
+            result = notify_ungrouped_students(dept=dept, course=course, custom_message=custom_message)
+            user_id = get_jwt_identity()
+            log_audit(mongo.db, user_id, Role.MANAGER, "users", "notify_ungrouped", new_value=result)
+
+            return {
+                "success": True,
+                "message": f"Successfully notified {result['sent_count']} ungrouped student(s).",
+                "data": result,
+            }, 200
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
+
