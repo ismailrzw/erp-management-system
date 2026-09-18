@@ -32,7 +32,17 @@ export const AppShell = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f3f3', position: 'relative' }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        width: '100%',
+        maxWidth: '100vw',
+        overflowX: 'hidden',
+        backgroundColor: '#f3f3f3',
+        position: 'relative',
+        boxSizing: 'border-box',
+      }}
+    >
       <Navbar
         onToggleSidebar={handleToggleSidebar}
         isSidebarCollapsed={isSidebarCollapsed}

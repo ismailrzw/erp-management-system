@@ -36,6 +36,23 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
     return labels[role] || role || 'User';
   };
 
+  const getPortalTitle = (role) => {
+    if (role === 'student') return 'Student Portal';
+    if (role === 'evaluator') return 'Evaluator Portal';
+    if (role === 'pbl_manager') return 'PBL Management Portal';
+    return 'PBL Portal';
+  };
+
+  const handleNotificationClick = () => {
+    if (user?.role === 'student') {
+      navigate('/student/dashboard');
+    } else if (user?.role === 'evaluator') {
+      navigate('/evaluator/dashboard');
+    } else {
+      navigate('/manager/dashboard');
+    }
+  };
+
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
 
   return (
@@ -95,8 +112,8 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
               PBL
             </div>
             {!isSidebarCollapsed && (
-              <div style={{ fontWeight: 600, fontSize: '14px', letterSpacing: '0.3px', whiteSpace: 'nowrap' }}>
-                PBL Portal
+              <div style={{ fontWeight: 600, fontSize: '13.5px', letterSpacing: '0.2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {getPortalTitle(user?.role)}
               </div>
             )}
           </div>
@@ -154,25 +171,27 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? '8px' : '12px' }}>
-        <div
-          style={{
-            backgroundColor: '#eef6fb',
-            color: '#0073aa',
-            fontSize: '11px',
-            fontWeight: 700,
-            padding: '4px 8px',
-            borderRadius: '20px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.3px',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {getRoleLabel(user?.role)}
-        </div>
+        {!isMobileView && (
+          <div
+            style={{
+              backgroundColor: '#eef6fb',
+              color: '#0073aa',
+              fontSize: '11px',
+              fontWeight: 700,
+              padding: '4px 8px',
+              borderRadius: '20px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.3px',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {getRoleLabel(user?.role)}
+          </div>
+        )}
 
         <button
           type="button"
-          onClick={() => navigate('/manager/dashboard')}
+          onClick={handleNotificationClick}
           style={{
             border: 'none',
             background: 'none',
@@ -219,9 +238,11 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
             >
               {userInitial}
             </div>
-            <span style={{ fontSize: '13.5px', color: '#1e293b', fontWeight: 500 }}>
-              {user?.name || 'Manager'}
-            </span>
+            {!isMobileView && (
+              <span style={{ fontSize: '13.5px', color: '#1e293b', fontWeight: 500, maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user?.name || 'User'}
+              </span>
+            )}
             <ChevronDown size={15} color="#64748b" />
           </button>
 

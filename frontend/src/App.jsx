@@ -6,6 +6,7 @@ import { AppShell } from './components/layout/AppShell';
 
 // Auth Pages
 import { SignInPage } from './pages/auth/SignInPage';
+import { SetPasswordPage } from './pages/auth/SetPasswordPage';
 
 // Manager Pages
 import { ManagerDashboard } from './pages/manager/ManagerDashboard';
@@ -91,6 +92,7 @@ export default function App() {
         <Routes>
           {/* Public Authentication Route */}
           <Route path="/login" element={<SignInPage />} />
+          <Route path="/set-password" element={<SetPasswordPage />} />
 
           {/* Root Redirect */}
           <Route path="/" element={<RootRedirect />} />
@@ -133,6 +135,7 @@ export default function App() {
             {/* Groups Management (Manager) */}
             <Route path="groups" element={<ManageGroupsPage />} />
             <Route path="groups/manage" element={<ManageGroupsPage />} />
+            <Route path="ungrouped-students" element={<Navigate to="/manager/groups?tab=ungrouped" replace />} />
 
             {/* Iterations Management (Manager) */}
             <Route path="iterations" element={<IterationsManagePage />} />
