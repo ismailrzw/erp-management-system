@@ -1,4 +1,4 @@
-# backend/app/schemas/student_schema.py
+﻿# backend/app/schemas/student_schema.py
 """Validation schemas for student data."""
 
 import re
@@ -56,10 +56,9 @@ class CreateStudentSchema(Schema):
             raise ValidationError("Roll must follow format f{year}-{number}, e.g. f2023-551.")
 
 
-
 class UpdateStudentSchema(Schema):
     """Schema for updating an existing student."""
-    
+
     name = fields.Str(
         validate=validate.Length(min=2, max=100),
         load_default=None

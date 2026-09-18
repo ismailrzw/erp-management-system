@@ -1,4 +1,4 @@
-"""Validation schemas for announcement data."""
+﻿"""Validation schemas for announcement data."""
 
 from marshmallow import Schema, fields, validate
 from app.models.announcement import AnnouncementScope

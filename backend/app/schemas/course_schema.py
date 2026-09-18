@@ -1,4 +1,4 @@
-# backend/app/schemas/course_schema.py
+﻿# backend/app/schemas/course_schema.py
 """Validation schemas for course data."""
 
 from datetime import date
@@ -8,7 +8,6 @@ from marshmallow import (
     ValidationError,
     fields,
     validate,
-    validates,
     validates_schema,
 )
 
@@ -95,4 +94,4 @@ class UpdateCourseSchema(Schema):
         min_group = data.get("min_group")
         max_group = data.get("max_group")
         if min_group is not None and max_group is not None and max_group < min_group:
-            raise ValidationError("max_group must be greater than or equal to min_group.", field_name="max_group")
+            raise ValidationError("max_group must be greater than or equal to min_group.", field_name="max_group")

@@ -1,4 +1,4 @@
-# backend/app/schemas/auth_schema.py
+﻿# backend/app/schemas/auth_schema.py
 """
 Marshmallow validation schemas for authentication endpoints.
 
@@ -67,4 +67,3 @@ class ChangePasswordSchema(Schema):
         ),
         error_messages={"required": "newPassword is required."},
     )
-

@@ -1,4 +1,4 @@
-# backend/app/schemas/__init__.py
+﻿# backend/app/schemas/__init__.py
 """
 Schemas package — Marshmallow validation schemas (API-level Check 1).
 

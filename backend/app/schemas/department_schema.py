@@ -1,4 +1,4 @@
-"""Validation schemas for department data."""
+﻿"""Validation schemas for department data."""
 
 from marshmallow import Schema, fields, validate
 

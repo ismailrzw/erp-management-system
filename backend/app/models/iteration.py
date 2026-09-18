@@ -1,4 +1,4 @@
-# backend/app/models/iteration.py
+﻿# backend/app/models/iteration.py
 """Constants for the 'iterations' and 'submissions' collections."""
 
 COLLECTION_ITERATIONS = "iterations"

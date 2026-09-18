@@ -1,4 +1,4 @@
-# backend/app/models/user.py
+﻿# backend/app/models/user.py
 """
 User Model — field constants, role constants, and password helpers.
 

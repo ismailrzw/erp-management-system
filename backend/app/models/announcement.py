@@ -1,4 +1,4 @@
-"""Announcement Model - field constants for announcements and announcement views."""
+﻿"""Announcement Model - field constants for announcements and announcement views."""
 
 
 class AnnouncementScope:

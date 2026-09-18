@@ -1,4 +1,4 @@
-# backend/app/models/group.py
+﻿# backend/app/models/group.py
 """
 Field and status constants for the groups and group_invitations collections.
 
@@ -122,4 +122,3 @@ class JoinRequestField:
     MESSAGE      = "message"
     CREATED_AT   = "created_at"
     RESPONDED_AT = "responded_at"
-

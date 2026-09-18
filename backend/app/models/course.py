@@ -1,4 +1,4 @@
-# backend/app/models/course.py
+﻿# backend/app/models/course.py
 """Field constants for the courses collection."""
 
 COLLECTION = "courses"
@@ -14,4 +14,4 @@ class Field:
     DELETED                  = "deleted"
     DELETED_AT               = "deleted_at"
     CREATED_AT               = "created_at"
-    UPDATED_AT               = "updated_at"
+    UPDATED_AT               = "updated_at"
