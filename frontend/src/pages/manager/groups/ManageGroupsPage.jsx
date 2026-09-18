@@ -19,7 +19,7 @@ import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { formatDate } from '../../../utils/dateUtils';
 
 export const ManageGroupsPage = () => {
@@ -169,7 +169,11 @@ export const ManageGroupsPage = () => {
   };
 
   if (loading && !refreshing) {
-    return <Preloader text="Loading Project Groups..." />;
+    return (
+      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <ContentLoader label="Loading project groups..." />
+      </div>
+    );
   }
 
   return (

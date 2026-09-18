@@ -14,7 +14,7 @@ import {
 import { authApi } from '../../../api/authApi';
 import { useAuth } from '../../../context/useAuth';
 import { Toast } from '../../../components/ui/Toast';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 
 export const ManagerProfilePage = () => {
   const { user } = useAuth();
@@ -112,11 +112,15 @@ export const ManagerProfilePage = () => {
     }
   };
 
-  if (loading) {
-    return <Preloader text="Loading Manager Profile..." />;
-  }
-
   const managerData = profile || user || {};
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        <ContentLoader label="Loading manager profile..." />
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>

@@ -10,7 +10,7 @@ import {
 import { studentProfileApi } from '../../../api/studentProfileApi';
 import { useAuth } from '../../../context/useAuth';
 import { Toast } from '../../../components/ui/Toast';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 
 export const StudentProfilePage = () => {
   const { updateUser } = useAuth();
@@ -132,7 +132,11 @@ export const StudentProfilePage = () => {
   };
 
   if (loading) {
-    return <Preloader text="Loading Student Profile..." />;
+    return (
+      <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+        <ContentLoader label="Loading student profile..." />
+      </div>
+    );
   }
 
   return (

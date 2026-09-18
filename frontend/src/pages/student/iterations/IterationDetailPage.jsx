@@ -1,25 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { Toast } from '../../../components/ui/Toast';
 import { studentIterationsApi } from '../../../api/studentIterationsApi';
 import {
   ArrowLeft,
-  Calendar,
-  FileText,
-  Upload,
-  CheckCircle2,
-  Clock,
   Download,
-  AlertCircle,
   User,
   ClipboardList,
   Plus,
   X,
-  MessageSquare,
   File,
   Paperclip,
-  Check
 } from 'lucide-react';
 
 const formatHumanDate = (dateStr) => {
@@ -53,6 +45,7 @@ export const IterationDetailPage = () => {
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
+  const [mountTime] = useState(() => Date.now());
 
   const fetchDetail = useCallback(async () => {
     setLoading(true);
@@ -73,6 +66,9 @@ export const IterationDetailPage = () => {
   useEffect(() => {
     fetchDetail();
   }, [fetchDetail]);
+
+  const hasSubmission = Boolean(iteration?.has_submitted);
+  const isPastDeadline = Boolean(iteration?.deadline && new Date(iteration.deadline).getTime() < mountTime);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -103,16 +99,18 @@ export const IterationDetailPage = () => {
     }
   };
 
-  if (loading) return <Preloader label="Loading assignment details..." />;
+  if (loading) {
+    return (
+      <div style={{ backgroundColor: '#ffffff', minHeight: '100vh', padding: '24px 32px' }}>
+        <ContentLoader label="Loading assignment details..." />
+      </div>
+    );
+  }
   if (!iteration) return null;
 
-  const hasSubmission = iteration.has_submitted;
   const submission = iteration.submission;
   const rubrics = iteration.rubrics || [];
   const totalPoints = rubrics.reduce((sum, r) => sum + Number(r.weight || 0), 0);
-
-  // Check if overdue
-  const isPastDeadline = iteration.deadline ? new Date(iteration.deadline).getTime() < Date.now() : false;
 
   // Work Status pill calculation
   let statusText = 'Assigned';
@@ -134,6 +132,7 @@ export const IterationDetailPage = () => {
     statusBg = '#fce8e6';
     statusColor = '#c5221f';
   }
+
 
   return (
     <div style={{ backgroundColor: '#ffffff', minHeight: '100vh', padding: '24px 32px' }}>

@@ -28,7 +28,7 @@ import { PageHeader } from '../../../components/ui/PageHeader';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Toast } from '../../../components/ui/Toast';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { Modal } from '../../../components/ui/Modal';
 import { formatDate } from '../../../utils/dateUtils';
 
@@ -236,11 +236,15 @@ export const BrowseGroupsPage = () => {
     }
   };
 
-  if (loading) {
-    return <Preloader text="Loading Groups, Requests & Invitations..." />;
-  }
+  const pendingSentRequestsCount = !loading ? sentRequests.filter((r) => r.status === 'pending').length : 0;
 
-  const pendingSentRequestsCount = sentRequests.filter((r) => r.status === 'pending').length;
+  if (loading) {
+    return (
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <ContentLoader label="Loading groups, requests & invitations..." />
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>

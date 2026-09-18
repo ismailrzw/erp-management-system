@@ -6,7 +6,7 @@ import { EmptyState } from '../../../components/ui/EmptyState';
 import { iterationsApi } from '../../../api/iterationsApi';
 import { coursesApi } from '../../../api/coursesApi';
 import { IterationsTabBar } from './IterationsTabBar';
-import { ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Download, Users, Calendar, FileText, Search, FileDown } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Download, Users, Calendar, FileText, Search, FileDown } from 'lucide-react';
 
 const fmt = (s) => {
   if (!s) return '-';

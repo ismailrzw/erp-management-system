@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Calendar, AlertCircle } from 'lucide-react';
+import { X, AlertCircle } from 'lucide-react';
 import { evaluatorApi } from '../../../api/evaluatorApi';
 
 export function MeetingFormModal({ defaultGroupId = '', assignedGroups = [], onClose, onSuccess }) {

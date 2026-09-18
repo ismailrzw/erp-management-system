@@ -18,7 +18,7 @@ import { StatCard } from '../../components/ui/StatCard';
 import { AccordionItem } from '../../components/ui/Accordion';
 import { Modal } from '../../components/ui/Modal';
 import { Toast } from '../../components/ui/Toast';
-import { Preloader } from '../../components/ui/Preloader';
+import { ContentLoader } from '../../components/ui/ContentLoader';
 import { formatDate } from '../../utils/dateUtils';
 import { formatFileSize } from '../../utils/fileUtils';
 
@@ -238,7 +238,11 @@ export const ManagerDashboard = () => {
   };
 
   if (loading) {
-    return <Preloader />;
+    return (
+      <div>
+        <ContentLoader label="Loading dashboard..." />
+      </div>
+    );
   }
 
   return (

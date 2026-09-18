@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../../../components/ui/Modal';
 import { iterationsApi } from '../../../api/iterationsApi';
 import { rubricTemplatesApi } from '../../../api/rubricTemplatesApi';
-import { Plus, Trash2, CheckCircle2, AlertTriangle, Copy, ChevronDown, ChevronUp, Sparkles, BookOpen } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, AlertTriangle, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 
 const DEFAULT_LEVELS = {
   '0': 'Not submitted / Unsatisfactory',
@@ -18,45 +18,6 @@ const EMPTY_RUBRIC = () => ({
   weight: 5,
   levels: { ...DEFAULT_LEVELS },
 });
-
-export const SRS_PRESET_TEMPLATES = [
-  {
-    name: 'SRS Phase 1 — Problem Statement & Scope (15 Marks)',
-    course: 'All Courses',
-    criteria: [
-      { question: 'Problem Statement & Background', weight: 5, levels: { ...DEFAULT_LEVELS } },
-      { question: 'Objectives & Project Scope', weight: 5, levels: { ...DEFAULT_LEVELS } },
-      { question: 'Target Audience & Stakeholder Analysis', weight: 5, levels: { ...DEFAULT_LEVELS } },
-    ],
-  },
-  {
-    name: 'SRS Phase 2 — Requirements Analysis (25 Marks)',
-    course: 'All Courses',
-    criteria: [
-      { question: 'Functional Requirements & User Stories', weight: 10, levels: { ...DEFAULT_LEVELS } },
-      { question: 'Non-Functional Requirements & Constraints', weight: 5, levels: { ...DEFAULT_LEVELS } },
-      { question: 'Use Case Diagrams & Specifications', weight: 10, levels: { ...DEFAULT_LEVELS } },
-    ],
-  },
-  {
-    name: 'SRS Phase 3 — Architecture & DB Design (30 Marks)',
-    course: 'All Courses',
-    criteria: [
-      { question: 'System Architecture & Data Flow Diagrams', weight: 10, levels: { ...DEFAULT_LEVELS } },
-      { question: 'Database ERD & Schema Design', weight: 10, levels: { ...DEFAULT_LEVELS } },
-      { question: 'UI/UX Wireframes & Component Design', weight: 10, levels: { ...DEFAULT_LEVELS } },
-    ],
-  },
-  {
-    name: 'SRS Phase 4 — Final SRS & Traceability (30 Marks)',
-    course: 'All Courses',
-    criteria: [
-      { question: 'IEEE Standard 830 Document Format', weight: 10, levels: { ...DEFAULT_LEVELS } },
-      { question: 'Requirements Traceability Matrix (RTM)', weight: 10, levels: { ...DEFAULT_LEVELS } },
-      { question: 'Test Plan & Verification Criteria', weight: 10, levels: { ...DEFAULT_LEVELS } },
-    ],
-  },
-];
 
 export const RubricBuilderModal = ({
   isOpen,
@@ -147,20 +108,6 @@ export const RubricBuilderModal = ({
 
   const toggleLevels = (index) => {
     setOpenLevels((prev) => ({ ...prev, [index]: !prev[index] }));
-  };
-
-  const handleLoadPreset = (preset) => {
-    if (!preset || !preset.criteria) return;
-    if (isTemplateOperation && !templateName) {
-      setTemplateName(preset.name.split(' (')[0]);
-    }
-    setRubrics(
-      preset.criteria.map((r) => ({
-        ...r,
-        weight: Number(r.weight || 0),
-        levels: { ...DEFAULT_LEVELS, ...(r.levels || {}) },
-      }))
-    );
   };
 
   const handleLoadCustomTemplate = (tplId) => {

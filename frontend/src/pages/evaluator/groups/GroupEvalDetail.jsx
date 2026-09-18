@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, FileText, Download, CheckCircle2, Clock, Calendar, Plus } from 'lucide-react';
+import { ArrowLeft, Users, FileText, Download, Calendar, Plus } from 'lucide-react';
 import { evaluatorApi } from '../../../api/evaluatorApi';
 import { EvaluationSheet } from '../evaluations/EvaluationSheet';
 import { MeetingFormModal } from '../meetings/MeetingFormModal';

@@ -25,7 +25,7 @@ import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { InviteModal } from '../../../components/student/groups/InviteModal';
 import { LeadershipTransferModal } from '../../../components/student/groups/LeadershipTransferModal';
 import { EditGroupModal } from '../../../components/student/groups/EditGroupModal';
@@ -157,7 +157,11 @@ export const MyGroupPage = () => {
   };
 
   if (loading) {
-    return <Preloader text="Loading Project Group..." />;
+    return (
+      <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+        <ContentLoader label="Loading project group..." />
+      </div>
+    );
   }
 
   // If student has no group

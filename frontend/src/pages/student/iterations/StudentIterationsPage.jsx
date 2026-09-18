@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { EmptyState } from '../../../components/ui/EmptyState';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { Toast } from '../../../components/ui/Toast';
 import { DeadlineCountdown } from '../../../components/ui/DeadlineCountdown';
 import { studentIterationsApi } from '../../../api/studentIterationsApi';
@@ -139,7 +139,7 @@ export const StudentIterationsPage = () => {
       )}
 
       {loading ? (
-        <Preloader label="Loading iterations..." />
+        <ContentLoader label="Loading iterations..." />
       ) : filteredIterations.length === 0 ? (
         <EmptyState
           title={statusFilter !== 'all' ? 'No matching iterations' : 'No Iterations Available'}

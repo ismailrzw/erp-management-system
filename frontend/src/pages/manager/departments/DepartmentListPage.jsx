@@ -11,7 +11,7 @@ import {
 import { departmentsApi } from '../../../api/departmentsApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { formatDate } from '../../../utils/dateUtils';
 
 export const DepartmentListPage = () => {
@@ -129,11 +129,9 @@ export const DepartmentListPage = () => {
     }
   };
 
-  if (loading) {
-    return <Preloader />;
-  }
-
-  return (
+  return loading ? (
+    <div><ContentLoader label="Loading departments..." /></div>
+  ) : (
     <div>
       <Toast
         message={toast.message}

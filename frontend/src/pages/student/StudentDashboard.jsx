@@ -25,7 +25,7 @@ import { StatusBadge } from '../../components/ui/StatusBadge';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Toast } from '../../components/ui/Toast';
-import { Preloader } from '../../components/ui/Preloader';
+import { ContentLoader } from '../../components/ui/ContentLoader';
 import { EditGroupModal } from '../../components/student/groups/EditGroupModal';
 import { formatFileSize } from '../../utils/fileUtils';
 
@@ -120,19 +120,23 @@ export const StudentDashboard = () => {
     }
   };
 
-  if (loading) {
-    return <Preloader text="Loading Student Dashboard..." />;
-  }
+  const student = !loading ? (data?.student || {}) : {};
+  const group = !loading ? data?.group : null;
+  const isLeader = !loading && (group?.members?.find((m) => m.id === student?.id)?.is_leader || group?.is_leader);
+  const isApproved = !loading && group?.status === 'approved';
+  const isRejected = !loading && group?.status === 'rejected';
+  const pendingInvitesCount = !loading ? (data?.pending_invitations_count || 0) : 0;
+  const announcements = !loading ? (data?.announcements || []) : [];
+  const recentAnnouncementsCount = !loading ? (data?.recent_announcements_count ?? announcements.filter((a) => a.is_recent).length) : 0;
+  const attachments = !loading ? (data?.attachments || []) : [];
 
-  const student = data?.student || {};
-  const group = data?.group;
-  const isLeader = group?.members?.find((m) => m.id === student?.id)?.is_leader || group?.is_leader;
-  const isApproved = group?.status === 'approved';
-  const isRejected = group?.status === 'rejected';
-  const pendingInvitesCount = data?.pending_invitations_count || 0;
-  const announcements = data?.announcements || [];
-  const recentAnnouncementsCount = data?.recent_announcements_count ?? announcements.filter((a) => a.is_recent).length;
-  const attachments = data?.attachments || [];
+  if (loading) {
+    return (
+      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <ContentLoader label="Loading student dashboard..." />
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto' }}>

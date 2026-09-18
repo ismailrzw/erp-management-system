@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
@@ -18,7 +18,6 @@ import {
   Eye,
   Search,
   CheckCircle2,
-  Table as TableIcon,
 } from 'lucide-react';
 
 const formatHumanDate = (dateStr) => {

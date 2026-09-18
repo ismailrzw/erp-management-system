@@ -10,7 +10,7 @@ import {
 import { studentGroupApi } from '../../../api/studentGroupApi';
 import { studentDashboardApi } from '../../../api/studentDashboardApi';
 import { Toast } from '../../../components/ui/Toast';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 
 export const CreateGroupPage = () => {
   const [formData, setFormData] = useState({ name: '', project_title: '' });
@@ -93,7 +93,11 @@ export const CreateGroupPage = () => {
   };
 
   if (loading) {
-    return <Preloader text="Checking group eligibility..." />;
+    return (
+      <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+        <ContentLoader label="Checking group eligibility..." />
+      </div>
+    );
   }
 
   if (existingGroup) {

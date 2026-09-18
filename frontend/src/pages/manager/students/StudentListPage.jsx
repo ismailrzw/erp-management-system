@@ -16,7 +16,7 @@ import { coursesApi } from '../../../api/coursesApi';
 import { teachersApi } from '../../../api/teachersApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 
 export const StudentListPage = () => {
   const [students, setStudents] = useState([]);
@@ -193,11 +193,9 @@ export const StudentListPage = () => {
     }
   };
 
-  if (loading) {
-    return <Preloader />;
-  }
-
-  return (
+  return loading ? (
+    <div><ContentLoader label="Loading students..." /></div>
+  ) : (
     <div>
       <Toast
         message={toast.message}

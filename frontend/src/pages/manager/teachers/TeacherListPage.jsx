@@ -12,7 +12,7 @@ import { teachersApi } from '../../../api/teachersApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { formatDate } from '../../../utils/dateUtils';
 
 export const TeacherListPage = () => {
@@ -151,11 +151,9 @@ export const TeacherListPage = () => {
     }
   };
 
-  if (loading) {
-    return <Preloader />;
-  }
-
-  return (
+  return loading ? (
+    <div><ContentLoader label="Loading teachers..." /></div>
+  ) : (
     <div>
       <Toast
         message={toast.message}

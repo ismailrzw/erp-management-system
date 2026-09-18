@@ -4,7 +4,7 @@ import { Trash2, RotateCcw, ArrowLeft, RefreshCw, AlertTriangle } from 'lucide-r
 import { studentsApi } from '../../../api/studentsApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 
 export const StudentTrashPage = () => {
   const [deletedStudents, setDeletedStudents] = useState([]);
@@ -95,11 +95,9 @@ export const StudentTrashPage = () => {
     }
   };
 
-  if (loading) {
-    return <Preloader />;
-  }
-
-  return (
+  return loading ? (
+    <div><ContentLoader label="Loading deleted students..." /></div>
+  ) : (
     <div>
       <Toast
         message={toast.message}
