@@ -11,7 +11,7 @@ import {
   ChevronDown,
   Compass,
   PlusCircle,
-  User,
+  Settings,
   LogOut,
   X,
   Layers,
@@ -133,13 +133,10 @@ export const Sidebar = ({
       section: 'Groups',
       items: [
         {
-          type: 'menu',
-          key: 'groups',
+          type: 'link',
           text: 'Manage Groups',
+          to: '/manager/groups',
           icon: FolderGit2,
-          subitems: [
-            { text: 'All Project Groups', to: '/manager/groups/manage' },
-          ],
         },
       ],
     },
@@ -152,9 +149,8 @@ export const Sidebar = ({
           text: 'Manage Iterations',
           icon: Layers,
           subitems: [
-            { text: 'Milestones', to: '/manager/iterations' },
-            { text: 'Submissions', to: '/manager/iterations/submissions' },
-            { text: 'Rubrics', to: '/manager/rubric-templates' },
+            { text: 'Milestones & Rubrics', to: '/manager/iterations' },
+            { text: 'Rubric Templates', to: '/manager/rubric-templates' },
           ],
         },
       ],
@@ -180,9 +176,9 @@ export const Sidebar = ({
       items: [
         {
           type: 'link',
-          text: 'My Profile',
-          to: '/manager/profile',
-          icon: User,
+          text: 'Settings',
+          to: '/manager/settings',
+          icon: Settings,
         },
         {
           type: 'action',
@@ -246,9 +242,9 @@ export const Sidebar = ({
       items: [
         {
           type: 'link',
-          text: 'My Profile',
-          to: '/student/profile',
-          icon: User,
+          text: 'Settings',
+          to: '/student/settings',
+          icon: Settings,
         },
         {
           type: 'action',
@@ -299,6 +295,12 @@ export const Sidebar = ({
     {
       section: 'Account',
       items: [
+        {
+          type: 'link',
+          text: 'Settings',
+          to: '/evaluator/settings',
+          icon: Settings,
+        },
         {
           type: 'action',
           text: 'Logout',
@@ -423,7 +425,10 @@ export const Sidebar = ({
           {sec.items.map((item, itemIdx) => {
             const Icon = item.icon;
             if (item.type === 'link') {
-              const isActive = location.pathname === item.to;
+              const isActive =
+                location.pathname === item.to ||
+                (item.to.endsWith('/settings') && location.pathname.endsWith('/profile')) ||
+                (item.to.endsWith('/profile') && location.pathname.endsWith('/settings'));
               return (
                 <NavLink
                   key={itemIdx}

@@ -140,7 +140,8 @@ export default function App() {
             <Route path="iterations/:id/submissions" element={<IterationSubmissionsPage />} />
             <Route path="rubric-templates" element={<RubricTemplatesPage />} />
 
-            {/* Profile & Security */}
+            {/* Profile & Settings */}
+            <Route path="settings" element={<ManagerProfilePage />} />
             <Route path="profile" element={<ManagerProfilePage />} />
 
             {/* Fallback for other subpages */}
@@ -160,6 +161,7 @@ export default function App() {
             <Route path="group/my" element={<MyGroupPage />} />
             <Route path="group/create" element={<CreateGroupPage />} />
             <Route path="group/browse" element={<BrowseGroupsPage />} />
+            <Route path="settings" element={<StudentProfilePage />} />
             <Route path="profile" element={<StudentProfilePage />} />
 
             {/* Iterations (Student) */}
@@ -184,6 +186,8 @@ export default function App() {
             <Route path="groups/:groupId" element={<GroupEvalDetail />} />
             <Route path="exhibition" element={<ExhibitionPage />} />
             <Route path="meetings" element={<MeetingsPage />} />
+            <Route path="settings" element={<ManagerProfilePage />} />
+            <Route path="profile" element={<ManagerProfilePage />} />
 
             {/* Fallback for other subpages */}
             <Route path="*" element={<NotFoundPage />} />

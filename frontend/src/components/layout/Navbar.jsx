@@ -253,9 +253,11 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
                 onClick={() => {
                   setDropdownOpen(false);
                   if (user?.role === 'student') {
-                    navigate('/student/profile');
+                    navigate('/student/settings');
+                  } else if (user?.role === 'evaluator') {
+                    navigate('/evaluator/settings');
                   } else {
-                    navigate('/manager/profile');
+                    navigate('/manager/settings');
                   }
                 }}
                 style={{
