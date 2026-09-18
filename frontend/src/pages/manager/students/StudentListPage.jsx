@@ -324,10 +324,11 @@ export const StudentListPage = () => {
               onChange={(e) => setSelectedDept(e.target.value)}
               style={{
                 width: '100%',
-                padding: '8px 10px',
+                padding: '8px 32px 8px 11px',
                 border: '1px solid #cbd5e1',
-                borderRadius: '4px',
+                borderRadius: '8px',
                 fontSize: '13px',
+                fontWeight: 500,
                 color: '#334155',
                 outline: 'none',
                 backgroundColor: '#ffffff',
@@ -342,16 +343,17 @@ export const StudentListPage = () => {
             </select>
           </div>
 
-          <div style={{ flex: '0 1 120px' }}>
+          <div style={{ flex: '0 1 130px' }}>
             <select
               value={selectedSection}
               onChange={(e) => setSelectedSection(e.target.value)}
               style={{
                 width: '100%',
-                padding: '8px 10px',
+                padding: '8px 32px 8px 11px',
                 border: '1px solid #cbd5e1',
-                borderRadius: '4px',
+                borderRadius: '8px',
                 fontSize: '13px',
+                fontWeight: 500,
                 color: '#334155',
                 outline: 'none',
                 backgroundColor: '#ffffff',
@@ -622,14 +624,14 @@ export const StudentListPage = () => {
               />
             </div>
             <div style={{ flex: 2 }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '5px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
                 Course *
               </label>
               <select
                 value={editFormData.course}
                 onChange={(e) => setEditFormData({ ...editFormData, course: e.target.value })}
                 required
-                style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '8px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
+                style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 34px 8px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
               >
                 <option value="">Select Course</option>
                 {courses.map((c) => (
@@ -642,14 +644,14 @@ export const StudentListPage = () => {
           </div>
 
           <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '5px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
               Assigned Teacher *
             </label>
             <select
               value={editFormData.teacher}
               onChange={(e) => setEditFormData({ ...editFormData, teacher: e.target.value })}
               required
-              style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '8px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
+              style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 34px 8px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
             >
               <option value="">Select Teacher</option>
               {teachers.map((t) => (

@@ -14,6 +14,9 @@ import {
   User,
   LogOut,
   X,
+  Layers,
+  Award,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 
@@ -38,6 +41,7 @@ export const Sidebar = ({
     courses: false,
     teachers: false,
     groups: false,
+    iterations: false,
     survey: false,
     studentGroup: false,
   });
@@ -47,6 +51,7 @@ export const Sidebar = ({
   };
 
   const isStudent = user?.role === 'student';
+  const isEvaluator = user?.role === 'evaluator';
 
   const managerNavSections = [
     {
@@ -139,6 +144,22 @@ export const Sidebar = ({
       ],
     },
     {
+      section: 'Iterations',
+      items: [
+        {
+          type: 'menu',
+          key: 'iterations',
+          text: 'Manage Iterations',
+          icon: Layers,
+          subitems: [
+            { text: 'Milestones', to: '/manager/iterations' },
+            { text: 'Submissions', to: '/manager/iterations/submissions' },
+            { text: 'Rubrics', to: '/manager/rubric-templates' },
+          ],
+        },
+      ],
+    },
+    {
       section: 'Survey',
       items: [
         {
@@ -210,6 +231,17 @@ export const Sidebar = ({
       ],
     },
     {
+      section: 'Milestones',
+      items: [
+        {
+          type: 'link',
+          text: 'Iterations & Submissions',
+          to: '/student/iterations',
+          icon: Layers,
+        },
+      ],
+    },
+    {
       section: 'Account',
       items: [
         {
@@ -229,7 +261,56 @@ export const Sidebar = ({
     },
   ];
 
-  const navSections = isStudent ? studentNavSections : managerNavSections;
+  const evaluatorNavSections = [
+    {
+      section: 'Navigation',
+      items: [
+        {
+          type: 'link',
+          text: 'Dashboard',
+          to: '/evaluator/dashboard',
+          icon: LayoutDashboard,
+        },
+      ],
+    },
+    {
+      section: 'Evaluator Portal',
+      items: [
+        {
+          type: 'link',
+          text: 'Assigned Groups',
+          to: '/evaluator/groups',
+          icon: Users,
+        },
+        {
+          type: 'link',
+          text: 'Exhibition Eval',
+          to: '/evaluator/exhibition',
+          icon: Award,
+        },
+        {
+          type: 'link',
+          text: 'Supervision Meetings',
+          to: '/evaluator/meetings',
+          icon: Calendar,
+        },
+      ],
+    },
+    {
+      section: 'Account',
+      items: [
+        {
+          type: 'action',
+          text: 'Logout',
+          onClick: handleLogout,
+          icon: LogOut,
+          danger: true,
+        },
+      ],
+    },
+  ];
+
+  const navSections = isStudent ? studentNavSections : isEvaluator ? evaluatorNavSections : managerNavSections;
 
   const sidebarStyle = isMobileView
     ? {

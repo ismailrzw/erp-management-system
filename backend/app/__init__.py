@@ -104,6 +104,13 @@ def create_app(config_class=Config):
     from app.blueprints.manager.groups import manager_groups_ns
     api.add_namespace(manager_groups_ns, path="/api/manager/groups")
 
+    # ── Iterations Namespaces (Sprint 3) ─────────────────
+    from app.blueprints.manager.iterations import iterations_ns
+    api.add_namespace(iterations_ns, path='/api/manager/iterations')
+
+    from app.blueprints.manager.rubric_templates import rubric_templates_ns
+    api.add_namespace(rubric_templates_ns, path='/api/manager/rubric-templates')
+
     # ── Register Student Namespaces ──────────────────────────────
     from app.blueprints.student.dashboard import student_dashboard_ns
     api.add_namespace(student_dashboard_ns, path="/api/student/dashboard")
@@ -125,5 +132,12 @@ def create_app(config_class=Config):
 
     from app.blueprints.student.attachments import student_attachments_ns
     api.add_namespace(student_attachments_ns, path="/api/student/attachments")
+
+    from app.blueprints.student.iterations import student_iterations_ns
+    api.add_namespace(student_iterations_ns, path='/api/student/iterations')
+
+    # ── Evaluator Blueprint (Sprint 4) ───────────────────────────────────────
+    from app.blueprints.evaluator import evaluator_bp
+    app.register_blueprint(evaluator_bp, url_prefix='/api/evaluator')
 
     return app
