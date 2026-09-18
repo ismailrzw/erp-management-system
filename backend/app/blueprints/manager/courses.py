@@ -29,7 +29,8 @@ course_model = courses_ns.model("Course", {
     "dept": fields.String(required=True),
     "min_group": fields.Integer(required=True),
     "max_group": fields.Integer(required=True),
-    "deadline": fields.String(required=True),
+    "group_formation_deadline": fields.String(required=True, description="Group formation deadline (ISO date)"),
+    "deadline": fields.String(required=False, description="Legacy alias"),
     "deleted": fields.Boolean(readonly=True),
     "created_at": fields.String(readonly=True),
 })
@@ -38,15 +39,18 @@ create_model = courses_ns.model("CourseCreate", {
     "dept": fields.String(required=True, description="Department code, e.g. SE"),
     "min_group": fields.Integer(required=True, description="Minimum students per group"),
     "max_group": fields.Integer(required=True, description="Maximum students per group"),
-    "deadline": fields.String(required=True, description="ISO date, e.g. 2026-08-15"),
+    "group_formation_deadline": fields.String(required=False, description="Group Formation Deadline (ISO date, e.g. 2026-08-15)"),
+    "deadline": fields.String(required=False, description="Legacy alias for Group Formation Deadline"),
 })
 update_model = courses_ns.model("CourseUpdate", {
     "name": fields.String(required=False),
     "dept": fields.String(required=False),
     "min_group": fields.Integer(required=False),
     "max_group": fields.Integer(required=False),
+    "group_formation_deadline": fields.String(required=False),
     "deadline": fields.String(required=False),
 })
+
 
 list_parser = courses_ns.parser()
 list_parser.add_argument("deleted", type=inputs.boolean, default=False, location="args")
@@ -73,7 +77,11 @@ class CourseList(Resource):
         try:
             payload = CreateCourseSchema().load(request.get_json() or {})
             course = create_course(
-                payload["name"], payload["dept"], payload["min_group"], payload["max_group"], payload["deadline"]
+                name=payload["name"],
+                dept=payload["dept"],
+                min_group=payload["min_group"],
+                max_group=payload["max_group"],
+                group_formation_deadline=payload.get("group_formation_deadline") or payload.get("deadline"),
             )
             log_audit(mongo.db, get_jwt_identity(), Role.MANAGER, "courses", "create",
                       target_id=course["id"], new_value=course)
@@ -112,13 +120,14 @@ class CourseDetail(Resource):
                 dept=payload.get("dept"),
                 min_group=payload.get("min_group"),
                 max_group=payload.get("max_group"),
-                deadline=payload.get("deadline"),
+                group_formation_deadline=payload.get("group_formation_deadline") or payload.get("deadline"),
             )
             if course is None:
                 return {"success": False, "message": "Course not found."}, 404
             log_audit(mongo.db, get_jwt_identity(), Role.MANAGER, "courses", "update",
                       target_id=course_id, new_value=course)
             return {"success": True, "message": "Course updated.", "data": course}, 200
+
         except ValidationError as exc:
             return {"success": False, "message": exc.messages}, 422
         except ValueError as exc:

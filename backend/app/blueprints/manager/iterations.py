@@ -33,7 +33,9 @@ create_iteration_model = iterations_ns.model('CreateIteration', {
     'title': fields.String(required=True, example='Project Proposal Submission'),
     'details': fields.String(example='Submit a comprehensive proposal...'),
     'course': fields.String(required=True, example='Final Year Project - Fall 2025'),
-    'deadline': fields.String(required=True, example='2026-07-10')
+    'deadline': fields.String(required=True, example='2026-07-10'),
+    'is_group_formation': fields.Boolean(default=False, description='Set as group formation cutoff milestone'),
+    'late_penalty_percent': fields.Integer(default=0, description='Penalty deduction percent for late group formation'),
 })
 
 rubrics_payload_model = iterations_ns.model('RubricsPayload', {
@@ -85,7 +87,7 @@ class IterationListResource(Resource):
 
             # Enrich with submission stats and cross-course/department breakdown
             iter_course = item.get('course')
-            group_query = {"status": "approved"}
+            group_query = {"status": {"$in": ["approved", "pending"]}}
             if iter_course and iter_course != 'All Courses':
                 group_query["course"] = iter_course
 
@@ -166,6 +168,14 @@ class IterationListResource(Resource):
                 rubric_template_id = tpl_oid
 
         now = datetime.now(timezone.utc)
+        is_group_formation = bool(data.get('is_group_formation', False))
+        late_penalty_percent = 0
+        if data.get('late_penalty_percent') is not None:
+            try:
+                late_penalty_percent = max(0, min(100, int(data.get('late_penalty_percent'))))
+            except (ValueError, TypeError):
+                late_penalty_percent = 0
+
         doc = {
             "title": title,
             "details": details,
@@ -175,6 +185,8 @@ class IterationListResource(Resource):
             "deadline": deadline,
             "rubrics": rubrics,
             "rubric_template_id": rubric_template_id,
+            "is_group_formation": is_group_formation,
+            "late_penalty_percent": late_penalty_percent,
             "createdAt": now,
             "updatedAt": now
         }
@@ -230,6 +242,13 @@ class IterationDetailResource(Resource):
             update_fields['deadline'] = data['deadline'].strip()
         if data.get('course'):
             update_fields['course'] = data['course'].strip()
+        if 'is_group_formation' in data:
+            update_fields['is_group_formation'] = bool(data['is_group_formation'])
+        if 'late_penalty_percent' in data:
+            try:
+                update_fields['late_penalty_percent'] = max(0, min(100, int(data['late_penalty_percent'])))
+            except (ValueError, TypeError):
+                update_fields['late_penalty_percent'] = 0
 
         update_fields['updatedAt'] = datetime.now(timezone.utc)
 
@@ -358,7 +377,7 @@ class IterationSubmissionsResource(Resource):
         course = iteration.get("course")
 
         # Fetch all approved groups — if "All Courses", get all; otherwise filter by course
-        group_query = {"status": "approved"}
+        group_query = {"status": {"$in": ["approved", "pending"]}}
         if course and course != "All Courses":
             group_query["course"] = course
 
@@ -403,6 +422,8 @@ class IterationSubmissionsResource(Resource):
             else:
                 cb["pending_count"] += 1
 
+            formation_status = group.get("formation_status", "on_time")
+
             if sub:
                 # Resolve submitter name
                 submitter_name = "Unknown"
@@ -423,6 +444,8 @@ class IterationSubmissionsResource(Resource):
                     "project_title": project_title,
                     "course": group_course,
                     "dept": group_dept,
+                    "formation_status": formation_status,
+                    "is_formation_late": formation_status == "late",
                     "submitted": True,
                     "is_late": is_late,
                     "submitted_by": submitter_name,
@@ -439,6 +462,8 @@ class IterationSubmissionsResource(Resource):
                     "project_title": project_title,
                     "course": group_course,
                     "dept": group_dept,
+                    "formation_status": formation_status,
+                    "is_formation_late": formation_status == "late",
                     "submitted": False,
                     "is_late": False,
                     "submitted_by": None,
@@ -449,18 +474,32 @@ class IterationSubmissionsResource(Resource):
                     "note": None,
                 })
 
+        # If this is a group formation milestone, fetch ungrouped students in the course
+        from app.services.student_service import list_ungrouped_students
+        target_course = course if course and course != "All Courses" else None
+        ungrouped_students = list_ungrouped_students(course=target_course)
+
         summary = {
             "total_groups": len(all_groups),
             "submitted_count": sum(1 for r in result if r["submitted"]),
             "late_count": sum(1 for r in result if r.get("is_late")),
             "pending_count": sum(1 for r in result if not r["submitted"]),
+            "late_formation_count": sum(1 for r in result if r.get("is_formation_late")),
             "iteration_title": iteration.get("title"),
             "iteration_deadline": iteration.get("deadline"),
+            "is_group_formation": iteration.get("is_group_formation", False),
+            "late_penalty_percent": iteration.get("late_penalty_percent", 0),
             "course": course,
             "by_course": list(course_breakdown.values()),
         }
 
         return success_response(
             "Submissions retrieved successfully.",
-            data={"summary": summary, "submissions": result}
+            data={
+                "summary": summary,
+                "submissions": result,
+                "ungrouped_students": ungrouped_students,
+                "is_group_formation": iteration.get("is_group_formation", False),
+                "late_penalty_percent": iteration.get("late_penalty_percent", 0),
+            }
         )
