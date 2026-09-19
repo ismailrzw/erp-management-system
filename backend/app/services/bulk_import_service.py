@@ -1,4 +1,4 @@
-﻿"""Validation and atomic-style bulk creation of student accounts."""
+"""Validation and atomic-style bulk creation of student accounts."""
 
 import csv
 from datetime import datetime, timezone
@@ -145,7 +145,7 @@ def bulk_create_students(rows: list[dict]) -> dict:
             UserFields.DEPT: data["dept"].upper(),
             UserFields.SECTION: data["section"].upper(),
             UserFields.COURSE: data["course"],
-            UserFields.ROLL: data["roll"],
+            UserFields.ROLL: data["roll"].strip().lower(),
             "session": data["session"],
             "teacher": data["teacher"],
             UserFields.RECOVERY_EMAIL: data["recovery_email"],
