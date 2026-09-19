@@ -21,8 +21,8 @@ from app.services.email_service import (
 
 
 def generate_student_email(roll: str, domain: str = "bnu.edu.pk") -> str:
-    """Generate email from roll number in lowercase."""
-    return f"{roll.strip().lower()}@{domain}"
+    """Generate an email from the normalized, uppercase roll number."""
+    return f"{roll.strip().upper()}@{domain}"
 
 
 def generate_initial_password(roll: str) -> str:
