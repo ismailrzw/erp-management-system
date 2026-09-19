@@ -243,6 +243,7 @@ export function GroupEvalDetail() {
                   rubrics={selectedIteration.rubrics || []}
                   existingEval={selectedIteration.evaluation}
                   onSubmitSuccess={loadGroupDetail}
+                  members={group.members || []}
                 />
               </div>
             ) : (

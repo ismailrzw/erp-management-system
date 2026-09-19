@@ -13,6 +13,7 @@ import {
   Loader2,
   RefreshCw,
 } from 'lucide-react';
+import { useAuth } from '../../context/useAuth';
 import { evaluatorApi } from '../../api/evaluatorApi';
 import { supervisorsApi } from '../../api/supervisorsApi';
 import { Modal } from '../../components/ui/Modal';
@@ -23,6 +24,7 @@ import { formatDate } from '../../utils/dateUtils';
 
 export function EvaluatorDashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [stats, setStats] = useState({
     assigned_groups: 0,
     pending_evaluations: 0,
@@ -125,7 +127,7 @@ export function EvaluatorDashboard() {
       {/* Standard Unified Header */}
       <PageHeader
         title="Evaluator Dashboard"
-        subtitle="Welcome back! Here is an overview of your assigned groups, supervision requests, and evaluations."
+        subtitle={`Welcome back${user?.name ? `, ${user.name}` : ''}! Here is an overview of your assigned groups, supervision requests, and evaluations.`}
       >
         <button
           type="button"

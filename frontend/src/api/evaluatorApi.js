@@ -20,4 +20,6 @@ export const evaluatorApi = {
     return api.get(`/evaluator/meetings${query}`);
   },
   logMeeting: (data) => api.post('/evaluator/meetings', data),
+  getGroupRubrics: (groupId) => api.get(`/evaluator/groups/${groupId}/rubrics`),
+  saveGroupRubrics: (groupId, rubrics) => api.post(`/evaluator/groups/${groupId}/rubrics`, { rubrics }),
 };
