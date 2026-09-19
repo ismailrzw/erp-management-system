@@ -1,6 +1,5 @@
 from test_students import create_student
 
-
 DASHBOARD_URL = "/api/manager/dashboard/"
 EXPECTED_KEYS = {"total_students", "total_evaluators", "total_groups", "pending_groups", "total_groups_evaluated", "groups_remaining_evaluation", "students_without_group", "announcements", "attachments"}
 
