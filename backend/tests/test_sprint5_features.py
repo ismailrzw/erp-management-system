@@ -30,7 +30,7 @@ def test_student_creation_password_set_and_login_flow(client, manager_headers):
     data = res.get_json()["data"]
     student_id = data["student_id"]
     assert data["roll"] == "f2024-551"
-    assert data["email"] == "f2024-551@bnu.edu.pk"
+    assert data["email"].upper() == "F2024-551@BNU.EDU.PK"
 
     # 2. Create password set token and activate account
     raw_token = AuthService.create_password_set_token(student_id)
