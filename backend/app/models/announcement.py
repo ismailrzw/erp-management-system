@@ -1,11 +1,11 @@
-﻿"""Announcement Model - field constants for announcements and announcement views."""
+"""Announcement Model - field constants for announcements and announcement views."""
 
 
 class AnnouncementScope:
     BROADCAST = "broadcast"
     DEPARTMENT = "department"
     GROUP = "group"
-    ALL = [BROADCAST, DEPARTMENT, GROUP]
+    ALL = (BROADCAST, DEPARTMENT, GROUP)
 
 
 class AnnouncementFields:

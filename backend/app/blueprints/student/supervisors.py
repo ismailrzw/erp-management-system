@@ -8,7 +8,9 @@ from flask_jwt_extended import get_jwt_identity
 from flask_restx import Namespace, Resource, fields
 
 from app.extensions import mongo
-from app.models.group import COLLECTION as GROUPS_COLLECTION, Field as GroupField, Status as GroupStatus
+from app.models.group import COLLECTION as GROUPS_COLLECTION
+from app.models.group import Field as GroupField
+from app.models.group import Status as GroupStatus
 from app.models.user import Role
 from app.services.supervisor_service import (
     cancel_supervisor_request,

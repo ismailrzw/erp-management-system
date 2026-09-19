@@ -1,4 +1,4 @@
-﻿"""Business logic for teacher/evaluator operations."""
+"""Business logic for teacher/evaluator operations."""
 
 import random
 import string
@@ -34,7 +34,8 @@ def _serialize(doc: dict | None) -> dict | None:
     # Calculate real-time active groups supervised by this teacher
     supervision_by_course = []
     try:
-        from app.models.group import COLLECTION as GROUPS_COLLECTION, Status as GroupStatus
+        from app.models.group import COLLECTION as GROUPS_COLLECTION
+        from app.models.group import Status as GroupStatus
         active_cnt = mongo.db[GROUPS_COLLECTION].count_documents({
             "supervisor_id": ObjectId(result["id"]),
             "status": {"$ne": GroupStatus.DELETED},
@@ -48,7 +49,7 @@ def _serialize(doc: dict | None) -> dict | None:
             {"course": cg["_id"] or "General", "count": cg["count"], "max_cap": 4}
             for cg in course_groups
         ]
-    except Exception:
+    except Exception:  # noqa: BLE001
         active_cnt = result.get(UserFields.ACTIVE_SUPERVISION_COUNT, 0)
     result["active_supervision_count"] = active_cnt
     result["supervision_by_course"] = supervision_by_course

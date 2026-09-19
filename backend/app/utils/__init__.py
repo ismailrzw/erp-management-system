@@ -2,7 +2,7 @@
 """JWT error handlers - return dictionaries for flask_restx compatibility."""
 
 
-from .audit import log_audit as log_audit  # noqa: F401
+from .audit import log_audit as log_audit
 
 
 def register_jwt_handlers(jwt):

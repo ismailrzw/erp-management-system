@@ -6,6 +6,7 @@ Idempotent script to align existing course records with Sprint 05 specifications
 
 import os
 import sys
+
 from dotenv import load_dotenv
 from pymongo import MongoClient
 

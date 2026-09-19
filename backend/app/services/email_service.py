@@ -1,4 +1,4 @@
-﻿# backend/app/services/email_service.py
+# backend/app/services/email_service.py
 """
 Email Service Module — PBL Management System.
 
@@ -164,7 +164,7 @@ Beaconhouse National University
     return _dispatch_email(to_email, subject, text_content, html_content)
 
 
-def send_ungrouped_notification(to_email: str, student_name: str, deadline: str, custom_message: str = None) -> bool:
+def send_ungrouped_notification(to_email: str, student_name: str, deadline: str, custom_message: str | None = None) -> bool:
     """
     Sends a reminder email to a student who has not yet joined a project group.
     """

@@ -8,11 +8,13 @@ import io
 import re
 
 import openpyxl
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from bson import ObjectId
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
 from app.extensions import mongo
-from app.models.group import COLLECTION as GROUPS_COLLECTION, Field as GroupField, Status as GroupStatus
+from app.models.group import COLLECTION as GROUPS_COLLECTION
+from app.models.group import Field as GroupField
+from app.models.group import Status as GroupStatus
 from app.models.user import UserFields
 
 

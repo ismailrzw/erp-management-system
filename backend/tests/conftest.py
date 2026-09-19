@@ -64,7 +64,7 @@ def reset_test_database(app):
                 mongo.db[collection_name].delete_many({})
         try:
             mongo.db.users.drop_index("email_1")
-        except Exception:
+        except Exception:  # noqa: S110, BLE001
             pass
         mongo.db.users.create_index("email", unique=True)
         mongo.db.users.replace_one(
@@ -222,8 +222,9 @@ EVALUATOR_PASSWORD = "eval-password-123"
 @pytest.fixture
 def evaluator_user(app) -> dict:
     """Insert an evaluator user directly and return id + credentials."""
-    import bcrypt as _bcrypt
     from datetime import datetime, timezone
+
+    import bcrypt as _bcrypt
     with app.app_context():
         pw_hash = _bcrypt.hashpw(EVALUATOR_PASSWORD.encode(), _bcrypt.gensalt()).decode()
         doc = {
@@ -259,8 +260,9 @@ def evaluator_headers(evaluator_token) -> dict[str, str]:
 @pytest.fixture
 def approved_group(app, evaluator_user) -> dict:
     """Insert an approved group assigned to the evaluator."""
-    from bson import ObjectId as OID
     from datetime import datetime, timezone
+
+    from bson import ObjectId as OID
     with app.app_context():
         gid = mongo.db.groups.insert_one({
             "name":    "Alpha Team",
@@ -299,8 +301,9 @@ def iteration_with_rubrics(app, approved_group) -> dict:
 @pytest.fixture
 def submitted_evaluation(app, evaluator_user, approved_group, iteration_with_rubrics) -> dict:
     """Insert a pre-existing locked evaluation (for duplicate / lock tests)."""
-    from bson import ObjectId as OID
     from datetime import datetime, timezone
+
+    from bson import ObjectId as OID
     with app.app_context():
         eid = mongo.db.evaluations.insert_one({
             "group_id":             OID(approved_group["id"]),

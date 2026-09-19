@@ -1,4 +1,4 @@
-﻿import json
+import json
 from datetime import datetime
 
 from bson import ObjectId
@@ -141,8 +141,8 @@ def create_app(config_class=Config):
     api.add_namespace(student_iterations_ns, path='/api/student/iterations')
 
     from app.blueprints.student.supervisors import (
-        student_supervisors_ns,
         student_supervisor_requests_ns,
+        student_supervisors_ns,
     )
     api.add_namespace(student_supervisors_ns, path="/api/student/supervisors")
     api.add_namespace(student_supervisor_requests_ns, path="/api/student/supervisor-requests")
@@ -156,7 +156,7 @@ def create_app(config_class=Config):
         with app.app_context():
             mongo.db.users.create_index("email", unique=True)
             mongo.db.users.create_index("roll", sparse=True)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: S110, BLE001
         pass
 
     return app

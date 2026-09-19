@@ -5,7 +5,11 @@ from datetime import datetime, timezone
 from bson import ObjectId
 
 from app.extensions import mongo
-from app.models.announcement import AnnouncementFields, AnnouncementScope, AnnouncementViewFields
+from app.models.announcement import (
+    AnnouncementFields,
+    AnnouncementScope,
+    AnnouncementViewFields,
+)
 from app.models.group import Field as GroupField
 from app.models.user import Role, UserFields
 

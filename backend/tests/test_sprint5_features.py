@@ -8,10 +8,10 @@ Integration tests for Sprint 5+ features:
 5. Targeted Announcements by Scope (REQ-08)
 """
 import io
-import openpyxl
 from datetime import datetime, timezone
-from app.extensions import mongo
-from app.models.user import Role
+
+import openpyxl
+
 from app.services.auth_service import AuthService
 
 
@@ -368,7 +368,7 @@ def test_supervisor_cap_enforced_per_course(client, manager_headers):
 
     # Fill 4 groups in "Course Alpha"
     for i in range(1, 5):
-        s_headers, g = make_group(f"f2024-60{i}", "Course Alpha")
+        s_headers, _ = make_group(f"f2024-60{i}", "Course Alpha")
         req_res = client.post("/api/student/supervisor-requests/", json={"evaluator_id": eval_id}, headers=s_headers)
         assert req_res.status_code == 201
         req_id = req_res.get_json()["data"]["id"]
@@ -376,13 +376,13 @@ def test_supervisor_cap_enforced_per_course(client, manager_headers):
         assert acc_res.status_code == 200
 
     # 5th group in "Course Alpha" -> should fail
-    s5_headers, g5 = make_group("f2024-605", "Course Alpha")
+    s5_headers, _ = make_group("f2024-605", "Course Alpha")
     req5_res = client.post("/api/student/supervisor-requests/", json={"evaluator_id": eval_id}, headers=s5_headers)
     assert req5_res.status_code == 400
     assert "maximum capacity of 4 projects for course 'Course Alpha'" in req5_res.get_json()["message"]
 
     # Group in "Course Beta" -> SHOULD SUCCEED because cap is per course!
-    s_beta_headers, g_beta = make_group("f2024-606", "Course Beta")
+    s_beta_headers, _ = make_group("f2024-606", "Course Beta")
     req_beta_res = client.post("/api/student/supervisor-requests/", json={"evaluator_id": eval_id}, headers=s_beta_headers)
     assert req_beta_res.status_code == 201
     req_beta_id = req_beta_res.get_json()["data"]["id"]

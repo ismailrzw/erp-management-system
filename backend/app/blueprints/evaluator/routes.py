@@ -1,4 +1,4 @@
-﻿# backend/app/blueprints/evaluator/routes.py
+# backend/app/blueprints/evaluator/routes.py
 """
 Evaluator Dashboard and Groups endpoints.
 
@@ -16,7 +16,7 @@ from app.blueprints.evaluator import evaluator_bp as bp
 from app.extensions import mongo
 from app.models.user import Role
 from app.utils.decorators import role_required
-from app.utils.responses import success_response, error_response
+from app.utils.responses import error_response, success_response
 
 
 def _serialize_id(doc):
@@ -77,8 +77,10 @@ def evaluator_dashboard():
     })
 
     # Active supervisions and breakdown by course (max 4 per course)
+    from app.models.group import COLLECTION as GROUPS_COLLECTION
+    from app.models.group import Field as GroupField
+    from app.models.group import Status as GroupStatus
     from app.services.supervisor_service import get_evaluator_active_count
-    from app.models.group import COLLECTION as GROUPS_COLLECTION, Field as GroupField, Status as GroupStatus
     active_supervision_count = get_evaluator_active_count(str(evaluator_id))
     supervised_groups = list(mongo.db[GROUPS_COLLECTION].find({
         "supervisor_id": evaluator_id,
@@ -155,7 +157,7 @@ def get_group_detail(group_id):
     # Security check: evaluator must be assigned to this group
     try:
         gid = ObjectId(group_id)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return error_response("Invalid group ID.", 400)
 
     assignment = mongo.db.assignments.find_one({
@@ -270,7 +272,7 @@ def get_evaluator_group_rubrics(group_id):
     evaluator_id = ObjectId(get_jwt_identity())
     try:
         gid = ObjectId(group_id)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return error_response("Invalid group ID.", 400)
 
     assignment = mongo.db.assignments.find_one({"evaluator_id": evaluator_id, "group_id": gid})
@@ -289,7 +291,7 @@ def save_evaluator_group_rubrics(group_id):
     evaluator_id = ObjectId(get_jwt_identity())
     try:
         gid = ObjectId(group_id)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return error_response("Invalid group ID.", 400)
 
     assignment = mongo.db.assignments.find_one({"evaluator_id": evaluator_id, "group_id": gid})

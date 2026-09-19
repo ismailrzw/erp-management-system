@@ -1,4 +1,4 @@
-﻿# backend/app/services/group_service.py
+# backend/app/services/group_service.py
 """
 Business logic for student group formation and the invitation workflow.
 
@@ -204,6 +204,7 @@ def generate_group_name(year: int | None = None) -> str:
     Format is configurable via Config.GROUP_NAME_FORMAT (default 'GRP-{YEAR}-{SEQ:03d}').
     """
     import re
+
     from app.config import Config
 
     if year is None:
@@ -218,8 +219,7 @@ def generate_group_name(year: int | None = None) -> str:
         if match:
             try:
                 seq = int(match.group(1))
-                if seq > max_seq:
-                    max_seq = seq
+                max_seq = max(max_seq, seq)
             except ValueError:
                 pass
 
@@ -237,6 +237,7 @@ def compute_formation_status(course_name: str, dept: str, created_at: datetime) 
       - None: if no deadline or iteration is configured
     """
     from datetime import date
+
     from app.models.group import FormationStatus
 
     deadline_str = None
@@ -280,7 +281,7 @@ def compute_formation_status(course_name: str, dept: str, created_at: datetime) 
         if created_date == dl_date:
             return FormationStatus.ON_DEADLINE
         return FormationStatus.LATE
-    except Exception:
+    except Exception:  # noqa: BLE001
         return FormationStatus.ON_TIME
 
 
@@ -335,7 +336,7 @@ def create_group(student_id: str, project_title: str, name: str | None = None, p
                 uploaded_by=student_id,
             )
             proposal_attachment_id = _oid(att_doc["id"])
-        except Exception as att_err:
+        except Exception as att_err:  # noqa: BLE001
             raise ValueError(f"Failed to process proposal attachment: {att_err!s}")
 
     group_doc = {

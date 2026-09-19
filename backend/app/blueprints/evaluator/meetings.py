@@ -1,4 +1,4 @@
-﻿# backend/app/blueprints/evaluator/meetings.py
+# backend/app/blueprints/evaluator/meetings.py
 """
 Supervision Meeting Log endpoints.
 
@@ -15,7 +15,7 @@ from app.blueprints.evaluator import evaluator_bp as bp
 from app.extensions import mongo
 from app.models.user import Role
 from app.utils.decorators import role_required
-from app.utils.responses import success_response, error_response
+from app.utils.responses import error_response, success_response
 
 
 @bp.route("/meetings", methods=["POST"])
@@ -41,7 +41,7 @@ def log_meeting():
     try:
         gid = ObjectId(group_id)
         eid = ObjectId(evaluator_id)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return error_response("Invalid ID format.", 400)
 
     # Verify evaluator is assigned to this group
@@ -93,7 +93,7 @@ def list_meetings():
     if group_id_str:
         try:
             query["group_id"] = ObjectId(group_id_str)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return error_response("Invalid group_id.", 400)
 
     meetings_raw = list(mongo.db.meetings.find(query).sort("date", -1))

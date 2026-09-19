@@ -5,17 +5,24 @@ Supervisor Service — Business logic for supervisor expertise profiles and requ
 
 import re
 from datetime import datetime, timezone
+
 from bson import ObjectId
 from bson.errors import InvalidId
 
 from app.extensions import mongo
 from app.models.group import (
     COLLECTION as GROUPS_COLLECTION,
+)
+from app.models.group import (
     Field as GroupField,
+)
+from app.models.group import (
     Status as GroupStatus,
 )
 from app.models.supervisor_request import (
     COLLECTION as SUP_REQ_COLLECTION,
+)
+from app.models.supervisor_request import (
     SupervisorRequestFields,
     SupervisorRequestStatus,
 )

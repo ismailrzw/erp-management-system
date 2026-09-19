@@ -5,6 +5,7 @@ Evaluator Supervisor Requests & Domains Endpoints.
 
 from flask import request
 from flask_jwt_extended import get_jwt_identity
+
 from app.blueprints.evaluator import evaluator_bp
 from app.models.user import Role
 from app.services.supervisor_service import (

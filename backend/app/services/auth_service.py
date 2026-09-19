@@ -1,4 +1,4 @@
-﻿# backend/app/services/auth_service.py
+# backend/app/services/auth_service.py
 """
 Auth Service — business logic for authentication.
 
@@ -228,7 +228,7 @@ class AuthService:
                 if bcrypt.checkpw(raw_token.encode("utf-8"), stored_hash.encode("utf-8")):
                     matched_token_doc = doc
                     break
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: S112, BLE001
                 continue
 
         if not matched_token_doc:

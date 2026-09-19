@@ -4,7 +4,6 @@ Sprint 4 — Evaluator Iteration Scoring Tests.
 
 Tests the POST /api/evaluator/evaluations endpoint and immutability guards.
 """
-import pytest
 
 
 # ── Unit test (no HTTP) ───────────────────────────────────────────────────────

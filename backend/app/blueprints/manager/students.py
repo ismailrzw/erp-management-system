@@ -1,4 +1,4 @@
-﻿# backend/app/blueprints/manager/students.py
+# backend/app/blueprints/manager/students.py
 """
 Manager Students API endpoints.
 
@@ -13,6 +13,8 @@ Data lifecycle enforced here:
   4. Service raises ValueError for constraint violations (409) or returns
      the serialised student dict.
 """
+
+from datetime import datetime, timezone
 
 from flask import Blueprint, request
 from flask_jwt_extended import get_jwt_identity
@@ -36,7 +38,6 @@ from app.services.student_service import (
     soft_delete_student,
     update_student,
 )
-
 from app.utils.audit import log_audit
 from app.utils.decorators import role_required
 
@@ -320,10 +321,10 @@ class UngroupedStudentsExport(Resource):
     def get(self):
         """Export ungrouped students as an Excel (.xlsx) spreadsheet."""
         import io
-        from datetime import datetime
-        from flask import send_file
+
         import openpyxl
-        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from flask import send_file
+        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
         try:
             dept = request.args.get("dept")
@@ -381,7 +382,7 @@ class UngroupedStudentsExport(Resource):
             wb.save(output)
             output.seek(0)
 
-            filename = f"ungrouped_students_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            filename = f"ungrouped_students_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.xlsx"
             return send_file(
                 output,
                 mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

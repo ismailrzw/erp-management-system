@@ -1,4 +1,4 @@
-﻿# backend/app/blueprints/evaluator/exhibition.py
+# backend/app/blueprints/evaluator/exhibition.py
 """
 Exhibition Evaluation endpoints.
 
@@ -17,9 +17,9 @@ from flask_jwt_extended import get_jwt_identity
 from app.blueprints.evaluator import evaluator_bp as bp
 from app.extensions import mongo
 from app.models.user import Role
-from app.utils.decorators import role_required
-from app.utils.responses import success_response, error_response
 from app.utils.audit import log_audit
+from app.utils.decorators import role_required
+from app.utils.responses import error_response, success_response
 
 
 @bp.route("/exhibition", methods=["GET"])
@@ -84,7 +84,7 @@ def submit_exhibition_eval():
     try:
         gid = ObjectId(group_id)
         eid = ObjectId(evaluator_id)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return error_response("Invalid ID format.", 400)
 
     # Verify assignment

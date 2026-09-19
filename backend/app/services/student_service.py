@@ -9,10 +9,15 @@ from bson.errors import InvalidId
 
 from app.config import Config
 from app.extensions import mongo
-from app.models.group import COLLECTION as GROUPS_COLLECTION, Field as GroupField, Status as GroupStatus
+from app.models.group import COLLECTION as GROUPS_COLLECTION
+from app.models.group import Field as GroupField
+from app.models.group import Status as GroupStatus
 from app.models.user import Role, UserFields
 from app.services.auth_service import AuthService
-from app.services.email_service import send_password_set_email, send_ungrouped_notification
+from app.services.email_service import (
+    send_password_set_email,
+    send_ungrouped_notification,
+)
 
 
 def generate_student_email(roll: str, domain: str = "bnu.edu.pk") -> str:
@@ -343,7 +348,8 @@ def notify_ungrouped_students(dept: str | None = None, course: str | None = None
             if cdoc:
                 deadline_val = cdoc.get("group_formation_deadline") or cdoc.get("deadline") or ""
             if not deadline_val:
-                from app.models.iteration import COLLECTION_ITERATIONS, Field as IterField
+                from app.models.iteration import COLLECTION_ITERATIONS
+                from app.models.iteration import Field as IterField
                 it_doc = mongo.db[COLLECTION_ITERATIONS].find_one(
                     {"course": course_name, IterField.IS_GROUP_FORMATION: True}
                 )

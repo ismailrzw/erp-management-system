@@ -7,7 +7,8 @@ Endpoints:
 GET /api/manager/reports/groups — Export 12-column Excel (.xlsx) report for project groups
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
+
 from flask import request, send_file
 from flask_restx import Namespace, Resource
 
@@ -35,7 +36,7 @@ class ManagerGroupReportExport(Resource):
 
         try:
             excel_stream = generate_group_report_excel(dept=dept, course=course, status=status)
-            filename = f"group_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            filename = f"group_report_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.xlsx"
             return send_file(
                 excel_stream,
                 mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

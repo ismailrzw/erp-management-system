@@ -1,4 +1,4 @@
-﻿# backend/app/blueprints/evaluator/evaluations.py
+# backend/app/blueprints/evaluator/evaluations.py
 """
 Evaluator Iteration Scoring endpoints.
 
@@ -18,9 +18,9 @@ from flask_jwt_extended import get_jwt_identity
 from app.blueprints.evaluator import evaluator_bp as bp
 from app.extensions import mongo
 from app.models.user import Role
-from app.utils.decorators import role_required
-from app.utils.responses import success_response, error_response
 from app.utils.audit import log_audit
+from app.utils.decorators import role_required
+from app.utils.responses import error_response, success_response
 
 
 def _compute_weighted(scores: dict, rubrics: list) -> float:
@@ -74,7 +74,7 @@ def submit_evaluation():
         gid = ObjectId(group_id)
         iid = ObjectId(iteration_id)
         eid = ObjectId(evaluator_id)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return error_response("Invalid ID format.", 400)
 
     assignment = mongo.db.assignments.find_one({
@@ -118,6 +118,8 @@ def submit_evaluation():
         all_student_scores = []
         for se in (student_evaluations or []):
             sid = str(se.get("student_id", ""))
+            if valid_student_ids and sid not in valid_student_ids:
+                return error_response(f"Student ID '{sid}' is not a valid member of this group.", 422)
             m_scores = se.get("manager_scores", {})
             e_scores = se.get("evaluator_scores", {})
             remark   = (se.get("remark") or "").strip()
@@ -217,13 +219,13 @@ def list_evaluations():
     if group_id_str:
         try:
             query["group_id"] = ObjectId(group_id_str)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return error_response("Invalid group_id.", 400)
 
     if iteration_id_str:
         try:
             query["iteration_id"] = ObjectId(iteration_id_str)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return error_response("Invalid iteration_id.", 400)
 
     evals = list(mongo.db.evaluations.find(query).sort("submitted_at", -1))
