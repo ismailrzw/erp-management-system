@@ -1,4 +1,4 @@
-"""Manager department API endpoints."""
+﻿"""Manager department API endpoints."""
 
 from flask import request
 from flask_jwt_extended import get_jwt_identity

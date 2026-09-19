@@ -1,4 +1,4 @@
-"""Validation schemas for attachment metadata."""
+﻿"""Validation schemas for attachment metadata."""
 
 from marshmallow import Schema, fields, validate
 

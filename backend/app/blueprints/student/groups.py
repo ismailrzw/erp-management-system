@@ -1,4 +1,4 @@
-# backend/app/blueprints/student/groups.py
+﻿# backend/app/blueprints/student/groups.py
 """
 Student Group API endpoints.
 
@@ -34,7 +34,6 @@ from marshmallow import ValidationError
 from app.extensions import mongo
 from app.models.user import Role
 from app.schemas.group_schema import (
-    CreateGroupSchema,
     InviteMemberSchema,
     UpdateGroupSchema,
 )
@@ -94,10 +93,10 @@ join_request_model = student_groups_ns.model("SendJoinRequest", {
     "message": fields.String(description="Optional note to the group leader"),
 })
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # Group endpoints
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 @student_groups_ns.route("/my")
 class MyGroup(Resource):
@@ -140,22 +139,43 @@ class GroupListCreate(Resource):
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500
 
-    @student_groups_ns.doc(security="Bearer Auth")
-    @student_groups_ns.expect(create_group_model)
+    @student_groups_ns.doc(security="Bearer Auth", consumes=["multipart/form-data", "application/json"])
     @role_required(Role.STUDENT)
     def post(self):
-        """Create a new pending group.  The calling student becomes the leader."""
-        # Check 1 — schema validation
-        try:
-            validated = CreateGroupSchema().load(request.get_json() or {})
-        except ValidationError as exc:
-            return {"success": False, "message": "Validation failed.", "errors": exc.messages}, 422
+        """Create a new pending group with auto-generated group name and mandatory proposal attachment."""
+        project_title = None
+        proposal_file = None
+        name = None
+
+        if request.content_type and "multipart/form-data" in request.content_type:
+            project_title = request.form.get("project_title")
+            name = request.form.get("name")
+            proposal_file = request.files.get("proposal") or request.files.get("file")
+        else:
+            json_body = request.get_json() or {}
+            project_title = json_body.get("project_title")
+            name = json_body.get("name")
+        if not project_title or not project_title.strip():
+            return {"success": False, "message": "Project title is required (at least 3 characters)."}, 422
+
+        if name and name.strip():
+            clean_name = name.strip()
+            if len(clean_name) < 3 or len(clean_name) > 100:
+                return {"success": False, "message": "Group name must be between 3 and 100 characters."}, 422
+            import re
+            if not re.match(r"^[\w\s\-]+$", clean_name):
+                return {"success": False, "message": "Group name may only contain letters, numbers, spaces, hyphens, and underscores."}, 422
 
         student_id = get_jwt_identity()
 
         # Check 2 — service layer
         try:
-            group = create_group(student_id, validated["name"], validated["project_title"])
+            group = create_group(
+                student_id=student_id,
+                project_title=project_title.strip(),
+                name=name.strip() if name else None,
+                proposal_file=proposal_file,
+            )
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 409
         except Exception as exc:  # noqa: BLE001
@@ -166,7 +186,7 @@ class GroupListCreate(Resource):
             target_id=group["id"],
             new_value={"name": group["name"], "project_title": group["project_title"]},
         )
-        return {"success": True, "message": "Group created successfully.", "data": group}, 201
+        return {"success": True, "message": f"Project group {group['name']} created successfully.", "data": group}, 201
 
 
 @student_groups_ns.route("/<string:group_id>")
@@ -436,10 +456,10 @@ class RejectJoinRequest(Resource):
         log_audit(mongo.db, leader_id, Role.STUDENT, "join_requests", "reject", target_id=request_id)
         return {"success": True, "message": result["message"]}, 200
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # Invitation endpoints
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 @student_invitations_ns.route("/pending")
 class PendingInvitations(Resource):
@@ -507,10 +527,10 @@ class DeclineInvitation(Resource):
         )
         return {"success": True, "message": "Invitation declined.", "data": result}, 200
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # Peer discovery endpoint
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 @student_search_ns.route("/")
 class StudentSearch(Resource):

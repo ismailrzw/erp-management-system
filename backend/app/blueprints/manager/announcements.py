@@ -1,4 +1,4 @@
-# backend/app/blueprints/manager/announcements.py
+﻿# backend/app/blueprints/manager/announcements.py
 """
 Manager announcement API endpoints.
 
@@ -40,17 +40,23 @@ announcement_model = announcements_ns.model("Announcement", {
     "content":    fields.String(required=True),
     "date":       fields.String(readonly=True),
     "posted_by":  fields.String(readonly=True),
+    "scope":      fields.String(readonly=True),
+    "target_ids": fields.List(fields.String(), readonly=True),
     "created_at": fields.String(readonly=True),
 })
 create_model = announcements_ns.model("AnnouncementCreate", {
-    "title":   fields.String(required=True),
-    "content": fields.String(required=True),
-    "date":    fields.String(required=False),
+    "title":      fields.String(required=True),
+    "content":    fields.String(required=True),
+    "date":       fields.String(required=False),
+    "scope":      fields.String(required=False, description="broadcast | department | group"),
+    "target_ids": fields.List(fields.String(), required=False, description="Dept codes or Group IDs"),
 })
 update_model = announcements_ns.model("AnnouncementUpdate", {
-    "title":   fields.String(required=False),
-    "content": fields.String(required=False),
-    "date":    fields.String(required=False),
+    "title":      fields.String(required=False),
+    "content":    fields.String(required=False),
+    "date":       fields.String(required=False),
+    "scope":      fields.String(required=False),
+    "target_ids": fields.List(fields.String(), required=False),
 })
 
 
@@ -77,8 +83,12 @@ class AnnouncementList(Resource):
         # Check 2 — service-layer persistence
         try:
             announcement = create_announcement(
-                payload["title"], payload["content"],
-                get_jwt_identity(), payload.get("date"),
+                title=payload["title"],
+                content=payload["content"],
+                posted_by=get_jwt_identity(),
+                date=payload.get("date"),
+                scope=payload.get("scope", "broadcast"),
+                target_ids=payload.get("target_ids", []),
             )
         except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 500
@@ -119,10 +129,12 @@ class AnnouncementDetail(Resource):
         # Check 2 — service-layer persistence
         try:
             announcement = update_announcement(
-                announcement_id,
-                payload.get("title"),
-                payload.get("content"),
-                payload.get("date"),
+                announcement_id=announcement_id,
+                title=payload.get("title"),
+                content=payload.get("content"),
+                date=payload.get("date"),
+                scope=payload.get("scope"),
+                target_ids=payload.get("target_ids"),
             )
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 400

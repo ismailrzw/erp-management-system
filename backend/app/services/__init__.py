@@ -1,4 +1,4 @@
-# backend/app/services/__init__.py
+﻿# backend/app/services/__init__.py
 """
 Services package — business logic layer.
 

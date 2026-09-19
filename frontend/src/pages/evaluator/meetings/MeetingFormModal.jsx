@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Calendar, AlertCircle } from 'lucide-react';
+import { X, AlertCircle } from 'lucide-react';
 import { evaluatorApi } from '../../../api/evaluatorApi';
 
 export function MeetingFormModal({ defaultGroupId = '', assignedGroups = [], onClose, onSuccess }) {
@@ -235,16 +235,7 @@ export function MeetingFormModal({ defaultGroupId = '', assignedGroups = [], onC
             <button
               type="submit"
               disabled={saving}
-              style={{
-                padding: '8px 18px',
-                borderRadius: '6px',
-                border: 'none',
-                background: saving ? '#93c5fd' : '#2563eb',
-                color: '#ffffff',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: saving ? 'not-allowed' : 'pointer',
-              }}
+              className="btn btn-primary btn-sm"
             >
               {saving ? 'Saving...' : 'Save Meeting Log'}
             </button>

@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EmptyState } from '../../../components/ui/EmptyState';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { Toast } from '../../../components/ui/Toast';
 import { Modal } from '../../../components/ui/Modal';
 import { iterationsApi } from '../../../api/iterationsApi';
 import { coursesApi } from '../../../api/coursesApi';
 import { IterationFormModal } from './IterationFormModal';
 import { RubricBuilderModal } from './RubricBuilderModal';
+import { IterationsTabBar } from './IterationsTabBar';
 import {
   Plus,
   Edit2,
@@ -17,8 +18,6 @@ import {
   Eye,
   Search,
   CheckCircle2,
-  Table as TableIcon,
-  Flag,
 } from 'lucide-react';
 
 const formatHumanDate = (dateStr) => {
@@ -60,7 +59,6 @@ export const IterationsManagePage = () => {
   const [editingIteration, setEditingIteration] = useState(null);
   const [isRubricOpen, setIsRubricOpen] = useState(false);
   const [rubricIteration, setRubricIteration] = useState(null);
-  const [isMatrixModalOpen, setIsMatrixModalOpen] = useState(false);
 
   // Delete Confirmation Modal
   const [iterationToDelete, setIterationToDelete] = useState(null);
@@ -167,131 +165,12 @@ export const IterationsManagePage = () => {
     return { all: iterations.length, active, completed };
   }, [iterations]);
 
-  // Aggregate Cross-Course Matrix
-  const courseMatrix = useMemo(() => {
-    const map = {};
-    iterations.forEach((item) => {
-      const stats = item.submission_stats || {};
-      (stats.by_course || []).forEach((bc) => {
-        const key = `${bc.course}__${bc.dept}`;
-        if (!map[key]) {
-          map[key] = {
-            course: bc.course,
-            dept: bc.dept,
-            total_groups: bc.total_groups || 0,
-            submitted_count: 0,
-            late_count: 0,
-            on_time_count: 0,
-          };
-        }
-        map[key].submitted_count += bc.submitted_count || 0;
-        map[key].late_count += bc.late_count || 0;
-        map[key].on_time_count += bc.on_time_count || 0;
-      });
-    });
-    return Object.values(map);
-  }, [iterations]);
-
   return (
     <div style={{ padding: '24px 32px', maxWidth: '1240px', margin: '0 auto', fontFamily: 'inherit' }}>
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
-      {/* Top Sub-Navigation Bar (Stitch Design) */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: '1px solid #e2e8f0',
-          paddingBottom: '12px',
-          marginBottom: '20px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
-          {/* 1. Milestones (active) */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13.5px',
-              fontWeight: 600,
-              color: '#2563eb',
-              position: 'relative',
-              paddingBottom: '8px',
-              cursor: 'pointer',
-            }}
-          >
-            <Flag size={16} />
-            <span>Milestones</span>
-            <span
-              style={{
-                position: 'absolute',
-                bottom: '-13px',
-                left: 0,
-                right: 0,
-                height: '2px',
-                backgroundColor: '#2563eb',
-                borderRadius: '2px',
-              }}
-            />
-          </div>
-
-          {/* 2. Submissions */}
-          <button
-            type="button"
-            onClick={() => navigate('/manager/iterations/submissions')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13.5px',
-              fontWeight: 500,
-              color: '#64748b',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '0 0 8px 0',
-              transition: 'color 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#1e293b')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-          >
-            <Eye size={15} />
-            <span>Submissions</span>
-          </button>
-
-          {/* 3. Rubrics */}
-          <button
-            type="button"
-            onClick={() => navigate('/manager/rubric-templates')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13.5px',
-              fontWeight: 500,
-              color: '#64748b',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '0 0 8px 0',
-              transition: 'color 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#1e293b')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-          >
-            <Sliders size={15} />
-            <span>Rubrics</span>
-          </button>
-        </div>
-
-        {/* Term / Cycle Indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#64748b' }}>
-          <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-          <span>Active Academic Semester</span>
-        </div>
-      </div>
+      {/* Top Sub-Navigation Bar */}
+      <IterationsTabBar />
 
       {/* Main Filter & Action Toolbar */}
       <div
@@ -402,23 +281,7 @@ export const IterationsManagePage = () => {
           <button
             type="button"
             onClick={handleCreateNew}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: '#2563eb',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '7px',
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(37,99,235,0.2)',
-              transition: 'background-color 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1d4ed8')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#2563eb')}
+            className="btn btn-primary"
           >
             <Plus size={16} />
             <span>Add Iteration</span>
@@ -428,7 +291,7 @@ export const IterationsManagePage = () => {
 
       {/* Main Milestones Table */}
       {loading ? (
-        <Preloader label="Loading milestones..." />
+        <ContentLoader label="Loading milestones..." />
       ) : filteredIterations.length === 0 ? (
         <EmptyState
           title="No Milestones Found"
@@ -441,29 +304,20 @@ export const IterationsManagePage = () => {
           onAction={handleCreateNew}
         />
       ) : (
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '10px',
-            border: '1px solid #e2e8f0',
-            overflow: 'hidden',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-            marginBottom: '24px',
-          }}
-        >
+        <div className="table-responsive-container table-wide" style={{ borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)', marginBottom: '24px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', width: '40%' }}>
+                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '220px' }}>
                   Milestone & Deliverable
                 </th>
-                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', width: '25%' }}>
+                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '160px' }}>
                   Status & Schedule
                 </th>
-                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', width: '20%' }}>
+                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '160px' }}>
                   Deliverable Progress
                 </th>
-                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', width: '15%', textAlign: 'right' }}>
+                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '100px', textAlign: 'right' }}>
                   Actions
                 </th>
               </tr>
@@ -485,8 +339,6 @@ export const IterationsManagePage = () => {
                       borderBottom: '1px solid #f1f5f9',
                       transition: 'background-color 0.15s ease',
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafafa')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
                   >
                     {/* 1. Milestone & Deliverable */}
                     <td style={{ padding: '16px 18px', verticalAlign: 'top' }}>
@@ -497,9 +349,9 @@ export const IterationsManagePage = () => {
                             width: '36px',
                             height: '36px',
                             borderRadius: '8px',
-                            backgroundColor: isCompleted ? '#f1f5f9' : '#eff6ff',
+                            backgroundColor: isCompleted ? '#f1f5f9' : 'var(--primary-light)',
                             border: `1px solid ${isCompleted ? '#e2e8f0' : '#bfdbfe'}`,
-                            color: isCompleted ? '#64748b' : '#2563eb',
+                            color: isCompleted ? '#64748b' : 'var(--primary)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -530,6 +382,21 @@ export const IterationsManagePage = () => {
                                 }}
                               >
                                 {item.course}
+                              </span>
+                            )}
+                            {item.is_group_formation && (
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  padding: '1px 7px',
+                                  borderRadius: '10px',
+                                  backgroundColor: '#ecfdf5',
+                                  color: '#059669',
+                                  border: '1px solid #a7f3d0',
+                                }}
+                              >
+                                👥 Formation Cutoff {item.late_penalty_percent ? `(-${item.late_penalty_percent}%)` : ''}
                               </span>
                             )}
                           </div>
@@ -631,7 +498,7 @@ export const IterationsManagePage = () => {
                             style={{
                               width: `${pct}%`,
                               height: '100%',
-                              backgroundColor: pct === 100 ? '#10b981' : '#2563eb',
+                              backgroundColor: pct === 100 ? '#10b981' : 'var(--primary)',
                               borderRadius: '3px',
                               transition: 'width 0.3s ease',
                             }}
@@ -648,27 +515,7 @@ export const IterationsManagePage = () => {
                           type="button"
                           onClick={() => navigate(`/manager/iterations/${item._id}/submissions`)}
                           title="View Group Submissions"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '6px',
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            color: '#64748b',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#eff6ff';
-                            e.currentTarget.style.color = '#2563eb';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = '#64748b';
-                          }}
+                          className="btn btn-ghost btn-sm"
                         >
                           <Eye size={17} />
                         </button>
@@ -678,27 +525,8 @@ export const IterationsManagePage = () => {
                           type="button"
                           onClick={() => handleOpenRubrics(item)}
                           title={rubricCount > 0 ? `Configure Rubrics (${rubricCount} criteria)` : 'Configure Rubrics'}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '6px',
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            color: rubricCount > 0 ? '#2563eb' : '#64748b',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#eff6ff';
-                            e.currentTarget.style.color = '#1d4ed8';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = rubricCount > 0 ? '#2563eb' : '#64748b';
-                          }}
+                          className="btn btn-ghost btn-sm"
+                          style={{ color: rubricCount > 0 ? 'var(--primary)' : undefined }}
                         >
                           <Sliders size={17} />
                         </button>
@@ -708,27 +536,7 @@ export const IterationsManagePage = () => {
                           type="button"
                           onClick={() => handleEdit(item)}
                           title="Edit Milestone"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '6px',
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            color: '#64748b',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#f1f5f9';
-                            e.currentTarget.style.color = '#0f172a';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = '#64748b';
-                          }}
+                          className="btn btn-ghost btn-sm"
                         >
                           <Edit2 size={16} />
                         </button>
@@ -738,27 +546,7 @@ export const IterationsManagePage = () => {
                           type="button"
                           onClick={() => setIterationToDelete(item)}
                           title="Delete Milestone"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '6px',
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            color: '#94a3b8',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#fef2f2';
-                            e.currentTarget.style.color = '#dc2626';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = '#94a3b8';
-                          }}
+                          className="btn btn-danger-outline btn-sm"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -822,16 +610,7 @@ export const IterationsManagePage = () => {
               type="button"
               onClick={() => setIterationToDelete(null)}
               disabled={deleteLoading}
-              style={{
-                padding: '7px 14px',
-                borderRadius: '6px',
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#475569',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
@@ -839,16 +618,7 @@ export const IterationsManagePage = () => {
               type="button"
               onClick={handleConfirmDelete}
               disabled={deleteLoading}
-              style={{
-                padding: '7px 14px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: '#dc2626',
-                color: '#ffffff',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              className="btn btn-danger"
             >
               {deleteLoading ? 'Deleting...' : 'Delete Milestone'}
             </button>

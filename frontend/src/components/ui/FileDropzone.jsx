@@ -83,7 +83,7 @@ export const FileDropzone = ({ onFileSelect, selectedFile, onFileRemove, disable
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-            <FileText size={24} style={{ color: '#2563eb', flexShrink: 0 }} />
+            <FileText size={24} style={{ color: 'var(--primary)', flexShrink: 0 }} />
             <div style={{ minWidth: 0 }}>
               <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {selectedFile.name}
@@ -124,14 +124,14 @@ export const FileDropzone = ({ onFileSelect, selectedFile, onFileRemove, disable
             alignItems: 'center',
             justifyContent: 'center',
             padding: '24px 16px',
-            border: `2px dashed ${isDragOver ? '#2563eb' : error ? '#ef4444' : '#cbd5e1'}`,
+            border: `2px dashed ${isDragOver ? 'var(--primary)' : error ? '#ef4444' : '#cbd5e1'}`,
             borderRadius: '8px',
-            backgroundColor: isDragOver ? '#eff6ff' : '#f8fafc',
+            backgroundColor: isDragOver ? 'var(--primary-light)' : '#f8fafc',
             cursor: disabled ? 'not-allowed' : 'pointer',
             transition: 'all 0.2s ease',
           }}
         >
-          <UploadCloud size={32} style={{ color: isDragOver ? '#2563eb' : '#64748b', marginBottom: '8px' }} />
+          <UploadCloud size={32} style={{ color: isDragOver ? 'var(--primary)' : '#64748b', marginBottom: '8px' }} />
           <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 600, color: '#334155' }}>
             Click to upload <span style={{ fontWeight: 400, color: '#64748b' }}>or drag and drop</span>
           </p>

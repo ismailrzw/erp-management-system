@@ -1,4 +1,4 @@
-# backend/app/schemas/group_schema.py
+﻿# backend/app/schemas/group_schema.py
 """
 Marshmallow validation schemas for student group and invitation operations.
 
@@ -24,6 +24,7 @@ from marshmallow import (
 )
 
 # ── Group schemas ──────────────────────────────────────────────────────────────
+
 
 class CreateGroupSchema(Schema):
     """Validate the payload when a student creates a new group."""
@@ -75,6 +76,7 @@ class UpdateGroupSchema(Schema):
 
 # ── Invitation schemas ─────────────────────────────────────────────────────────
 
+
 class InviteMemberSchema(Schema):
     """Validate the payload when a leader sends a group invitation."""
 
@@ -91,6 +93,7 @@ class InviteMemberSchema(Schema):
 
 
 # ── Profile / password schemas ─────────────────────────────────────────────────
+
 
 class UpdateProfileSchema(Schema):
     """Validate the payload when a student updates their own profile."""

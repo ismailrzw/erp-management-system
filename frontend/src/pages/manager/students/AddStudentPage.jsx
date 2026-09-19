@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, ArrowLeft, CheckCircle2, AlertCircle, Upload, Download, RefreshCw } from 'lucide-react';
+import { UserPlus, ArrowLeft, CheckCircle2, AlertCircle, Upload, Download, RefreshCw, Mail } from 'lucide-react';
 import { studentsApi } from '../../../api/studentsApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { coursesApi } from '../../../api/coursesApi';
@@ -12,11 +12,11 @@ export const AddStudentPage = () => {
   const [formData, setFormData] = useState({
     name: '',
     roll: '',
-    dept: 'CS',
-    section: 'A',
-    session: 'Fall 2025',
-    course: 'Final Year Project',
-    teacher: 'Dr. Sarah Ahmed',
+    dept: '',
+    section: '',
+    session: '',
+    course: '',
+    teacher: '',
     recovery_email: '',
   });
 
@@ -48,23 +48,14 @@ export const AddStudentPage = () => {
           if (dRes.success && dRes.data) {
             const dItems = dRes.data.items || dRes.data || [];
             setDepartments(dItems);
-            if (dItems.length > 0) {
-              setFormData((prev) => ({ ...prev, dept: prev.dept || dItems[0].code }));
-            }
           }
           if (cRes.success && cRes.data) {
             const cItems = cRes.data.items || cRes.data || [];
             setCourses(cItems);
-            if (cItems.length > 0) {
-              setFormData((prev) => ({ ...prev, course: prev.course || cItems[0].name }));
-            }
           }
           if (tRes.success && tRes.data) {
             const tItems = tRes.data.items || tRes.data || [];
             setTeachers(tItems);
-            if (tItems.length > 0) {
-              setFormData((prev) => ({ ...prev, teacher: prev.teacher || tItems[0].name }));
-            }
           }
         }
       } catch {
@@ -81,29 +72,30 @@ export const AddStudentPage = () => {
     e.preventDefault();
     setFormError('');
 
-    const cleanRoll = formData.roll.trim().replace(/\s+/g, '');
-    const cleanDept = formData.dept.trim() || 'CS';
+    const cleanName = formData.name.trim();
+    const cleanRoll = formData.roll.trim().toLowerCase();
 
-    if (!formData.name.trim() || !cleanRoll) {
-      setFormError('Name and Roll Number are required.');
+    if (!cleanName || !cleanRoll) {
+      setFormError('Name and Roll Number are mandatory.');
       return;
     }
 
-    if (cleanDept.length < 2 || cleanDept.length > 10) {
-      setFormError('Department code must be between 2 and 10 characters (e.g. CS, SE, EE).');
+    const rollRegex = /^f\d{4}-\d+$/i;
+    if (!rollRegex.test(cleanRoll)) {
+      setFormError('Roll number must follow format f{year}-{number} (e.g. f2023-551).');
       return;
     }
 
     try {
       setIsSubmitting(true);
       const payload = {
-        name: formData.name.trim(),
+        name: cleanName,
         roll: cleanRoll,
-        dept: cleanDept,
-        section: formData.section.trim() || 'A',
-        session: formData.session.trim() || 'Fall 2025',
-        course: formData.course.trim() || 'Final Year Project',
-        teacher: formData.teacher.trim() || 'Dr. Sarah Ahmed',
+        dept: formData.dept.trim() || undefined,
+        section: formData.section.trim() || undefined,
+        session: formData.session.trim() || undefined,
+        course: formData.course.trim() || undefined,
+        teacher: formData.teacher.trim() || undefined,
         recovery_email: formData.recovery_email.trim() || undefined,
       };
 
@@ -112,9 +104,8 @@ export const AddStudentPage = () => {
         setCreatedStudent({
           ...payload,
           ...res.data,
-          initial_password: res.data.initial_password || res.data.password,
         });
-        setToast({ message: 'Student account created successfully!', type: 'success' });
+        setToast({ message: 'Student account created and activation email dispatched!', type: 'success' });
       }
     } catch (err) {
       const errPayload = err.response?.data;
@@ -135,8 +126,8 @@ export const AddStudentPage = () => {
   const handleDownloadTemplate = () => {
     const csvContent =
       'Name,Roll,Department,Section,Session,Course,Teacher,Recovery Email\n' +
-      'Muhammad Ali,2024-CS-101,CS,A,Fall 2025,Final Year Project,Dr. Sarah Ahmed,ali@example.com\n' +
-      'Fatima Zahra,2024-CS-102,CS,B,Fall 2025,Final Year Project,Dr. Sarah Ahmed,fatima@example.com\n';
+      'Muhammad Ali,f2023-101,CS,A,Fall 2025,Final Year Project,Dr. Sarah Ahmed,ali@example.com\n' +
+      'Fatima Zahra,f2023-102,CS,B,Fall 2025,Final Year Project,Dr. Sarah Ahmed,fatima@example.com\n';
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -190,18 +181,8 @@ export const AddStudentPage = () => {
         <button
           type="button"
           onClick={() => navigate('/manager/students/view')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'none',
-            border: 'none',
-            color: '#64748b',
-            cursor: 'pointer',
-            fontSize: '13px',
-            padding: 0,
-            marginBottom: '10px',
-          }}
+          className="btn btn-back"
+          style={{ marginBottom: '10px' }}
         >
           <ArrowLeft size={16} />
           <span>Back to Students List</span>
@@ -210,25 +191,13 @@ export const AddStudentPage = () => {
           Add New Student
         </h1>
         <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-          Create an individual student account or bulk import students via spreadsheet.
+          Create an individual student account or bulk import students via spreadsheet. A password setup email is dispatched automatically.
         </div>
         <div style={{ marginTop: '14px', display: 'flex', gap: '10px', alignItems: 'center' }}>
           <button
             type="button"
             onClick={() => { setImportReport(null); setImportFile(null); setIsImportModalOpen(true); }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13px',
-              fontWeight: 600,
-              padding: '8px 16px',
-              backgroundColor: '#0073aa',
-              border: 'none',
-              color: '#ffffff',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
+            className="btn btn-primary"
           >
             <Upload size={15} />
             <span>Bulk Import Students</span>
@@ -284,32 +253,14 @@ export const AddStudentPage = () => {
                 <button
                   type="button"
                   onClick={() => { setImportReport(null); setImportFile(null); }}
-                  style={{
-                    padding: '8px 14px',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    border: '1px solid #cbd5e1',
-                    backgroundColor: '#ffffff',
-                    color: '#475569',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
+                  className="btn btn-secondary"
                 >
                   Import Another File
                 </button>
                 <button
                   type="button"
                   onClick={() => { setIsImportModalOpen(false); navigate('/manager/students/view'); }}
-                  style={{
-                    padding: '8px 16px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    border: 'none',
-                    backgroundColor: '#0073aa',
-                    color: '#ffffff',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
+                  className="btn btn-primary"
                 >
                   View All Students
                 </button>
@@ -371,36 +322,14 @@ export const AddStudentPage = () => {
                 <button
                   type="button"
                   onClick={() => setIsImportModalOpen(false)}
-                  style={{
-                    padding: '8px 14px',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    border: '1px solid #cbd5e1',
-                    backgroundColor: '#ffffff',
-                    color: '#475569',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
+                  className="btn btn-secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={importLoading || !importFile}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 16px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    border: 'none',
-                    backgroundColor: '#0073aa',
-                    color: '#ffffff',
-                    borderRadius: '4px',
-                    cursor: importLoading || !importFile ? 'not-allowed' : 'pointer',
-                    opacity: importLoading || !importFile ? 0.7 : 1,
-                  }}
+                  className="btn btn-primary"
                 >
                   {importLoading ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={14} />}
                   <span>{importLoading ? 'Importing...' : 'Upload and Import'}</span>
@@ -447,7 +376,7 @@ export const AddStudentPage = () => {
             Student Created Successfully!
           </h2>
           <p style={{ color: '#64748b', fontSize: '13.5px', marginBottom: '24px' }}>
-            The student account is now active. Please note down their auto-generated credentials:
+            The student account has been created and a one-time activation link was dispatched.
           </p>
 
           <div
@@ -456,7 +385,7 @@ export const AddStudentPage = () => {
               border: '1px solid #cbd5e1',
               borderRadius: '6px',
               padding: '16px 20px',
-              maxWidth: '450px',
+              maxWidth: '480px',
               margin: '0 auto 24px',
               textAlign: 'left',
               fontSize: '13.5px',
@@ -466,16 +395,27 @@ export const AddStudentPage = () => {
               <strong>Name:</strong> {createdStudent.name}
             </div>
             <div style={{ marginBottom: '8px' }}>
-              <strong>Roll No:</strong> {createdStudent.roll}
+              <strong>Roll No:</strong> <code style={{ backgroundColor: '#e2e8f0', padding: '2px 6px', borderRadius: '3px' }}>{createdStudent.roll}</code>
             </div>
-            <div style={{ marginBottom: '8px' }}>
+            <div style={{ marginBottom: '12px' }}>
               <strong>System Email:</strong> <code style={{ backgroundColor: '#e2e8f0', padding: '2px 6px', borderRadius: '3px' }}>{createdStudent.email}</code>
             </div>
-            {createdStudent.initial_password && (
-              <div>
-                <strong>Initial Password:</strong> <code style={{ backgroundColor: '#fef08a', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>{createdStudent.initial_password}</code>
-              </div>
-            )}
+            <div
+              style={{
+                backgroundColor: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                color: '#065f46',
+                padding: '10px 12px',
+                borderRadius: '4px',
+                fontSize: '12.5px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <Mail size={16} color="#059669" />
+              <span>Password setup email dispatched to {createdStudent.email}</span>
+            </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
@@ -487,40 +427,22 @@ export const AddStudentPage = () => {
                 setFormData({
                   name: '',
                   roll: '',
-                  dept: departments[0]?.code || 'CS',
-                  section: 'A',
-                  session: 'Fall 2025',
-                  course: courses[0]?.name || 'Final Year Project',
-                  teacher: teachers[0]?.name || 'Dr. Sarah Ahmed',
+                  dept: '',
+                  section: '',
+                  session: '',
+                  course: '',
+                  teacher: '',
                   recovery_email: '',
                 });
               }}
-              style={{
-                padding: '9px 18px',
-                backgroundColor: '#0073aa',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              className="btn btn-primary"
             >
               Add Another Student
             </button>
             <button
               type="button"
               onClick={() => navigate('/manager/students/view')}
-              style={{
-                padding: '9px 18px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                color: '#334155',
-                borderRadius: '4px',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               View All Students
             </button>
@@ -539,28 +461,28 @@ export const AddStudentPage = () => {
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '6px' }}>
-                  Full Name *
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Full Name <span style={{ color: '#dc2626' }}>*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Muhammad Ismail Rana"
+                  placeholder="e.g. Muhammad Ismail"
                   required
                   style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '6px' }}>
-                  Roll Number (No spaces) *
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Roll Number (Format: fYYYY-NNN) <span style={{ color: '#dc2626' }}>*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.roll}
                   onChange={(e) => setFormData({ ...formData, roll: e.target.value })}
-                  placeholder="e.g. BSEF23F-551"
+                  placeholder="e.g. f2023-551"
                   required
                   style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
                 />
@@ -569,116 +491,90 @@ export const AddStudentPage = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Department Code *
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '6px' }}>
+                  Department Code (Optional)
                 </label>
                 <select
                   value={formData.dept}
                   onChange={(e) => setFormData({ ...formData, dept: e.target.value })}
-                  required
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 34px 9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
                 >
-                  {departments.length === 0 ? (
-                    <>
-                      <option value="CS">CS - Computer Science</option>
-                      <option value="SE">SE - Software Engineering</option>
-                      <option value="EE">EE - Electrical Engineering</option>
-                      <option value="BBA">BBA - Business Administration</option>
-                    </>
-                  ) : (
-                    departments.map((d) => (
-                      <option key={d.id || d._id || d.code} value={d.code}>
-                        {d.code} - {d.name}
-                      </option>
-                    ))
-                  )}
+                  <option value="">-- Select Department --</option>
+                  {departments.map((d) => (
+                    <option key={d.id || d._id || d.code} value={d.code}>
+                      {d.code} - {d.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Section *
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '6px' }}>
+                  Section (Optional)
                 </label>
                 <input
                   type="text"
                   value={formData.section}
                   onChange={(e) => setFormData({ ...formData, section: e.target.value })}
                   placeholder="e.g. A"
-                  required
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Academic Session *
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '6px' }}>
+                  Academic Session (Optional)
                 </label>
                 <input
                   type="text"
                   value={formData.session}
                   onChange={(e) => setFormData({ ...formData, session: e.target.value })}
                   placeholder="e.g. Fall 2025"
-                  required
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
                 />
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Course *
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '6px' }}>
+                  Course (Optional)
                 </label>
                 <select
                   value={formData.course}
                   onChange={(e) => setFormData({ ...formData, course: e.target.value })}
-                  required
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 34px 9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
                 >
-                  {courses.length === 0 ? (
-                    <>
-                      <option value="Final Year Project">Final Year Project</option>
-                      <option value="Software Architecture PBL">Software Architecture PBL</option>
-                    </>
-                  ) : (
-                    courses.map((c) => (
-                      <option key={c.id || c._id || c.name} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))
-                  )}
+                  <option value="">-- Select Course --</option>
+                  {courses.map((c) => (
+                    <option key={c.id || c._id || c.name} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Assigned Teacher / Evaluator *
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '6px' }}>
+                  Assigned Teacher / Evaluator (Optional)
                 </label>
                 <select
                   value={formData.teacher}
                   onChange={(e) => setFormData({ ...formData, teacher: e.target.value })}
-                  required
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 34px 9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
                 >
-                  {teachers.length === 0 ? (
-                    <>
-                      <option value="Dr. Sarah Ahmed">Dr. Sarah Ahmed (Internal Faculty)</option>
-                      <option value="Prof. Ali Raza">Prof. Ali Raza (Internal Faculty)</option>
-                      <option value="Mr. Kashif Mehmood">Mr. Kashif Mehmood (External Industry)</option>
-                    </>
-                  ) : (
-                    teachers.map((t) => (
-                      <option key={t.id || t._id || t.email} value={t.name}>
-                        {t.name} ({t.dept || 'Faculty'})
-                      </option>
-                    ))
-                  )}
+                  <option value="">-- Select Teacher --</option>
+                  {teachers.map((t) => (
+                    <option key={t.id || t._id || t.email} value={t.name}>
+                      {t.name} ({t.dept || 'Faculty'})
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
 
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '6px' }}>
                 Recovery Email Address (Optional)
               </label>
               <input
@@ -694,36 +590,14 @@ export const AddStudentPage = () => {
               <button
                 type="button"
                 onClick={() => navigate('/manager/students/view')}
-                style={{
-                  padding: '9px 16px',
-                  fontSize: '13.5px',
-                  fontWeight: 500,
-                  border: '1px solid #cbd5e1',
-                  backgroundColor: '#ffffff',
-                  color: '#475569',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                }}
+                className="btn btn-secondary"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '9px 20px',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
-                  border: 'none',
-                  backgroundColor: '#0073aa',
-                  color: '#ffffff',
-                  borderRadius: '4px',
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                  opacity: isSubmitting ? 0.7 : 1,
-                }}
+                className="btn btn-primary"
               >
                 <UserPlus size={16} />
                 <span>{isSubmitting ? 'Creating Student...' : 'Create Student'}</span>

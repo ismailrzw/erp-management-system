@@ -1,18 +1,5 @@
 import { useMemo } from 'react';
-import { Calendar, Clock, X, Sparkles, Check } from 'lucide-react';
-
-/**
- * Format a Date object to 'YYYY-MM-DDTHH:mm' (local time)
- */
-const toLocalDateTimeString = (d) => {
-  const pad = (n) => String(n).padStart(2, '0');
-  const year = d.getFullYear();
-  const month = pad(d.getMonth() + 1);
-  const day = pad(d.getDate());
-  const hours = pad(d.getHours());
-  const minutes = pad(d.getMinutes());
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
+import { Calendar, Clock, X, Check } from 'lucide-react';
 
 /**
  * Format ISO/datetime string to a human friendly format (e.g. "Thu, 15 Oct 2026, 11:59 PM")
@@ -95,42 +82,8 @@ export const DateTimePicker = ({
     onChange(`${d}T${newTime || '23:59'}`);
   };
 
-  const applyPreset = (presetType) => {
-    const d = new Date();
-    if (presetType === 'today_end') {
-      d.setHours(23, 59, 0, 0);
-    } else if (presetType === 'tomorrow_end') {
-      d.setDate(d.getDate() + 1);
-      d.setHours(23, 59, 0, 0);
-    } else if (presetType === 'week_end') {
-      d.setDate(d.getDate() + 7);
-      d.setHours(23, 59, 0, 0);
-    } else if (presetType === 'two_weeks') {
-      d.setDate(d.getDate() + 14);
-      d.setHours(23, 59, 0, 0);
-    } else if (presetType === 'noon') {
-      d.setHours(12, 0, 0, 0);
-    }
-    onChange(toLocalDateTimeString(d));
-  };
-
   const formattedValue = formatHuman(value);
   const relativeLabel = getRelativeLabel(value);
-
-  const presetButtonStyle = (active) => ({
-    padding: '4px 10px',
-    borderRadius: '16px',
-    fontSize: '11.5px',
-    fontWeight: 600,
-    border: active ? '1px solid #2563eb' : '1px solid #e2e8f0',
-    backgroundColor: active ? '#eff6ff' : '#ffffff',
-    color: active ? '#1d4ed8' : '#475569',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    transition: 'all 0.15s ease',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '4px',
-  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', ...containerStyle }}>

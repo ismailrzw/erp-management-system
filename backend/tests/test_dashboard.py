@@ -14,8 +14,8 @@ def test_dashboard_returns_complete_stats_shape(client, manager_headers):
 
 
 def test_dashboard_student_counts_are_accurate(client, manager_headers):
-    create_student(client, manager_headers, "2024-CS-301")
-    create_student(client, manager_headers, "2024-CS-302")
+    create_student(client, manager_headers, "f2024-301")
+    create_student(client, manager_headers, "f2024-302")
     response = client.get(DASHBOARD_URL, headers=manager_headers)
     assert response.status_code == 200, response.get_json()
     data = response.get_json()["data"]

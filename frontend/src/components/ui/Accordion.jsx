@@ -39,7 +39,7 @@ export const AccordionItem = ({
   return (
     <div
       style={{
-        border: isOpen ? '1px solid #93c5fd' : '1px solid #e2e8f0',
+        border: isOpen ? '1px solid rgba(0, 115, 170, 0.3)' : '1px solid #e2e8f0',
         borderRadius: '8px',
         marginBottom: '12px',
         overflow: 'hidden',
@@ -181,54 +181,24 @@ export const AccordionItem = ({
             {onEdit && (
               <button
                 type="button"
+                className="btn btn-secondary btn-sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   onEdit(announcement);
                 }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  padding: '6px 12px',
-                  borderRadius: '5px',
-                  border: '1px solid #cbd5e1',
-                  backgroundColor: '#ffffff',
-                  color: '#334155',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.15s ease',
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
-                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
               >
-                <Edit2 size={13} color="#0073aa" />
+                <Edit2 size={13} color="var(--primary)" />
                 <span>Edit</span>
               </button>
             )}
             {onDelete && (
               <button
                 type="button"
+                className="btn btn-danger-outline btn-sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete(announcement);
                 }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  padding: '6px 12px',
-                  borderRadius: '5px',
-                  border: '1px solid #fecaca',
-                  backgroundColor: '#fef2f2',
-                  color: '#dc2626',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.15s ease',
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#fee2e2')}
-                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
               >
                 <Trash2 size={13} />
                 <span>Remove</span>

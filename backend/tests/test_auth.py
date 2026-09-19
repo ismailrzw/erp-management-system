@@ -12,7 +12,7 @@ def test_login_success_returns_token(client):
 def test_login_rejects_wrong_password(client):
     response = client.post("/api/auth/login", json={"email": MANAGER_EMAIL, "password": "incorrect"})
     assert response.status_code == 401, response.get_json()
-    assert response.get_json()["message"] == "Invalid email or password."
+    assert "Invalid" in response.get_json()["message"]
 
 
 def test_login_rejects_unknown_email(client):

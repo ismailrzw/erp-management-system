@@ -47,6 +47,7 @@ from app.models.user import Role, UserFields
 # Internal helpers
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def _oid(value: str) -> ObjectId:
     """Convert a string to ObjectId, raising ValueError on failure."""
     try:
@@ -197,30 +198,106 @@ def _ensure_indexes() -> None:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+def generate_group_name(year: int | None = None) -> str:
+    """
+    Auto-generate a sequential group name scoped to the calendar year.
+    Format is configurable via Config.GROUP_NAME_FORMAT (default 'GRP-{YEAR}-{SEQ:03d}').
+    """
+    import re
+
+    from app.config import Config
+
+    if year is None:
+        year = datetime.now(timezone.utc).year
+
+    pattern = re.compile(rf"^GRP-{year}-(\d+)", re.IGNORECASE)
+    groups = mongo.db[COLLECTION].find({Field.NAME: pattern}, {Field.NAME: 1})
+    max_seq = 0
+    for g in groups:
+        name = g.get(Field.NAME, "")
+        match = pattern.match(name)
+        if match:
+            try:
+                seq = int(match.group(1))
+                max_seq = max(max_seq, seq)
+            except ValueError:
+                pass
+
+    next_seq = max_seq + 1
+    fmt = getattr(Config, "GROUP_NAME_FORMAT", "GRP-{YEAR}-{SEQ:03d}")
+    return fmt.format(YEAR=year, SEQ=next_seq)
+
+
+def compute_formation_status(course_name: str, dept: str, created_at: datetime) -> str | None:
+    """
+    Compute group formation status against Iteration Milestone or course deadline:
+      - 'on_time': created before deadline date (UTC)
+      - 'on_deadline': created on the same calendar date as deadline (UTC)
+      - 'late': created after deadline date (UTC)
+      - None: if no deadline or iteration is configured
+    """
+    from datetime import date
+
+    from app.models.group import FormationStatus
+
+    deadline_str = None
+
+    # 1. Primary check: check Iteration Milestones marked as group formation for this course
+    iter_doc = mongo.db.iterations.find_one(
+        {
+            "$or": [{"course": course_name}, {"course": "All Courses"}],
+            "is_group_formation": True,
+        },
+        sort=[("createdAt", -1)],
+    )
+
+    # 2. Fallback check: earliest iteration milestone for this course if none marked as group formation
+    if not iter_doc:
+        iter_doc = mongo.db.iterations.find_one(
+            {"$or": [{"course": course_name}, {"course": "All Courses"}]},
+            sort=[("deadline", 1)],
+        )
+
+    if iter_doc and iter_doc.get("deadline"):
+        deadline_str = iter_doc.get("deadline")
+    else:
+        # 3. Fallback check: course record deadline if present
+        course_doc = mongo.db.courses.find_one({
+            "name": course_name,
+            "dept": dept.upper() if dept else "",
+            "deleted": {"$ne": True},
+        })
+        if course_doc:
+            deadline_str = course_doc.get("group_formation_deadline") or course_doc.get("deadline")
+
+    if not deadline_str:
+        return FormationStatus.ON_TIME
+
+    try:
+        dl_date = date.fromisoformat(str(deadline_str).strip()[:10])
+        created_date = created_at.date()
+        if created_date < dl_date:
+            return FormationStatus.ON_TIME
+        if created_date == dl_date:
+            return FormationStatus.ON_DEADLINE
+        return FormationStatus.LATE
+    except Exception:  # noqa: BLE001
+        return FormationStatus.ON_TIME
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Group CRUD
 # ══════════════════════════════════════════════════════════════════════════════
 
-def create_group(student_id: str, name: str, project_title: str) -> dict:
+
+def create_group(student_id: str, project_title: str, name: str | None = None, proposal_file=None) -> dict:
     """
-    Create a new pending group with the calling student as leader.
-
-    Business rules
-    --------------
-    1. The student must not already belong to an active group.
-    2. The group is seeded with the leader as the sole member.
-    3. course, dept, section are copied from the student's user record.
-    4. group_id is written back to the student's user doc atomically.
-
-    Returns
-    -------
-    dict
-        Serialized group document including course constraint metadata.
-
-    Raises
-    ------
-    ValueError
-        If the student already has a group.
+    Create a new pending group with auto-generated group name, proposal attachment,
+    and formation_status tracking.
     """
+    from app.models.group import SubmissionStatus
+    from app.services.attachment_service import upload_attachment
+
     _ensure_indexes()
     student = _get_active_student(student_id)
 
@@ -235,25 +312,51 @@ def create_group(student_id: str, name: str, project_title: str) -> dict:
     if existing:
         raise ValueError("You are already a member of an active group.")
 
+    clean_title = (project_title or "").strip()
+    if not clean_title or len(clean_title) < 3:
+        raise ValueError("Project title must be at least 3 characters long.")
+
     course_name = student.get(UserFields.COURSE, "")
     dept        = student.get(UserFields.DEPT, "")
     section     = student.get(UserFields.SECTION, "")
     constraints = _get_course_constraints(course_name, dept)
     now = _now()
 
+    # Generate sequential group name if not provided
+    auto_name = (name or "").strip() if (name and name.strip()) else generate_group_name(now.year)
+    formation_status = compute_formation_status(course_name, dept, now)
+
+    # Handle proposal file upload if present
+    proposal_attachment_id = None
+    if proposal_file is not None:
+        try:
+            att_doc = upload_attachment(
+                file=proposal_file,
+                title=f"Project Proposal — {auto_name}",
+                uploaded_by=student_id,
+            )
+            proposal_attachment_id = _oid(att_doc["id"])
+        except Exception as att_err:  # noqa: BLE001
+            raise ValueError(f"Failed to process proposal attachment: {att_err!s}")
+
     group_doc = {
-        Field.NAME:          name.strip(),
-        Field.PROJECT_TITLE: project_title.strip(),
-        Field.COURSE:        course_name,
-        Field.DEPT:          dept,
-        Field.SECTION:       section,
-        Field.LEADER_ID:     _oid(student_id),
-        Field.MEMBER_IDS:    [_oid(student_id)],
-        Field.STATUS:        Status.PENDING,
-        Field.EVALUATED:     False,
-        Field.VERSION:       1,
-        Field.CREATED_AT:    now,
-        Field.UPDATED_AT:    now,
+        Field.NAME:                   auto_name,
+        Field.PROJECT_TITLE:          clean_title,
+        Field.COURSE:                 course_name,
+        Field.DEPT:                   dept,
+        Field.SECTION:                section,
+        Field.LEADER_ID:              _oid(student_id),
+        Field.MEMBER_IDS:             [_oid(student_id)],
+        Field.STATUS:                 Status.PENDING,
+        Field.FORMATION_STATUS:       formation_status,
+        Field.SUBMISSION_STATUS:      SubmissionStatus.NOT_SUBMITTED,
+        Field.SUPERVISOR_ID:          None,
+        Field.SUPERVISOR_NAME:        None,
+        Field.PROPOSAL_ATTACHMENT_ID: proposal_attachment_id,
+        Field.EVALUATED:              False,
+        Field.VERSION:                1,
+        Field.CREATED_AT:             now,
+        Field.UPDATED_AT:             now,
     }
 
     result = mongo.db[COLLECTION].insert_one(group_doc)
@@ -555,6 +658,7 @@ def remove_member(group_id: str, leader_id: str, member_id: str) -> dict:
 # Invitation workflow
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def invite_member(group_id: str, leader_id: str, roll: str) -> dict:
     """
     Send a group invitation to a student identified by roll number.
@@ -601,9 +705,10 @@ def invite_member(group_id: str, leader_id: str, roll: str) -> dict:
             f"Group has reached maximum capacity ({constraints['max_group']} members). Cannot send invitations."
         )
 
-    # Find target student by roll number
+    # Find target student by roll number (case-insensitive)
+    import re
     target = mongo.db[UserFields.COLLECTION].find_one({
-        UserFields.ROLL:    roll.strip().upper(),
+        UserFields.ROLL:    {"$regex": f"^{re.escape(roll.strip())}$", "$options": "i"},
         UserFields.ROLE:    Role.STUDENT,
         UserFields.DELETED: {"$ne": True},
     })
@@ -851,6 +956,7 @@ def respond_to_invitation(invitation_id: str, student_id: str, accept: bool) -> 
 # Peer discovery and Group browsing
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def search_students(query_fragment: str, course: str, dept: str = "", current_student_id: str | None = None) -> list[dict]:
     """
     Search for students in the same course by roll number or name (cross-section allowed).
@@ -1032,6 +1138,7 @@ def list_groups_for_student(student_id: str, search: str = "", status_filter: st
 # ══════════════════════════════════════════════════════════════════════════════
 # Join Requests (Student ➔ Group)
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 def send_join_request(student_id: str, group_id: str, message: str = "") -> dict:
     """
@@ -1381,4 +1488,3 @@ def reject_join_request(leader_id: str, request_id: str) -> dict:
         {"$set": {JoinRequestField.STATUS: JoinRequestStatus.REJECTED, JoinRequestField.RESPONDED_AT: now}},
     )
     return {"message": "Join request declined."}
-

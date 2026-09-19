@@ -1,4 +1,4 @@
-# backend/app/blueprints/manager/dashboard.py
+﻿# backend/app/blueprints/manager/dashboard.py
 """Manager Dashboard API endpoints."""
 
 from datetime import datetime
@@ -61,7 +61,7 @@ class Dashboard(Resource):
                     ]
                 })
                 groups_remaining_evaluation = max(0, total_groups - total_groups_evaluated)
-                
+
                 students_in_groups = mongo.db.groups.distinct("member_ids")
                 students_without_group = mongo.db.users.count_documents({
                     "role": Role.STUDENT,

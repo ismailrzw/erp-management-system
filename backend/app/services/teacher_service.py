@@ -29,19 +29,46 @@ def _serialize(doc: dict | None) -> dict | None:
     result = dict(doc)
     result["id"] = str(result.pop(UserFields.ID))
     result.pop(UserFields.PASSWORD_HASH, None)
+    result["domains"] = result.get(UserFields.DOMAINS) or []
+
+    # Calculate real-time active groups supervised by this teacher
+    supervision_by_course = []
+    try:
+        from app.models.group import COLLECTION as GROUPS_COLLECTION
+        from app.models.group import Status as GroupStatus
+        active_cnt = mongo.db[GROUPS_COLLECTION].count_documents({
+            "supervisor_id": ObjectId(result["id"]),
+            "status": {"$ne": GroupStatus.DELETED},
+        })
+        pipeline = [
+            {"$match": {"supervisor_id": ObjectId(result["id"]), "status": {"$ne": GroupStatus.DELETED}}},
+            {"$group": {"_id": "$course", "count": {"$sum": 1}}},
+        ]
+        course_groups = list(mongo.db[GROUPS_COLLECTION].aggregate(pipeline))
+        supervision_by_course = [
+            {"course": cg["_id"] or "General", "count": cg["count"], "max_cap": 4}
+            for cg in course_groups
+        ]
+    except Exception:  # noqa: BLE001
+        active_cnt = result.get(UserFields.ACTIVE_SUPERVISION_COUNT, 0)
+    result["active_supervision_count"] = active_cnt
+    result["supervision_by_course"] = supervision_by_course
+    result["max_supervision_cap"] = 4
+
     for key, value in list(result.items()):
         if isinstance(value, datetime):
             result[key] = value.isoformat()
     return result
 
 
-def create_teacher(name: str, email: str, dept: str, type_: str) -> dict:
+def create_teacher(name: str, email: str, dept: str, type_: str, domains: list[str] | None = None) -> dict:
     if mongo.db[UserFields.COLLECTION].find_one({UserFields.EMAIL: email}):
         raise ValueError(f"A user with email '{email}' already exists.")
 
     password = generate_initial_password()
     password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
     now = datetime.now(timezone.utc)
+    clean_domains = [d.strip() for d in (domains or []) if isinstance(d, str) and d.strip()]
 
     document = {
         UserFields.NAME: name,
@@ -49,6 +76,8 @@ def create_teacher(name: str, email: str, dept: str, type_: str) -> dict:
         UserFields.DEPT: dept,
         UserFields.TYPE: type_,
         UserFields.ROLE: Role.EVALUATOR,
+        UserFields.DOMAINS: clean_domains,
+        UserFields.ACTIVE_SUPERVISION_COUNT: 0,
         UserFields.PASSWORD_HASH: password_hash,
         UserFields.DELETED: False,
         UserFields.CREATED_AT: now,

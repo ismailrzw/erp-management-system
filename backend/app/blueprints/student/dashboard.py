@@ -1,4 +1,4 @@
-# backend/app/blueprints/student/dashboard.py
+﻿# backend/app/blueprints/student/dashboard.py
 """
 Student Dashboard API endpoint.
 

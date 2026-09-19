@@ -1,4 +1,4 @@
-# backend/app/utils/validators.py
+﻿# backend/app/utils/validators.py
 import re
 
 
@@ -7,10 +7,12 @@ def validate_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
+
 def validate_roll_number(roll):
     """Validate BNU roll number format: XXXX-FXX-XXX."""
     pattern = r'^[A-Z]{4}-[F|S]\d{2}-\d{3,4}$'
     return re.match(pattern, roll) is not None
+
 
 def validate_password_strength(password):
     """Validate password strength (min 8 chars, at least one number)."""

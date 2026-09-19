@@ -11,7 +11,7 @@ export const AddCoursePage = () => {
     dept: 'CS',
     min_group: 1,
     max_group: 4,
-    deadline: '2026-12-31',
+    group_formation_deadline: '',
   });
 
   const [departments, setDepartments] = useState([]);
@@ -74,7 +74,7 @@ export const AddCoursePage = () => {
         dept: formData.dept,
         min_group: minGroup,
         max_group: maxGroup,
-        deadline: formData.deadline || undefined,
+        group_formation_deadline: formData.group_formation_deadline || undefined,
       });
 
       if (res.success && res.data) {
@@ -102,18 +102,8 @@ export const AddCoursePage = () => {
         <button
           type="button"
           onClick={() => navigate('/manager/courses/view')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'none',
-            border: 'none',
-            color: '#64748b',
-            cursor: 'pointer',
-            fontSize: '13px',
-            padding: 0,
-            marginBottom: '10px',
-          }}
+          className="btn btn-back"
+          style={{ marginBottom: '10px' }}
         >
           <ArrowLeft size={16} />
           <span>Back to Courses List</span>
@@ -122,7 +112,7 @@ export const AddCoursePage = () => {
           Add New Course
         </h1>
         <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-          Configure a course with group size boundaries and project submission deadline.
+          Configure a course with group size boundaries and group formation cutoff deadline.
         </div>
       </div>
 
@@ -175,35 +165,17 @@ export const AddCoursePage = () => {
                   dept: departments[0]?.code || 'CS',
                   min_group: 1,
                   max_group: 4,
-                  deadline: '2026-12-31',
+                  group_formation_deadline: '2026-12-31',
                 });
               }}
-              style={{
-                padding: '9px 18px',
-                backgroundColor: '#0073aa',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              className="btn btn-primary"
             >
               Add Another Course
             </button>
             <button
               type="button"
               onClick={() => navigate('/manager/courses/view')}
-              style={{
-                padding: '9px 18px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                color: '#334155',
-                borderRadius: '4px',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               View All Courses
             </button>
@@ -287,13 +259,18 @@ export const AddCoursePage = () => {
             </div>
 
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                Final Project Submission Deadline
-              </label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                  Group Formation Deadline <span style={{ fontWeight: 400, color: '#64748b' }}>(Optional)</span>
+                </label>
+              </div>
+              <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', lineHeight: '1.4' }}>
+                Group formation deadlines, rubrics, and deliverable penalties are managed dynamically within <strong>Iteration Milestones</strong>. You may also specify an optional fallback deadline date here.
+              </div>
               <input
                 type="date"
-                value={formData.deadline}
-                onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                value={formData.group_formation_deadline}
+                onChange={(e) => setFormData({ ...formData, group_formation_deadline: e.target.value })}
                 style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
               />
             </div>
@@ -302,36 +279,14 @@ export const AddCoursePage = () => {
               <button
                 type="button"
                 onClick={() => navigate('/manager/courses/view')}
-                style={{
-                  padding: '9px 16px',
-                  fontSize: '13.5px',
-                  fontWeight: 500,
-                  border: '1px solid #cbd5e1',
-                  backgroundColor: '#ffffff',
-                  color: '#475569',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                }}
+                className="btn btn-secondary"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '9px 20px',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
-                  border: 'none',
-                  backgroundColor: '#0073aa',
-                  color: '#ffffff',
-                  borderRadius: '4px',
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                  opacity: isSubmitting ? 0.7 : 1,
-                }}
+                className="btn btn-primary"
               >
                 <BookOpen size={16} />
                 <span>{isSubmitting ? 'Creating...' : 'Create Course'}</span>

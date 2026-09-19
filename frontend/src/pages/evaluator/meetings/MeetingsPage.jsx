@@ -24,9 +24,8 @@ export function MeetingsPage() {
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => {
-    loadData();
-  }, [selectedGroupFilter]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadData(); }, [selectedGroupFilter]);
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -41,20 +40,8 @@ export function MeetingsPage() {
         </div>
         <button
           type="button"
+          className="btn btn-primary"
           onClick={() => setShowModal(true)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: '#2563eb',
-            color: '#ffffff',
-            border: 'none',
-            padding: '10px 18px',
-            borderRadius: '6px',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
         >
           <Plus size={18} />
           <span>Log New Meeting</span>
@@ -77,14 +64,8 @@ export function MeetingsPage() {
           <select
             value={selectedGroupFilter}
             onChange={(e) => setSelectedGroupFilter(e.target.value)}
-            style={{
-              padding: '8px 12px',
-              borderRadius: '6px',
-              border: '1px solid #cbd5e1',
-              fontSize: '13px',
-              background: '#ffffff',
-              minWidth: '240px',
-            }}
+            className="form-input"
+            style={{ minWidth: '240px' }}
           >
             <option value="">All Assigned Groups</option>
             {assignedGroups.map(g => (
@@ -132,7 +113,7 @@ export function MeetingsPage() {
                     <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', margin: 0 }}>
                       {m.title}
                     </h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: '#2563eb', fontWeight: 600, marginTop: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: 'var(--primary)', fontWeight: 600, marginTop: '4px' }}>
                       <Users size={14} />
                       <span>{grp ? grp.name : `Group ID: ${m.group_id}`}</span>
                     </div>

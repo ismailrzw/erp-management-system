@@ -1,4 +1,4 @@
-"""Business logic for department CRUD operations."""
+﻿"""Business logic for department CRUD operations."""
 
 from datetime import datetime, timezone
 

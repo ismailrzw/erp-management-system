@@ -1,4 +1,4 @@
-"""Department Model - field constants for the departments collection."""
+﻿"""Department Model - field constants for the departments collection."""
 
 
 class DepartmentFields:

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 
 export const PageHeader = ({
@@ -36,9 +37,9 @@ export const PageHeader = ({
               <span key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 {idx > 0 && <ChevronRight size={12} />}
                 {crumb.to ? (
-                  <a href={crumb.to} style={{ color: '#0073aa', textDecoration: 'none' }}>
+                  <Link to={crumb.to} style={{ color: '#0073aa', textDecoration: 'none' }}>
                     {crumb.label}
-                  </a>
+                  </Link>
                 ) : (
                   <span>{crumb.label}</span>
                 )}
@@ -51,7 +52,7 @@ export const PageHeader = ({
           <h1
             style={{
               margin: 0,
-              fontSize: '22px',
+              fontSize: 'clamp(17px, 4vw, 22px)',
               fontWeight: 700,
               color: 'var(--heading)',
               letterSpacing: '-0.2px',
