@@ -1,4 +1,4 @@
-# backend/app/middleware/auth_middleware.py
+﻿# backend/app/middleware/auth_middleware.py
 """
 Authorization header normalisation middleware.
 

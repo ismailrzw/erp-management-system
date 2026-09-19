@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   RefreshCw,
   Plus,
@@ -14,23 +15,36 @@ import {
 import { dashboardApi } from '../../api/dashboardApi';
 import { announcementsApi } from '../../api/announcementsApi';
 import { attachmentsApi } from '../../api/attachmentsApi';
+import { departmentsApi } from '../../api/departmentsApi';
 import { StatCard } from '../../components/ui/StatCard';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { AccordionItem } from '../../components/ui/Accordion';
 import { Modal } from '../../components/ui/Modal';
 import { Toast } from '../../components/ui/Toast';
-import { Preloader } from '../../components/ui/Preloader';
+import { ContentLoader } from '../../components/ui/ContentLoader';
 import { formatDate } from '../../utils/dateUtils';
 import { formatFileSize } from '../../utils/fileUtils';
 
 export const ManagerDashboard = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
 
+  // Dropdown reference data
+  const [departments, setDepartments] = useState([]);
+
   // Announcement Modal States
   const [isAnnModalOpen, setIsAnnModalOpen] = useState(false);
-  const [annFormData, setAnnFormData] = useState({ id: null, title: '', content: '' });
+  const [annFormData, setAnnFormData] = useState({
+    id: null,
+    title: '',
+    content: '',
+    scope: 'broadcast',
+    target_dept: '',
+    target_groups: '',
+  });
   const [annLoading, setAnnLoading] = useState(false);
   const [annSearch, setAnnSearch] = useState('');
   const [annFilterMode, setAnnFilterMode] = useState('recent'); // 'recent' | 'all'
@@ -71,40 +85,53 @@ export const ManagerDashboard = () => {
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-    const load = async () => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  useEffect(() => {
+    const loadRefData = async () => {
       try {
-        const res = await dashboardApi.getManagerDashboard();
-        if (isMounted && res.success && res.data) {
-          setData(res.data);
+        const dRes = await departmentsApi.list({ limit: 100, deleted: false });
+        if (dRes.success && dRes.data) {
+          setDepartments(dRes.data.items || dRes.data || []);
         }
-      } catch (err) {
-        if (isMounted) {
-          setToast({
-            message: err.response?.data?.message || 'Failed to load dashboard data',
-            type: 'error',
-          });
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+      } catch {
+        // Fallbacks
       }
     };
-    load();
-    return () => {
-      isMounted = false;
-    };
+    loadRefData();
   }, []);
 
   // Announcement Handlers
   const handleOpenNewAnnouncement = () => {
-    setAnnFormData({ id: null, title: '', content: '' });
+    setAnnFormData({
+      id: null,
+      title: '',
+      content: '',
+      scope: 'broadcast',
+      target_dept: '',
+      target_groups: '',
+    });
     setIsAnnModalOpen(true);
   };
 
   const handleOpenEditAnnouncement = (ann) => {
-    setAnnFormData({ id: ann.id || ann._id, title: ann.title, content: ann.content || '' });
+    let targetDept = '';
+    let targetGroups = '';
+    if (ann.scope === 'department' && ann.target_ids && ann.target_ids.length > 0) {
+      targetDept = ann.target_ids[0];
+    } else if (ann.scope === 'group' && ann.target_ids) {
+      targetGroups = ann.target_ids.join(', ');
+    }
+
+    setAnnFormData({
+      id: ann.id || ann._id,
+      title: ann.title,
+      content: ann.content || '',
+      scope: ann.scope || 'broadcast',
+      target_dept: targetDept,
+      target_groups: targetGroups,
+    });
     setIsAnnModalOpen(true);
   };
 
@@ -114,17 +141,28 @@ export const ManagerDashboard = () => {
 
     try {
       setAnnLoading(true);
+      let target_ids = [];
+      if (annFormData.scope === 'department') {
+        target_ids = annFormData.target_dept ? [annFormData.target_dept.trim()] : [];
+      } else if (annFormData.scope === 'group') {
+        target_ids = annFormData.target_groups
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
+
+      const payload = {
+        title: annFormData.title.trim(),
+        content: annFormData.content.trim(),
+        scope: annFormData.scope,
+        target_ids,
+      };
+
       if (annFormData.id) {
-        await announcementsApi.update(annFormData.id, {
-          title: annFormData.title.trim(),
-          content: annFormData.content.trim(),
-        });
+        await announcementsApi.update(annFormData.id, payload);
         setToast({ message: 'Announcement updated successfully', type: 'success' });
       } else {
-        await announcementsApi.create({
-          title: annFormData.title.trim(),
-          content: annFormData.content.trim(),
-        });
+        await announcementsApi.create(payload);
         setToast({ message: 'Announcement created successfully', type: 'success' });
       }
       setIsAnnModalOpen(false);
@@ -191,7 +229,7 @@ export const ManagerDashboard = () => {
     try {
       setAttLoading(true);
       await attachmentsApi.delete(attToDelete.id || attToDelete._id);
-      setToast({ message: 'Attachment removed successfully', type: 'success' });
+      setToast({ message: 'Attachment deleted successfully', type: 'success' });
       setAttToDelete(null);
       fetchDashboardData(true);
     } catch (err) {
@@ -206,92 +244,70 @@ export const ManagerDashboard = () => {
 
   const handleOpenEditAttachment = (att) => {
     setAttToEdit(att);
-    setAttEditTitle(att.title || att.filename || '');
+    setAttEditTitle(att.title || '');
     setAttEditError('');
   };
 
   const handleSaveEditAttachment = async (e) => {
     e.preventDefault();
-    if (!attToEdit) return;
-    const title = attEditTitle.trim();
-    if (!title || title.length < 2) {
-      setAttEditError('Attachment title must be at least 2 characters.');
-      return;
-    }
-    if (title.length > 200) {
-      setAttEditError('Attachment title cannot exceed 200 characters.');
+    if (!attEditTitle.trim()) {
+      setAttEditError('Attachment title cannot be empty.');
       return;
     }
 
     try {
       setAttEditLoading(true);
       setAttEditError('');
-      await attachmentsApi.update(attToEdit.id || attToEdit._id, title);
-      setToast({ message: 'Attachment title updated successfully!', type: 'success' });
-      setAttToEdit(null);
-      fetchDashboardData(true);
+      const attId = attToEdit.id || attToEdit._id;
+      const res = await attachmentsApi.update(attId, { title: attEditTitle.trim() });
+      if (res.success) {
+        setToast({ message: 'Attachment title updated successfully', type: 'success' });
+        setAttToEdit(null);
+        fetchDashboardData(true);
+      }
     } catch (err) {
-      setAttEditError(err.response?.data?.message || 'Failed to update attachment');
+      setAttEditError(err.response?.data?.message || 'Failed to update attachment title');
     } finally {
       setAttEditLoading(false);
     }
   };
 
-  if (loading) {
-    return <Preloader />;
+  if (loading && !refreshing && !data) {
+    return (
+      <div className="page-frame-container">
+        <PageHeader
+          title="Dashboard"
+          subtitle="Overview of Project-Based Learning operations, announcements, and course attachments."
+          breadcrumbs={[{ label: 'Home' }, { label: 'Dashboard' }]}
+        />
+        <ContentLoader label="Loading manager dashboard..." />
+      </div>
+    );
   }
 
   return (
-    <div>
+    <div className="page-frame-container">
       <Toast
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          marginBottom: '20px',
-        }}
+      <PageHeader
+        title="Dashboard"
+        subtitle="Overview of Project-Based Learning operations, announcements, and course attachments."
+        breadcrumbs={[{ label: 'Home' }, { label: 'Dashboard' }]}
       >
-        <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-            Dashboard
-          </h1>
-          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-            <span>Home</span> <span style={{ margin: '0 4px' }}>/</span>{' '}
-            <span style={{ color: '#0073aa', fontWeight: 500 }}>Dashboard</span>
-          </div>
-        </div>
-
         <button
           type="button"
           onClick={() => fetchDashboardData(true)}
           disabled={refreshing}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '13px',
-            fontWeight: 500,
-            padding: '8px 14px',
-            backgroundColor: '#ffffff',
-            border: '1px solid #cbd5e1',
-            borderRadius: '4px',
-            color: '#334155',
-            cursor: refreshing ? 'not-allowed' : 'pointer',
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-          }}
+          className="btn btn-ghost btn-sm"
         >
-          <RefreshCw size={15} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
           <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
         </button>
-      </div>
+      </PageHeader>
 
       <div className="stat-grid-responsive">
         <StatCard
@@ -299,30 +315,40 @@ export const ManagerDashboard = () => {
           count={data?.total_groups}
           iconName="layers"
           variant="primary"
+          onClick={() => navigate('/manager/groups')}
+          subtext="View project groups"
         />
         <StatCard
           title="Total Evaluators"
           count={data?.total_evaluators}
           iconName="teacher"
           variant="success"
+          onClick={() => navigate('/manager/teachers')}
+          subtext="Faculty evaluators"
         />
         <StatCard
           title="Remaining to Evaluate"
           count={data?.groups_remaining_evaluation}
           iconName="clock"
           variant="warning"
+          onClick={() => navigate('/manager/groups')}
+          subtext="Groups awaiting grading"
         />
         <StatCard
           title="Total Students"
           count={data?.total_students}
           iconName="users"
           variant="info"
+          onClick={() => navigate('/manager/students')}
+          subtext="Enrolled students"
         />
         <StatCard
           title="Students Without a Group"
           count={data?.students_without_group}
           iconName="bell"
           variant="warning"
+          onClick={() => navigate('/manager/groups?tab=ungrouped')}
+          subtext="Click to manage"
         />
       </div>
 
@@ -395,22 +421,7 @@ export const ManagerDashboard = () => {
                   <button
                     type="button"
                     onClick={handleOpenNewAnnouncement}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      padding: '5px 12px',
-                      backgroundColor: '#0073aa',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      transition: 'background-color 0.15s ease',
-                    }}
-                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#005f8d')}
-                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#0073aa')}
+                    className="btn btn-primary btn-sm"
                   >
                     <Plus size={14} />
                     <span>New</span>
@@ -432,7 +443,6 @@ export const ManagerDashboard = () => {
                     gap: '10px',
                   }}
                 >
-                  {/* Segmented Controls */}
                   <div
                     style={{
                       display: 'inline-flex',
@@ -455,7 +465,6 @@ export const ManagerDashboard = () => {
                         color: annFilterMode === 'recent' ? '#0073aa' : '#64748b',
                         boxShadow: annFilterMode === 'recent' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
                         cursor: 'pointer',
-                        transition: 'all 0.15s ease',
                       }}
                     >
                       Latest ({Math.min(5, allAnnouncements.length)})
@@ -473,14 +482,12 @@ export const ManagerDashboard = () => {
                         color: annFilterMode === 'all' ? '#0073aa' : '#64748b',
                         boxShadow: annFilterMode === 'all' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
                         cursor: 'pointer',
-                        transition: 'all 0.15s ease',
                       }}
                     >
                       All ({allAnnouncements.length})
                     </button>
                   </div>
 
-                  {/* Search Bar */}
                   <div
                     style={{
                       position: 'relative',
@@ -500,14 +507,14 @@ export const ManagerDashboard = () => {
                       onChange={(e) => setAnnSearch(e.target.value)}
                       placeholder="Search announcements..."
                       style={{
-                        fontSize: '12px',
-                        padding: '5px 26px 5px 28px',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '5px',
-                        backgroundColor: '#ffffff',
-                        color: '#1e293b',
-                        outline: 'none',
                         width: '100%',
+                        padding: '4px 26px 4px 28px',
+                        fontSize: '12px',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '4px',
+                        backgroundColor: '#ffffff',
+                        outline: 'none',
+                        color: '#334155',
                       }}
                     />
                     {annSearch && (
@@ -517,150 +524,102 @@ export const ManagerDashboard = () => {
                         style={{
                           position: 'absolute',
                           right: '6px',
-                          border: 'none',
                           background: 'none',
-                          color: '#94a3b8',
+                          border: 'none',
                           cursor: 'pointer',
+                          color: '#94a3b8',
+                          padding: 0,
                           display: 'flex',
-                          alignItems: 'center',
-                          padding: '2px',
                         }}
-                        title="Clear search"
                       >
-                        <X size={13} />
+                        <X size={12} />
                       </button>
                     )}
                   </div>
                 </div>
               )}
 
-              {/* Announcements List Container with Scroll Limit */}
-              <div
-                style={{
-                  padding: '16px 20px',
-                  maxHeight: '480px',
-                  overflowY: 'auto',
-                  flex: 1,
-                }}
-              >
-                {allAnnouncements.length === 0 ? (
-                  <div
-                    style={{
-                      textAlign: 'center',
-                      padding: '36px 20px',
-                      color: '#94a3b8',
-                    }}
-                  >
-                    <Megaphone size={36} style={{ margin: '0 auto 10px', opacity: 0.5 }} />
-                    <div style={{ fontWeight: 600, color: '#475569', fontSize: '14px' }}>
-                      No announcements yet
+              {/* Announcement List */}
+              <div style={{ flex: 1, padding: '12px 20px', maxHeight: '420px', overflowY: 'auto' }}>
+                {displayedAnnouncements.length === 0 ? (
+                  <div style={{ padding: '30px 10px', textAlign: 'center', color: '#94a3b8' }}>
+                    <Megaphone size={30} style={{ margin: '0 auto 8px', opacity: 0.4 }} />
+                    <div style={{ fontSize: '13.5px', fontWeight: 500, color: '#64748b' }}>
+                      {annSearch ? 'No matching announcements' : 'No announcements published yet'}
                     </div>
-                    <div style={{ fontSize: '12.5px', marginTop: '4px' }}>
-                      Publish an announcement to keep everyone informed.
-                    </div>
-                  </div>
-                ) : displayedAnnouncements.length === 0 ? (
-                  <div
-                    style={{
-                      textAlign: 'center',
-                      padding: '30px 20px',
-                      color: '#64748b',
-                    }}
-                  >
-                    <Search size={28} style={{ margin: '0 auto 8px', opacity: 0.5, color: '#94a3b8' }} />
-                    <div style={{ fontWeight: 600, fontSize: '13.5px' }}>
-                      No announcements match "{annSearch}"
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setAnnSearch('')}
-                      style={{
-                        marginTop: '8px',
-                        fontSize: '12px',
-                        color: '#0073aa',
-                        background: 'none',
-                        border: 'none',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        textDecoration: 'underline',
-                      }}
-                    >
-                      Clear search filter
-                    </button>
                   </div>
                 ) : (
-                  displayedAnnouncements.map((ann, idx) => (
+                  displayedAnnouncements.map((ann) => (
                     <AccordionItem
                       key={ann.id || ann._id}
-                      announcement={ann}
-                      onEdit={handleOpenEditAnnouncement}
-                      onDelete={() => setAnnToDelete(ann)}
-                      defaultOpen={idx === 0 && !annSearch.trim()}
-                      isRecent={false}
-                    />
+                      title={ann.title}
+                      badge={
+                        ann.scope === 'department'
+                          ? `Dept: ${ann.target_ids?.[0] || ''}`
+                          : ann.scope === 'group'
+                          ? `Groups: ${ann.target_ids?.length || 1}`
+                          : 'Broadcast'
+                      }
+                      date={formatDate(ann.date || ann.created_at)}
+                      actions={
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditAnnouncement(ann);
+                            }}
+                            className="btn btn-ghost btn-sm"
+                            title="Edit Announcement"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAnnToDelete(ann);
+                            }}
+                            className="btn btn-danger-outline btn-sm"
+                            title="Delete Announcement"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      }
+                    >
+                      <div
+                        style={{
+                          fontSize: '13px',
+                          color: '#475569',
+                          lineHeight: 1.6,
+                          whiteSpace: 'pre-wrap',
+                          padding: '4px 0',
+                        }}
+                      >
+                        {ann.content}
+                      </div>
+                    </AccordionItem>
                   ))
                 )}
               </div>
-
-              {/* Bottom Expand / View All Toggle when list is long */}
-              {allAnnouncements.length > 5 && !annSearch.trim() && (
-                <div
-                  style={{
-                    padding: '8px 20px',
-                    backgroundColor: '#f8fafc',
-                    borderTop: '1px solid #f1f5f9',
-                    textAlign: 'center',
-                  }}
-                >
-                  {isShowingRecent ? (
-                    <button
-                      type="button"
-                      onClick={() => setAnnFilterMode('all')}
-                      style={{
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        color: '#0073aa',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '4px 8px',
-                      }}
-                    >
-                      View All {allAnnouncements.length} Announcements ({allAnnouncements.length - 5} older) ↓
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setAnnFilterMode('recent')}
-                      style={{
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        color: '#64748b',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '4px 8px',
-                      }}
-                    >
-                      Show Recent (Top 5) Only ↑
-                    </button>
-                  )}
-                </div>
-              )}
             </div>
           );
         })()}
 
-        {/* Right: Attachments */}
+        {/* Right: Attachments & Guidelines */}
         <div
           style={{
             backgroundColor: '#ffffff',
-            borderRadius: '6px',
+            borderRadius: '8px',
             border: '1px solid #e2e8f0',
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
             overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
+          {/* Header */}
           <div
             style={{
               padding: '16px 20px',
@@ -668,52 +627,35 @@ export const ManagerDashboard = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              borderTop: '3px solid #5faee3',
+              borderTop: '3px solid #16a34a',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FileText size={18} color="#5faee3" />
+              <FileText size={18} color="#16a34a" />
               <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-                Attachments
+                Attachments & Rubrics
               </h2>
             </div>
             <button
               type="button"
-              onClick={() => setIsAttModalOpen(true)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                fontSize: '12px',
-                fontWeight: 600,
-                padding: '5px 10px',
-                backgroundColor: '#5faee3',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
+              onClick={() => {
+                setAttFormData({ title: '', file: null });
+                setIsAttModalOpen(true);
               }}
+              className="btn btn-success btn-sm"
             >
               <Upload size={14} />
               <span>Upload</span>
             </button>
           </div>
 
-          <div style={{ padding: '16px 20px' }}>
-            {!data?.attachments || data.attachments.length === 0 ? (
-              <div
-                style={{
-                  textAlign: 'center',
-                  padding: '36px 20px',
-                  color: '#94a3b8',
-                }}
-              >
-                <FileText size={36} style={{ margin: '0 auto 10px', opacity: 0.5 }} />
-                <div style={{ fontWeight: 600, color: '#475569', fontSize: '14px' }}>
-                  No attachments
-                </div>
-                <div style={{ fontSize: '12.5px', marginTop: '4px' }}>
-                  Upload a file to share with students and evaluators.
+          {/* List */}
+          <div style={{ flex: 1, padding: '14px 20px', maxHeight: '420px', overflowY: 'auto' }}>
+            {(!data?.attachments || data.attachments.length === 0) ? (
+              <div style={{ padding: '30px 10px', textAlign: 'center', color: '#94a3b8' }}>
+                <FileText size={30} style={{ margin: '0 auto 8px', opacity: 0.4 }} />
+                <div style={{ fontSize: '13.5px', fontWeight: 500, color: '#64748b' }}>
+                  No guidelines or templates attached
                 </div>
               </div>
             ) : (
@@ -727,57 +669,27 @@ export const ManagerDashboard = () => {
                     padding: '10px 14px',
                     border: '1px solid #e2e8f0',
                     borderRadius: '6px',
-                    marginBottom: '10px',
-                    backgroundColor: '#ffffff',
+                    marginBottom: '8px',
+                    backgroundColor: '#f8fafc',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '6px',
-                        backgroundColor: '#eef6fb',
-                        color: '#0073aa',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <FileText size={18} />
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '13.5px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                    <FileText size={20} color="#0073aa" style={{ flexShrink: 0 }} />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', truncate: true }}>
                         {att.title || att.filename}
                       </div>
-                      <div style={{ fontSize: '11.5px', color: '#94a3b8', marginTop: '2px' }}>
-                        {att.filename && <span>{att.filename} · </span>}
-                        {att.size && <span>{formatFileSize(att.size)} · </span>}
-                        <span>{formatDate(att.uploaded_at || att.created_at)}</span>
+                      <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                        {formatFileSize(att.size)} • {formatDate(att.created_at)}
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    <button
-                      type="button"
-                      onClick={() => attachmentsApi.download(att.id || att._id)}
-                      style={{
-                        border: 'none',
-                        background: 'none',
-                        color: '#64748b',
-                        padding: '6px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                      }}
-                      title="Download File"
-                    >
-                      <Download size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditAttachment(att)}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <a
+                      href={att.download_url || `/api/attachments/${att.id || att._id}/download`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       style={{
                         border: 'none',
                         background: 'none',
@@ -787,22 +699,22 @@ export const ManagerDashboard = () => {
                         cursor: 'pointer',
                         display: 'flex',
                       }}
-                      title="Edit Attachment Title"
+                      title="Download file"
+                    >
+                      <Download size={16} />
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditAttachment(att)}
+                      className="btn btn-ghost btn-sm"
+                      title="Rename Attachment"
                     >
                       <Edit2 size={16} />
                     </button>
                     <button
                       type="button"
                       onClick={() => setAttToDelete(att)}
-                      style={{
-                        border: 'none',
-                        background: 'none',
-                        color: '#dc2626',
-                        padding: '6px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                      }}
+                      className="btn btn-danger-outline btn-sm"
                       title="Delete Attachment"
                     >
                       <Trash2 size={16} />
@@ -815,7 +727,7 @@ export const ManagerDashboard = () => {
         </div>
       </div>
 
-      {/* Modal: New / Edit Announcement */}
+      {/* Modal: New / Edit Announcement with Target Selector */}
       <Modal
         isOpen={isAnnModalOpen}
         onClose={() => setIsAnnModalOpen(false)}
@@ -823,22 +735,14 @@ export const ManagerDashboard = () => {
       >
         <form onSubmit={handleSaveAnnouncement}>
           <div style={{ marginBottom: '14px' }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: '#334155',
-                marginBottom: '5px',
-              }}
-            >
-              Title *
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+              Announcement Title *
             </label>
             <input
               type="text"
               value={annFormData.title}
               onChange={(e) => setAnnFormData({ ...annFormData, title: e.target.value })}
-              placeholder="e.g. Sprint 1 Progress Reviews"
+              placeholder="e.g. FYP Proposal Guidelines Released"
               required
               style={{
                 width: '100%',
@@ -851,23 +755,91 @@ export const ManagerDashboard = () => {
             />
           </div>
 
-          <div style={{ marginBottom: '18px' }}>
-            <label
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+              Target Audience / Scope *
+            </label>
+            <select
+              value={annFormData.scope}
+              onChange={(e) => setAnnFormData({ ...annFormData, scope: e.target.value })}
               style={{
-                display: 'block',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: '#334155',
-                marginBottom: '5px',
+                width: '100%',
+                border: '1px solid #cbd5e1',
+                borderRadius: '4px',
+                padding: '8px 12px',
+                fontSize: '13.5px',
+                backgroundColor: '#ffffff',
+                outline: 'none',
               }}
             >
-              Content
+              <option value="broadcast">Broadcast (All Students & Faculty)</option>
+              <option value="department">Specific Department</option>
+              <option value="group">Specific Group(s)</option>
+            </select>
+          </div>
+
+          {annFormData.scope === 'department' && (
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                Select Department *
+              </label>
+              <select
+                value={annFormData.target_dept}
+                onChange={(e) => setAnnFormData({ ...annFormData, target_dept: e.target.value })}
+                required
+                style={{
+                  width: '100%',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '4px',
+                  padding: '8px 12px',
+                  fontSize: '13.5px',
+                  backgroundColor: '#ffffff',
+                  outline: 'none',
+                }}
+              >
+                <option value="">-- Choose Department --</option>
+                {departments.map((d) => (
+                  <option key={d.id || d._id || d.code} value={d.code}>
+                    {d.code} - {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {annFormData.scope === 'group' && (
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                Target Group IDs (Comma-separated) *
+              </label>
+              <input
+                type="text"
+                value={annFormData.target_groups}
+                onChange={(e) => setAnnFormData({ ...annFormData, target_groups: e.target.value })}
+                placeholder="e.g. 64f1..., 64f2..."
+                required
+                style={{
+                  width: '100%',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '4px',
+                  padding: '8px 12px',
+                  fontSize: '13.5px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+          )}
+
+          <div style={{ marginBottom: '18px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+              Content / Message *
             </label>
             <textarea
               rows={4}
               value={annFormData.content}
               onChange={(e) => setAnnFormData({ ...annFormData, content: e.target.value })}
               placeholder="Enter announcement description..."
+              required
               style={{
                 width: '100%',
                 border: '1px solid #cbd5e1',
@@ -884,33 +856,14 @@ export const ManagerDashboard = () => {
             <button
               type="button"
               onClick={() => setIsAnnModalOpen(false)}
-              style={{
-                padding: '8px 14px',
-                fontSize: '13px',
-                fontWeight: 500,
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#475569',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={annLoading}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: 600,
-                border: 'none',
-                backgroundColor: '#0073aa',
-                color: '#ffffff',
-                borderRadius: '4px',
-                cursor: annLoading ? 'not-allowed' : 'pointer',
-                opacity: annLoading ? 0.7 : 1,
-              }}
+              className="btn btn-primary"
             >
               {annLoading ? 'Saving...' : annFormData.id ? 'Save Changes' : 'Publish'}
             </button>
@@ -933,16 +886,7 @@ export const ManagerDashboard = () => {
           <button
             type="button"
             onClick={() => setAnnToDelete(null)}
-            style={{
-              padding: '8px 14px',
-              fontSize: '13px',
-              fontWeight: 500,
-              border: '1px solid #cbd5e1',
-              backgroundColor: '#ffffff',
-              color: '#475569',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
+            className="btn btn-secondary"
           >
             Cancel
           </button>
@@ -950,16 +894,7 @@ export const ManagerDashboard = () => {
             type="button"
             onClick={handleConfirmDeleteAnnouncement}
             disabled={annLoading}
-            style={{
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              border: 'none',
-              backgroundColor: '#dc2626',
-              color: '#ffffff',
-              borderRadius: '4px',
-              cursor: annLoading ? 'not-allowed' : 'pointer',
-            }}
+            className="btn btn-danger"
           >
             {annLoading ? 'Removing...' : 'Remove'}
           </button>
@@ -974,15 +909,7 @@ export const ManagerDashboard = () => {
       >
         <form onSubmit={handleSaveAttachment}>
           <div style={{ marginBottom: '14px' }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: '#334155',
-                marginBottom: '5px',
-              }}
-            >
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '5px' }}>
               Attachment Title *
             </label>
             <input
@@ -1003,15 +930,7 @@ export const ManagerDashboard = () => {
           </div>
 
           <div style={{ marginBottom: '18px' }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: '#334155',
-                marginBottom: '5px',
-              }}
-            >
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '5px' }}>
               Select File (.pdf, .docx, .xlsx, .zip) *
             </label>
             <input
@@ -1034,33 +953,14 @@ export const ManagerDashboard = () => {
             <button
               type="button"
               onClick={() => setIsAttModalOpen(false)}
-              style={{
-                padding: '8px 14px',
-                fontSize: '13px',
-                fontWeight: 500,
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#475569',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={attLoading}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: 600,
-                border: 'none',
-                backgroundColor: '#0073aa',
-                color: '#ffffff',
-                borderRadius: '4px',
-                cursor: attLoading ? 'not-allowed' : 'pointer',
-                opacity: attLoading ? 0.7 : 1,
-              }}
+              className="btn btn-primary"
             >
               {attLoading ? 'Uploading...' : 'Upload'}
             </button>
@@ -1083,16 +983,7 @@ export const ManagerDashboard = () => {
           <button
             type="button"
             onClick={() => setAttToDelete(null)}
-            style={{
-              padding: '8px 14px',
-              fontSize: '13px',
-              fontWeight: 500,
-              border: '1px solid #cbd5e1',
-              backgroundColor: '#ffffff',
-              color: '#475569',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
+            className="btn btn-secondary"
           >
             Cancel
           </button>
@@ -1100,16 +991,7 @@ export const ManagerDashboard = () => {
             type="button"
             onClick={handleConfirmDeleteAttachment}
             disabled={attLoading}
-            style={{
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              border: 'none',
-              backgroundColor: '#dc2626',
-              color: '#ffffff',
-              borderRadius: '4px',
-              cursor: attLoading ? 'not-allowed' : 'pointer',
-            }}
+            className="btn btn-danger"
           >
             {attLoading ? 'Deleting...' : 'Delete'}
           </button>
@@ -1141,15 +1023,7 @@ export const ManagerDashboard = () => {
           )}
 
           <div style={{ marginBottom: '16px' }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '13px',
-                fontWeight: 600,
-                color: '#334155',
-                marginBottom: '6px',
-              }}
-            >
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
               Attachment Title *
             </label>
             <input
@@ -1178,33 +1052,14 @@ export const ManagerDashboard = () => {
             <button
               type="button"
               onClick={() => setAttToEdit(null)}
-              style={{
-                padding: '8px 14px',
-                fontSize: '13px',
-                fontWeight: 500,
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#475569',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={attEditLoading}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: 600,
-                border: 'none',
-                backgroundColor: '#0073aa',
-                color: '#ffffff',
-                borderRadius: '4px',
-                cursor: attEditLoading ? 'not-allowed' : 'pointer',
-                opacity: attEditLoading ? 0.7 : 1,
-              }}
+              className="btn btn-primary"
             >
               {attEditLoading ? 'Saving...' : 'Save Changes'}
             </button>

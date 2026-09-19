@@ -1,4 +1,4 @@
-# backend/app/blueprints/student/announcements.py
+﻿# backend/app/blueprints/student/announcements.py
 """
 Student Announcements API endpoint.
 

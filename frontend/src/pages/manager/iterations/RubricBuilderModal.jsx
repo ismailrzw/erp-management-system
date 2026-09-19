@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../../../components/ui/Modal';
 import { iterationsApi } from '../../../api/iterationsApi';
 import { rubricTemplatesApi } from '../../../api/rubricTemplatesApi';
-import { Plus, Trash2, CheckCircle2, AlertTriangle, Copy, ChevronDown, ChevronUp, Sparkles, BookOpen } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, AlertTriangle, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 
 const DEFAULT_LEVELS = {
   '0': 'Not submitted / Unsatisfactory',
@@ -18,45 +18,6 @@ const EMPTY_RUBRIC = () => ({
   weight: 5,
   levels: { ...DEFAULT_LEVELS },
 });
-
-export const SRS_PRESET_TEMPLATES = [
-  {
-    name: 'SRS Phase 1 — Problem Statement & Scope (15 Marks)',
-    course: 'All Courses',
-    criteria: [
-      { question: 'Problem Statement & Background', weight: 5, levels: { ...DEFAULT_LEVELS } },
-      { question: 'Objectives & Project Scope', weight: 5, levels: { ...DEFAULT_LEVELS } },
-      { question: 'Target Audience & Stakeholder Analysis', weight: 5, levels: { ...DEFAULT_LEVELS } },
-    ],
-  },
-  {
-    name: 'SRS Phase 2 — Requirements Analysis (25 Marks)',
-    course: 'All Courses',
-    criteria: [
-      { question: 'Functional Requirements & User Stories', weight: 10, levels: { ...DEFAULT_LEVELS } },
-      { question: 'Non-Functional Requirements & Constraints', weight: 5, levels: { ...DEFAULT_LEVELS } },
-      { question: 'Use Case Diagrams & Specifications', weight: 10, levels: { ...DEFAULT_LEVELS } },
-    ],
-  },
-  {
-    name: 'SRS Phase 3 — Architecture & DB Design (30 Marks)',
-    course: 'All Courses',
-    criteria: [
-      { question: 'System Architecture & Data Flow Diagrams', weight: 10, levels: { ...DEFAULT_LEVELS } },
-      { question: 'Database ERD & Schema Design', weight: 10, levels: { ...DEFAULT_LEVELS } },
-      { question: 'UI/UX Wireframes & Component Design', weight: 10, levels: { ...DEFAULT_LEVELS } },
-    ],
-  },
-  {
-    name: 'SRS Phase 4 — Final SRS & Traceability (30 Marks)',
-    course: 'All Courses',
-    criteria: [
-      { question: 'IEEE Standard 830 Document Format', weight: 10, levels: { ...DEFAULT_LEVELS } },
-      { question: 'Requirements Traceability Matrix (RTM)', weight: 10, levels: { ...DEFAULT_LEVELS } },
-      { question: 'Test Plan & Verification Criteria', weight: 10, levels: { ...DEFAULT_LEVELS } },
-    ],
-  },
-];
 
 export const RubricBuilderModal = ({
   isOpen,
@@ -147,20 +108,6 @@ export const RubricBuilderModal = ({
 
   const toggleLevels = (index) => {
     setOpenLevels((prev) => ({ ...prev, [index]: !prev[index] }));
-  };
-
-  const handleLoadPreset = (preset) => {
-    if (!preset || !preset.criteria) return;
-    if (isTemplateOperation && !templateName) {
-      setTemplateName(preset.name.split(' (')[0]);
-    }
-    setRubrics(
-      preset.criteria.map((r) => ({
-        ...r,
-        weight: Number(r.weight || 0),
-        levels: { ...DEFAULT_LEVELS, ...(r.levels || {}) },
-      }))
-    );
   };
 
   const handleLoadCustomTemplate = (tplId) => {
@@ -370,7 +317,7 @@ export const RubricBuilderModal = ({
                       max="1000"
                       value={r.weight}
                       onChange={(e) => updateRubric(index, 'weight', e.target.value)}
-                      style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 600, color: '#2563eb' }}
+                      style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 600, color: 'var(--primary)' }}
                     />
                   </div>
 
@@ -379,17 +326,8 @@ export const RubricBuilderModal = ({
                       type="button"
                       onClick={() => handleRemoveCriterion(index)}
                       title="Delete Criterion"
-                      style={{
-                        marginTop: '18px',
-                        backgroundColor: '#fef2f2',
-                        color: '#dc2626',
-                        border: '1px solid #fecaca',
-                        padding: '7px 10px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
+                      className="btn btn-danger-outline btn-sm"
+                      style={{ marginTop: '18px' }}
                     >
                       <Trash2 size={16} />
                     </button>
@@ -408,7 +346,7 @@ export const RubricBuilderModal = ({
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: '#2563eb',
+                        color: 'var(--primary)',
                         fontSize: '12px',
                         fontWeight: 600,
                         cursor: 'pointer',
@@ -454,9 +392,9 @@ export const RubricBuilderModal = ({
             gap: '6px',
             padding: '8px 14px',
             borderRadius: '6px',
-            border: '1px dashed #2563eb',
-            backgroundColor: '#eff6ff',
-            color: '#2563eb',
+            border: '1px dashed var(--primary)',
+            backgroundColor: 'var(--primary-light)',
+            color: 'var(--primary)',
             fontSize: '13px',
             fontWeight: 600,
             cursor: 'pointer',
@@ -470,7 +408,7 @@ export const RubricBuilderModal = ({
           <button
             type="button"
             onClick={onClose}
-            style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}
+            className="btn btn-secondary"
           >
             Cancel
           </button>
@@ -478,16 +416,7 @@ export const RubricBuilderModal = ({
             type="button"
             onClick={handleSave}
             disabled={saving || !isValidTotal}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: 'none',
-              backgroundColor: isValidTotal ? '#2563eb' : '#94a3b8',
-              color: '#ffffff',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: isValidTotal && !saving ? 'pointer' : 'not-allowed',
-            }}
+            className="btn btn-primary"
           >
             {saving ? 'Saving...' : isTemplateOperation ? 'Save Template' : 'Save Rubrics'}
           </button>

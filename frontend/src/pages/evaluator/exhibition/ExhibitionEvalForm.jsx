@@ -226,21 +226,8 @@ export function ExhibitionEvalForm({ group, onClose, onSuccess }) {
           <button
             type="submit"
             disabled={saving}
-            style={{
-              width: '100%',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              background: saving ? '#93c5fd' : '#2563eb',
-              color: '#ffffff',
-              padding: '10px',
-              borderRadius: '6px',
-              border: 'none',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: saving ? 'not-allowed' : 'pointer',
-            }}
+            className="btn btn-primary"
+            style={{ width: '100%', justifyContent: 'center' }}
           >
             <CheckCircle2 size={18} />
             <span>{saving ? 'Submitting...' : 'Submit Exhibition Evaluation'}</span>

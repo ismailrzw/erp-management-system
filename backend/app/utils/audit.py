@@ -1,4 +1,4 @@
-"""Audit log helper."""
+﻿"""Audit log helper."""
 
 import logging
 from datetime import datetime, timezone

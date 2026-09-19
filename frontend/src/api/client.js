@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { apiCache } from './apiCache';
 
 const getBaseURL = () => {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
@@ -14,6 +15,59 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Cache wrapper for GET requests: provides 0ms responses for seamless navigation
+const originalGet = api.get.bind(api);
+api.get = async function (url, config = {}) {
+  const shouldSkipCache =
+    config.skipCache === true ||
+    config.params?._refresh === true ||
+    config.headers?.['Cache-Control'] === 'no-cache';
+
+  // If cache is enabled, check for cached entry
+  if (!shouldSkipCache) {
+    const cached = apiCache.get(url, config.params);
+    if (cached && !cached.isStale) {
+      // 0ms instant cache hit
+      return Promise.resolve({
+        data: cached.data,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+        fromCache: true,
+      });
+    }
+
+    // Stale-While-Revalidate: Return stale data instantly and revalidate in the background
+    if (cached && cached.isStale) {
+      originalGet(url, config)
+        .then((freshRes) => {
+          if (freshRes?.data) {
+            apiCache.set(url, config.params, freshRes.data);
+          }
+        })
+        .catch(() => {});
+
+      return Promise.resolve({
+        data: cached.data,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+        fromCache: true,
+        isStale: true,
+      });
+    }
+  }
+
+  // Network fetch
+  const response = await originalGet(url, config);
+  if (response?.data && !shouldSkipCache) {
+    apiCache.set(url, config.params, response.data);
+  }
+  return response;
+};
 
 // Request interceptor: attach Bearer token
 api.interceptors.request.use(
@@ -32,12 +86,19 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor: handle token expiration / 401
+// Response interceptor: handle token expiration / 401 & automatic mutation invalidation
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const method = (response.config?.method || '').toLowerCase();
+    if (['post', 'put', 'patch', 'delete'].includes(method)) {
+      apiCache.invalidateForMutation(method, response.config?.url);
+    }
+    return response;
+  },
   (error) => {
     const isAuthRequest = error.config?.url?.includes('/auth/login');
     if (error.response?.status === 401 && !isAuthRequest) {
+      apiCache.clear();
       localStorage.removeItem('pbl_token');
       localStorage.removeItem('pbl_user');
       sessionStorage.removeItem('pbl_token');

@@ -1,4 +1,4 @@
-# backend/app/models/teacher.py
+﻿# backend/app/models/teacher.py
 """Teacher/Evaluator constants — teachers live in the ``users`` collection."""
 
 from typing import ClassVar

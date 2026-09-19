@@ -4,7 +4,7 @@ import { Trash2, RotateCcw, ArrowLeft, RefreshCw, AlertTriangle } from 'lucide-r
 import { departmentsApi } from '../../../api/departmentsApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 
 export const DepartmentTrashPage = () => {
   const [deletedDepts, setDeletedDepts] = useState([]);
@@ -95,11 +95,9 @@ export const DepartmentTrashPage = () => {
     }
   };
 
-  if (loading) {
-    return <Preloader />;
-  }
-
-  return (
+  return loading ? (
+    <div><ContentLoader label="Loading deleted departments..." /></div>
+  ) : (
     <div>
       <Toast
         message={toast.message}
@@ -119,18 +117,8 @@ export const DepartmentTrashPage = () => {
           <button
             type="button"
             onClick={() => navigate('/manager/departments/view')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'none',
-              border: 'none',
-              color: '#64748b',
-              cursor: 'pointer',
-              fontSize: '13px',
-              padding: 0,
-              marginBottom: '10px',
-            }}
+            className="btn btn-back"
+            style={{ marginBottom: '10px' }}
           >
             <ArrowLeft size={16} />
             <span>Back to Active Departments</span>
@@ -147,19 +135,7 @@ export const DepartmentTrashPage = () => {
           type="button"
           onClick={() => fetchDeleted(true)}
           disabled={refreshing}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            backgroundColor: '#ffffff',
-            border: '1px solid #cbd5e1',
-            borderRadius: '4px',
-            color: '#334155',
-            fontSize: '13px',
-            fontWeight: 500,
-            cursor: refreshing ? 'not-allowed' : 'pointer',
-          }}
+          className="btn btn-secondary btn-sm"
         >
           <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
           <span>Refresh</span>
@@ -175,13 +151,13 @@ export const DepartmentTrashPage = () => {
           overflow: 'hidden',
         }}
       >
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-responsive-container" style={{ borderRadius: 0 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
             <thead>
               <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Code</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600 }}>Department Name</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, textAlign: 'right' }}>Actions</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '80px' }}>Code</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '180px' }}>Department Name</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, textAlign: 'right', minWidth: '120px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -204,19 +180,7 @@ export const DepartmentTrashPage = () => {
                           type="button"
                           disabled={actionLoading}
                           onClick={() => handleRestore(d)}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '5px 10px',
-                            backgroundColor: '#eafbf1',
-                            color: '#16a34a',
-                            border: '1px solid #bcf0d2',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
+                          className="btn btn-success btn-sm"
                         >
                           <RotateCcw size={13} />
                           <span>Restore</span>
@@ -225,19 +189,7 @@ export const DepartmentTrashPage = () => {
                           type="button"
                           disabled={actionLoading}
                           onClick={() => setDeptToPermanentDelete(d)}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '5px 10px',
-                            backgroundColor: '#fdecea',
-                            color: '#dc2626',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
+                          className="btn btn-danger-outline btn-sm"
                         >
                           <Trash2 size={13} />
                           <span>Permanent Delete</span>
@@ -263,7 +215,7 @@ export const DepartmentTrashPage = () => {
           <button
             type="button"
             onClick={() => setDeptToPermanentDelete(null)}
-            style={{ padding: '8px 14px', fontSize: '13px', fontWeight: 500, border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569', borderRadius: '4px', cursor: 'pointer' }}
+            className="btn btn-secondary"
           >
             Cancel
           </button>
@@ -271,7 +223,7 @@ export const DepartmentTrashPage = () => {
             type="button"
             onClick={handleConfirmPermanentDelete}
             disabled={actionLoading}
-            style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, border: 'none', backgroundColor: '#dc2626', color: '#ffffff', borderRadius: '4px', cursor: actionLoading ? 'not-allowed' : 'pointer' }}
+            className="btn btn-danger"
           >
             {actionLoading ? 'Deleting...' : 'Permanently Delete'}
           </button>

@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react';
 import {
-  User,
-  Mail,
-  Lock,
-  Building2,
   ShieldCheck,
   CheckCircle2,
-  AlertCircle,
-  Loader2,
   KeyRound,
-  Shield,
+  GraduationCap,
+  Plus,
+  X,
+  Loader2,
+  Save,
 } from 'lucide-react';
 import { authApi } from '../../../api/authApi';
+import { supervisorsApi } from '../../../api/supervisorsApi';
 import { useAuth } from '../../../context/useAuth';
 import { Toast } from '../../../components/ui/Toast';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
+import { ChangePasswordModal } from '../../../components/profile/ChangePasswordModal';
 
 export const ManagerProfilePage = () => {
   const { user } = useAuth();
@@ -22,15 +22,47 @@ export const ManagerProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ message: '', type: 'success' });
 
-  // Password Form States
-  const [passwordForm, setPasswordForm] = useState({
-    current_password: '',
-    new_password: '',
-    confirm_password: '',
+  // Evaluator Domain Tags
+  const [domains, setDomains] = useState([]);
+  const [domainInput, setDomainInput] = useState('');
+  const [savingDomains, setSavingDomains] = useState(false);
+
+  // Modal State
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+
+  // Notification Preferences (persisted in localStorage)
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pbl_manager_notifications');
+      return saved
+        ? JSON.parse(saved)
+        : {
+            emailNotifications: true,
+            groupRequests: true,
+            submissionAlerts: true,
+            systemNotices: true,
+          };
+    } catch {
+      return {
+        emailNotifications: true,
+        groupRequests: true,
+        submissionAlerts: true,
+        systemNotices: true,
+      };
+    }
   });
-  const [savingPassword, setSavingPassword] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
-  const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  const toggleNotification = (key) => {
+    setNotifications((prev) => {
+      const updated = { ...prev, [key]: !prev[key] };
+      try {
+        localStorage.setItem('pbl_manager_notifications', JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -39,14 +71,16 @@ export const ManagerProfilePage = () => {
         const res = await authApi.getMe();
         if (isMounted && res.success && res.data) {
           setProfile(res.data);
+          setDomains(res.data.domains || []);
         } else if (isMounted && user) {
           setProfile(user);
+          setDomains(user.domains || []);
         }
       } catch (err) {
         if (isMounted) {
-          // Fallback to auth context user
           if (user) {
             setProfile(user);
+            setDomains(user.domains || []);
           } else {
             setToast({
               message: err.response?.data?.message || 'Failed to load manager profile',
@@ -64,59 +98,55 @@ export const ManagerProfilePage = () => {
     };
   }, [user]);
 
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault();
-    const { current_password, new_password, confirm_password } = passwordForm;
+  const handleAddDomain = () => {
+    const val = domainInput.trim();
+    if (!val) return;
+    if (domains.includes(val)) {
+      setToast({ message: 'Domain tag already added.', type: 'info' });
+      return;
+    }
+    setDomains([...domains, val]);
+    setDomainInput('');
+  };
 
-    if (!current_password) {
-      setPasswordError('Current Password is required.');
-      return;
-    }
-    if (!new_password || new_password.length < 6) {
-      setPasswordError('New Password must be at least 6 characters.');
-      return;
-    }
-    if (new_password === current_password) {
-      setPasswordError('New password must be different from your current password.');
-      return;
-    }
-    if (new_password !== confirm_password) {
-      setPasswordError('New password and confirm password do not match.');
-      return;
-    }
+  const handleRemoveDomain = (idx) => {
+    setDomains(domains.filter((_, i) => i !== idx));
+  };
 
+  const handleSaveDomains = async () => {
     try {
-      setSavingPassword(true);
-      setPasswordError('');
-      setPasswordSuccess('');
-
-      const res = await authApi.changePassword(current_password, new_password);
-
+      setSavingDomains(true);
+      const res = await supervisorsApi.updateEvaluatorDomains(domains);
       if (res.success) {
-        setPasswordSuccess('Password changed successfully! Keep your credentials secure.');
-        setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
-        setToast({ message: 'Password updated successfully!', type: 'success' });
-      } else {
-        setPasswordError(res.message || 'Failed to change password.');
+        setToast({ message: 'Supervision & research domains updated successfully!', type: 'success' });
       }
     } catch (err) {
-      const errMsg =
-        err.response?.data?.message ||
-        err.response?.data?.errors?.newPassword?.[0] ||
-        err.response?.data?.errors?.currentPassword?.[0] ||
-        err.message ||
-        'Failed to change password';
-      setPasswordError(errMsg);
+      setToast({
+        message: err.response?.data?.message || 'Failed to update domains.',
+        type: 'error',
+      });
     } finally {
-      setSavingPassword(false);
+      setSavingDomains(false);
     }
   };
 
+  const managerData = profile || user || {};
+
   if (loading) {
-    return <Preloader text="Loading Manager Profile..." />;
+    return (
+      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        <ContentLoader label="Loading settings..." />
+      </div>
+    );
   }
 
-  const managerData = profile || user || {};
+  const userInitial = managerData?.name ? managerData.name.charAt(0).toUpperCase() : 'M';
+  const roleLabel =
+    managerData?.role === 'pbl_manager'
+      ? 'PBL Manager'
+      : managerData?.role === 'evaluator'
+      ? 'Evaluator'
+      : managerData?.role || 'Administrator';
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
@@ -129,423 +159,493 @@ export const ManagerProfilePage = () => {
         />
       )}
 
-      {/* Header */}
-      <div style={{ marginBottom: '22px' }}>
-        <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 700, color: 'var(--heading)' }}>
-          Manager Profile & Security
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        onSuccess={(msg) => setToast({ message: msg, type: 'success' })}
+      />
+
+      {/* Page Header */}
+      <div style={{ marginBottom: '24px' }}>
+        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: 'var(--heading)' }}>
+          Settings
         </h1>
         <p style={{ margin: '4px 0 0', fontSize: '13.5px', color: 'var(--body-text)' }}>
-          View your administrative account credentials and update your portal password.
+          View administrative account credentials, update login security, and configure portal notifications.
         </p>
       </div>
 
-      {/* Profile Details Card */}
+      {/* CARD 1: PROFILE & ACCOUNT SECURITY (Google Classroom Style) */}
       <div
         className="card-responsive"
-        style={{ borderTop: '3px solid var(--primary)', marginBottom: '22px' }}
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '10px',
+          border: '1px solid #e2e8f0',
+          padding: '24px',
+          marginBottom: '24px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
+        }}
       >
+        <div style={{ paddingBottom: '16px', borderBottom: '1px solid #f1f5f9', marginBottom: '20px' }}>
+          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--heading)' }}>
+            Profile
+          </h2>
+        </div>
+
+        {/* Profile Avatar & Info Row */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            paddingBottom: '14px',
-            borderBottom: '1px solid #f1f5f9',
-            marginBottom: '18px',
             flexWrap: 'wrap',
-            gap: '10px',
+            gap: '16px',
+            paddingBottom: '20px',
+            borderBottom: '1px solid #f8fafc',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div
               style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '8px',
-                backgroundColor: 'var(--primary-light)',
-                color: 'var(--primary)',
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--primary, #0073aa)',
+                color: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                fontSize: '22px',
+                fontWeight: 700,
+                flexShrink: 0,
+                boxShadow: '0 2px 6px rgba(0, 115, 170, 0.25)',
               }}
             >
-              <ShieldCheck size={22} />
+              {userInitial}
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--heading)' }}>
-                Account Information
-              </h2>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
-                System Administrator & Coordinator Profile
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#0f172a' }}>
+                  {managerData?.name || 'Administrator'}
+                </h3>
+                <span
+                  style={{
+                    backgroundColor: '#eaf5fb',
+                    color: '#0073aa',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {roleLabel}
+                </span>
+              </div>
+              <div style={{ fontSize: '13px', color: '#64748b', marginTop: '3px' }}>
+                {managerData?.email}
               </div>
             </div>
           </div>
-
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-              fontSize: '12px',
-              fontWeight: 600,
-              padding: '4px 10px',
-              borderRadius: '12px',
-              backgroundColor: '#e0f2fe',
-              color: '#0369a1',
-              border: '1px solid #bae6fd',
-            }}
-          >
-            <Shield size={13} />
-            PBL Manager
-          </span>
         </div>
 
+        {/* Account Settings / Password Row */}
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
             gap: '16px',
+            padding: '18px 0',
+            borderBottom: '1px solid #f1f5f9',
           }}
         >
-          {/* Full Name */}
-          <div
-            style={{
-              padding: '14px',
-              backgroundColor: '#f8fafc',
-              borderRadius: '6px',
-              border: '1px solid #e2e8f0',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '11.5px',
-                color: '#64748b',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-              }}
-            >
-              <User size={14} color="#0073aa" />
-              <span>Full Name</span>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b' }}>
+              Account security
             </div>
-            <div style={{ fontSize: '15px', fontWeight: 600, color: '#1e293b', marginTop: '6px' }}>
-              {managerData.name || 'System Manager'}
+            <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+              Change your password and security credentials to protect your portal account.
             </div>
           </div>
-
-          {/* Email Address */}
-          <div
-            style={{
-              padding: '14px',
-              backgroundColor: '#f8fafc',
-              borderRadius: '6px',
-              border: '1px solid #e2e8f0',
-            }}
+          <button
+            type="button"
+            onClick={() => setIsPasswordModalOpen(true)}
+            className="btn btn-secondary"
           >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '11.5px',
-                color: '#64748b',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-              }}
-            >
-              <Mail size={14} color="#0073aa" />
-              <span>Email Address</span>
-            </div>
-            <div style={{ fontSize: '14.5px', fontWeight: 600, color: '#1e293b', marginTop: '6px', wordBreak: 'break-all' }}>
-              {managerData.email || 'zamanaziz@bnu.edu.pk'}
-            </div>
+            <KeyRound size={15} />
+            <span>Change Password</span>
+          </button>
+        </div>
+
+        {/* Account Credentials Grid */}
+        <div style={{ marginTop: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+            <ShieldCheck size={16} color="var(--primary)" />
+            <h4 style={{ margin: 0, fontSize: '13.5px', fontWeight: 600, color: 'var(--heading)' }}>
+              Administrative Credentials & Role Details
+            </h4>
           </div>
 
-          {/* Department */}
-          <div
-            style={{
-              padding: '14px',
-              backgroundColor: '#f8fafc',
-              borderRadius: '6px',
-              border: '1px solid #e2e8f0',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '11.5px',
-                color: '#64748b',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-              }}
-            >
-              <Building2 size={14} color="#0073aa" />
-              <span>Department</span>
+          <div className="form-grid-3">
+            <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                Full Name
+              </div>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', marginTop: '3px' }}>
+                {managerData?.name || 'System Manager'}
+              </div>
             </div>
-            <div style={{ fontSize: '15px', fontWeight: 600, color: '#1e293b', marginTop: '6px' }}>
-              {managerData.dept || 'Computer Science'}
+
+            <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                Official Login Email
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a', marginTop: '3px', wordBreak: 'break-all' }}>
+                {managerData?.email}
+              </div>
+            </div>
+
+            <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                Assigned Role
+              </div>
+              <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#0f172a', marginTop: '3px' }}>
+                {roleLabel}
+              </div>
+            </div>
+
+            <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                Account Security Status
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#15803d', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <CheckCircle2 size={14} />
+                <span>Active & Verified</span>
+              </div>
+            </div>
+
+            <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                Access Permissions
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a', marginTop: '3px' }}>
+                Full Portal Management
+              </div>
+            </div>
+
+            <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                Two-Factor Security
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#64748b', marginTop: '3px' }}>
+                Password Protected
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Security & Password Change Card */}
-      <div className="card-responsive" style={{ borderTop: '3px solid #f59e0b' }}>
+      {/* CARD: EVALUATOR RESEARCH & SUPERVISION DOMAINS (Only for Evaluators) */}
+      {managerData?.role === 'evaluator' && (
         <div
+          className="card-responsive"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            paddingBottom: '14px',
-            borderBottom: '1px solid #f1f5f9',
-            marginBottom: '18px',
+            backgroundColor: '#ffffff',
+            borderRadius: '10px',
+            border: '1px solid #e2e8f0',
+            padding: '24px',
+            marginBottom: '24px',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
           }}
         >
-          <div
-            style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '8px',
-              backgroundColor: '#fef3c7',
-              color: '#d97706',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <KeyRound size={22} />
-          </div>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--heading)' }}>
-              Change Account Password
-            </h2>
-            <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
-              Ensure your account uses a strong password with at least 6 characters.
+          <div style={{ paddingBottom: '16px', borderBottom: '1px solid #f1f5f9', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <GraduationCap size={20} color="#7c3aed" />
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--heading)' }}>
+                Research & Supervision Domains
+              </h2>
             </div>
+            <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--body-text)' }}>
+              Specify your areas of expertise so students can discover and request your supervision for relevant projects.
+            </p>
           </div>
-        </div>
 
-        {/* Error Alert */}
-        {passwordError && (
-          <div
-            style={{
-              backgroundColor: '#fdecea',
-              border: '1px solid #fecaca',
-              borderRadius: '6px',
-              padding: '12px 14px',
-              color: '#dc2626',
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              marginBottom: '16px',
-            }}
-          >
-            <AlertCircle size={16} style={{ flexShrink: 0 }} />
-            <span>{passwordError}</span>
-          </div>
-        )}
-
-        {/* Success Alert */}
-        {passwordSuccess && (
-          <div
-            style={{
-              backgroundColor: '#f0fdf4',
-              border: '1px solid #bbf7d0',
-              borderRadius: '6px',
-              padding: '12px 14px',
-              color: '#15803d',
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              marginBottom: '16px',
-            }}
-          >
-            <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
-            <span>{passwordSuccess}</span>
-          </div>
-        )}
-
-        <form onSubmit={handlePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Current Password */}
           <div>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '13px',
-                fontWeight: 600,
-                color: '#334155',
-                marginBottom: '6px',
-              }}
-            >
-              Current Password <span style={{ color: '#dc2626' }}>*</span>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>
+              Domain Tags & Specialties
             </label>
-            <div style={{ position: 'relative' }}>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
               <input
-                type="password"
-                value={passwordForm.current_password}
-                onChange={(e) =>
-                  setPasswordForm((prev) => ({ ...prev, current_password: e.target.value }))
-                }
-                placeholder="Enter current password"
-                required
+                type="text"
+                placeholder="e.g. Machine Learning, Cloud Computing, Mobile Apps, IoT..."
+                value={domainInput}
+                onChange={(e) => setDomainInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddDomain();
+                  }
+                }}
                 style={{
-                  width: '100%',
+                  flex: '1 1 240px',
+                  padding: '8px 12px',
+                  fontSize: '13px',
                   border: '1px solid #cbd5e1',
                   borderRadius: '6px',
-                  padding: '9px 12px 9px 36px',
-                  fontSize: '13.5px',
-                  color: '#1e293b',
                   outline: 'none',
                 }}
               />
-              <Lock
-                size={16}
+              <button
+                type="button"
+                onClick={handleAddDomain}
+                className="btn btn-secondary"
+              >
+                <Plus size={15} />
+                <span>Add Tag</span>
+              </button>
+            </div>
+
+            {/* Tags display */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', minHeight: '36px', marginBottom: '18px' }}>
+              {domains.length === 0 ? (
+                <span style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic' }}>
+                  No domain tags added yet. Add domain tags above to help students find you.
+                </span>
+              ) : (
+                domains.map((dom, idx) => (
+                  <span
+                    key={idx}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 10px',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      backgroundColor: '#f5f3ff',
+                      color: '#7c3aed',
+                      border: '1px solid #ddd6fe',
+                      borderRadius: '16px',
+                    }}
+                  >
+                    <span>{dom}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveDomain(idx)}
+                      className="btn btn-back"
+                    >
+                      <X size={13} />
+                    </button>
+                  </span>
+                ))
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
+              <button
+                type="button"
+                onClick={handleSaveDomains}
+                disabled={savingDomains}
+                className="btn btn-primary"
+              >
+                {savingDomains ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                <span>{savingDomains ? 'Saving...' : 'Save Domains'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CARD 2: NOTIFICATIONS (Google Classroom Style) */}
+      <div
+        className="card-responsive"
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '10px',
+          border: '1px solid #e2e8f0',
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
+        }}
+      >
+        <div style={{ paddingBottom: '16px', borderBottom: '1px solid #f1f5f9', marginBottom: '20px' }}>
+          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--heading)' }}>
+            Notifications
+          </h2>
+          <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--body-text)' }}>
+            These settings apply to the administrative alerts and notices you receive.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          {/* Allow email notifications */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+            <div>
+              <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#1e293b' }}>
+                Allow email notifications
+              </div>
+              <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
+                Receive essential administrative summaries and portal alerts via email.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleNotification('emailNotifications')}
+              style={{
+                width: '44px',
+                height: '24px',
+                borderRadius: '12px',
+                backgroundColor: notifications.emailNotifications ? 'var(--primary, #0073aa)' : '#cbd5e1',
+                border: 'none',
+                cursor: 'pointer',
+                position: 'relative',
+                transition: 'background-color 0.2s ease',
+                padding: '2px',
+                flexShrink: 0,
+              }}
+              aria-label="Toggle email notifications"
+            >
+              <div
                 style={{
-                  position: 'absolute',
-                  left: '11px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#94a3b8',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ffffff',
+                  transform: notifications.emailNotifications ? 'translateX(20px)' : 'translateX(0)',
+                  transition: 'transform 0.2s ease',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
                 }}
               />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
-            {/* New Password */}
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#334155',
-                  marginBottom: '6px',
-                }}
-              >
-                New Password <span style={{ color: '#dc2626' }}>*</span>
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="password"
-                  value={passwordForm.new_password}
-                  onChange={(e) =>
-                    setPasswordForm((prev) => ({ ...prev, new_password: e.target.value }))
-                  }
-                  placeholder="Min 6 characters"
-                  required
-                  style={{
-                    width: '100%',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '6px',
-                    padding: '9px 12px 9px 36px',
-                    fontSize: '13.5px',
-                    color: '#1e293b',
-                    outline: 'none',
-                  }}
-                />
-                <KeyRound
-                  size={16}
-                  style={{
-                    position: 'absolute',
-                    left: '11px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: '#94a3b8',
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Confirm New Password */}
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#334155',
-                  marginBottom: '6px',
-                }}
-              >
-                Confirm New Password <span style={{ color: '#dc2626' }}>*</span>
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="password"
-                  value={passwordForm.confirm_password}
-                  onChange={(e) =>
-                    setPasswordForm((prev) => ({ ...prev, confirm_password: e.target.value }))
-                  }
-                  placeholder="Re-type new password"
-                  required
-                  style={{
-                    width: '100%',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '6px',
-                    padding: '9px 12px 9px 36px',
-                    fontSize: '13.5px',
-                    color: '#1e293b',
-                    outline: 'none',
-                  }}
-                />
-                <Lock
-                  size={16}
-                  style={{
-                    position: 'absolute',
-                    left: '11px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: '#94a3b8',
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
-            <button
-              type="submit"
-              disabled={savingPassword}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '9px 20px',
-                backgroundColor: 'var(--primary)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '13.5px',
-                fontWeight: 600,
-                cursor: savingPassword ? 'not-allowed' : 'pointer',
-                opacity: savingPassword ? 0.75 : 1,
-                transition: 'background-color 0.15s ease',
-              }}
-              onMouseEnter={(e) => {
-                if (!savingPassword) e.currentTarget.style.backgroundColor = 'var(--primary-hover)';
-              }}
-              onMouseLeave={(e) => {
-                if (!savingPassword) e.currentTarget.style.backgroundColor = 'var(--primary)';
-              }}
-            >
-              {savingPassword ? (
-                <>
-                  <Loader2 size={16} className="ball-scale-1" />
-                  <span>Updating Password...</span>
-                </>
-              ) : (
-                <span>Update Password</span>
-              )}
             </button>
           </div>
-        </form>
+
+          {/* Group Requests */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', paddingTop: '14px', borderTop: '1px solid #f8fafc' }}>
+            <div>
+              <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#1e293b' }}>
+                Student group creations & supervisor requests
+              </div>
+              <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
+                Alerts when new project groups are formed and pending coordinator approval.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleNotification('groupRequests')}
+              style={{
+                width: '44px',
+                height: '24px',
+                borderRadius: '12px',
+                backgroundColor: notifications.groupRequests ? 'var(--primary, #0073aa)' : '#cbd5e1',
+                border: 'none',
+                cursor: 'pointer',
+                position: 'relative',
+                transition: 'background-color 0.2s ease',
+                padding: '2px',
+                flexShrink: 0,
+              }}
+              aria-label="Toggle group requests"
+            >
+              <div
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ffffff',
+                  transform: notifications.groupRequests ? 'translateX(20px)' : 'translateX(0)',
+                  transition: 'transform 0.2s ease',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                }}
+              />
+            </button>
+          </div>
+
+          {/* Submission Alerts */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', paddingTop: '14px', borderTop: '1px solid #f8fafc' }}>
+            <div>
+              <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#1e293b' }}>
+                Milestone submissions & rubric grading updates
+              </div>
+              <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
+                Notifications when student groups turn in milestone iterations.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleNotification('submissionAlerts')}
+              style={{
+                width: '44px',
+                height: '24px',
+                borderRadius: '12px',
+                backgroundColor: notifications.submissionAlerts ? 'var(--primary, #0073aa)' : '#cbd5e1',
+                border: 'none',
+                cursor: 'pointer',
+                position: 'relative',
+                transition: 'background-color 0.2s ease',
+                padding: '2px',
+                flexShrink: 0,
+              }}
+              aria-label="Toggle submission alerts"
+            >
+              <div
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ffffff',
+                  transform: notifications.submissionAlerts ? 'translateX(20px)' : 'translateX(0)',
+                  transition: 'transform 0.2s ease',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                }}
+              />
+            </button>
+          </div>
+
+          {/* System Notices */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', paddingTop: '14px', borderTop: '1px solid #f8fafc' }}>
+            <div>
+              <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#1e293b' }}>
+                System security & coordinator digests
+              </div>
+              <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
+                Weekly digest reports on department milestones and evaluator progress.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleNotification('systemNotices')}
+              style={{
+                width: '44px',
+                height: '24px',
+                borderRadius: '12px',
+                backgroundColor: notifications.systemNotices ? 'var(--primary, #0073aa)' : '#cbd5e1',
+                border: 'none',
+                cursor: 'pointer',
+                position: 'relative',
+                transition: 'background-color 0.2s ease',
+                padding: '2px',
+                flexShrink: 0,
+              }}
+              aria-label="Toggle system notices"
+            >
+              <div
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ffffff',
+                  transform: notifications.systemNotices ? 'translateX(20px)' : 'translateX(0)',
+                  transition: 'transform 0.2s ease',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                }}
+              />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { EmptyState } from '../../../components/ui/EmptyState';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { Toast } from '../../../components/ui/Toast';
 import { DeadlineCountdown } from '../../../components/ui/DeadlineCountdown';
 import { studentIterationsApi } from '../../../api/studentIterationsApi';
@@ -21,9 +21,9 @@ const tabStyle = (active) => ({
   fontSize: '12.5px',
   fontWeight: 600,
   cursor: 'pointer',
-  border: active ? '1px solid #2563eb' : '1px solid #e2e8f0',
-  backgroundColor: active ? '#eff6ff' : '#ffffff',
-  color: active ? '#1d4ed8' : '#64748b',
+  border: active ? '1px solid var(--primary)' : '1px solid #e2e8f0',
+  backgroundColor: active ? 'var(--primary-light)' : '#ffffff',
+  color: active ? 'var(--primary)' : '#64748b',
   transition: 'all 0.15s ease',
 });
 
@@ -104,17 +104,8 @@ export const StudentIterationsPage = () => {
           <button
             type="button"
             onClick={() => navigate('/student/group/browse')}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '6px',
-              border: '1px solid #fde68a',
-              backgroundColor: '#fef3c7',
-              color: '#92400e',
-              fontSize: '12.5px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
+            className="btn btn-secondary btn-sm"
+            style={{ whiteSpace: 'nowrap' }}
           >
             <Users size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
             Browse Groups
@@ -139,7 +130,7 @@ export const StudentIterationsPage = () => {
       )}
 
       {loading ? (
-        <Preloader label="Loading iterations..." />
+        <ContentLoader label="Loading iterations..." />
       ) : filteredIterations.length === 0 ? (
         <EmptyState
           title={statusFilter !== 'all' ? 'No matching iterations' : 'No Iterations Available'}
@@ -172,14 +163,6 @@ export const StudentIterationsPage = () => {
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                   boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
-                  e.currentTarget.style.borderColor = '#bfdbfe';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
-                  e.currentTarget.style.borderColor = isOverdue ? '#fecaca' : '#e2e8f0';
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>

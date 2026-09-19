@@ -1,4 +1,4 @@
-"""File-system and MongoDB operations for manager attachments."""
+﻿"""File-system and MongoDB operations for manager attachments."""
 
 from datetime import datetime, timezone
 from pathlib import Path

@@ -1,22 +1,6 @@
 # backend/tests/test_student_groups.py
 """
 Integration tests for student group formation and invitation workflow.
-
-Covers
-------
-Groups:
-  - GET  /api/student/groups/my
-  - POST /api/student/groups/
-  - PUT  /api/student/groups/<id>
-  - POST /api/student/groups/<id>/leave
-  - POST /api/student/groups/<id>/invite
-  - POST /api/student/groups/<id>/remove/<member_id>
-  - GET  /api/student/students/search/
-
-Invitations:
-  - GET  /api/student/invitations/pending
-  - POST /api/student/invitations/<id>/accept
-  - POST /api/student/invitations/<id>/decline
 """
 
 GROUPS_URL     = "/api/student/groups/"
@@ -25,6 +9,7 @@ INVITES_URL    = "/api/student/invitations/"
 SEARCH_URL     = "/api/student/students/search/"
 
 GROUP_PAYLOAD = {"name": "Team Alpha", "project_title": "Smart Attendance System"}
+
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -201,7 +186,7 @@ def test_non_leader_cannot_invite(client, real_student_headers, second_student_h
     # Second student tries to invite someone
     r = client.post(
         f"{GROUPS_URL}{group['id']}/invite",
-        json={"roll": "SE-F23-003"},
+        json={"roll": "f2023-003"},
         headers=second_student_headers,
     )
     assert r.status_code == 403, r.get_json()
@@ -229,11 +214,18 @@ def test_accept_auto_declines_other_pending_invites(client, real_student_headers
 
     # Create a third student and have them invite second_student too
     r3 = client.post("/api/manager/students/", json={
-        "name": "Third Student", "roll": "SE-F23-003", "dept": "SE",
+        "name": "Third Student", "roll": "f2023-9003", "dept": "SE",
         "section": "A", "session": "Fall 2023", "course": "Final Year Project", "teacher": "Dr. X",
     }, headers=manager_headers)
+    assert r3.status_code == 201, r3.get_json()
     third = r3.get_json()["data"]
-    third_login = client.post("/api/auth/login", json={"email": third["email"], "password": third["password"]})
+
+    from app.services.auth_service import AuthService
+    raw_token = AuthService.create_password_set_token(third["student_id"])
+    client.post("/api/auth/set-password", json={"token": raw_token, "new_password": "StudentPassword123!"})
+
+    third_login = client.post("/api/auth/login", json={"email": third["email"], "password": "StudentPassword123!"})
+    assert third_login.status_code == 200, third_login.get_json()
     third_headers = {"Authorization": f"Bearer {third_login.get_json()['data']['token']}"}
 
     group2 = client.post(GROUPS_URL, json={"name": "Team Two", "project_title": "Another Project Title"}, headers=third_headers).get_json()["data"]
@@ -351,7 +343,7 @@ def test_leave_group_as_leader_returns_400(client, real_student_headers, second_
 
 def test_search_students_by_roll(client, real_student_headers, second_student_user):
     """Searching by roll fragment returns students in same dept/section."""
-    r = client.get(f"{SEARCH_URL}?roll=SE-F23", headers=real_student_headers)
+    r = client.get(f"{SEARCH_URL}?roll=f2023", headers=real_student_headers)
     assert r.status_code == 200, r.get_json()
     items = r.get_json()["data"]["items"]
     assert any(s["roll"] == second_student_user["roll"] for s in items)
@@ -362,8 +354,9 @@ def test_search_returns_has_group_flag(client, real_student_headers, second_stud
     # second student creates a group
     client.post(GROUPS_URL, json=GROUP_PAYLOAD, headers=second_student_headers)
 
-    r = client.get(f"{SEARCH_URL}?roll=SE-F23", headers=real_student_headers)
+    r = client.get(f"{SEARCH_URL}?roll=f2023", headers=real_student_headers)
     items = {s["roll"]: s for s in r.get_json()["data"]["items"]}
+    assert second_student_user["roll"] in items
     assert items[second_student_user["roll"]]["has_group"] is True
 
 
@@ -481,4 +474,3 @@ def test_leader_reject_join_request(client, real_student_headers, second_student
     r3 = client.get(f"{GROUPS_URL}my/sent-requests", headers=second_student_headers)
     items = r3.get_json()["data"]["items"]
     assert items[0]["status"] == "rejected"
-

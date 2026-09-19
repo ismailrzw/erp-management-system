@@ -89,18 +89,8 @@ export const AddTeacherPage = () => {
         <button
           type="button"
           onClick={() => navigate('/manager/teachers/view')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'none',
-            border: 'none',
-            color: '#64748b',
-            cursor: 'pointer',
-            fontSize: '13px',
-            padding: 0,
-            marginBottom: '10px',
-          }}
+          className="btn btn-back"
+          style={{ marginBottom: '10px' }}
         >
           <ArrowLeft size={16} />
           <span>Back to Teachers List</span>
@@ -186,32 +176,14 @@ export const AddTeacherPage = () => {
                   type: 'Internal Faculty',
                 });
               }}
-              style={{
-                padding: '9px 18px',
-                backgroundColor: '#0073aa',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              className="btn btn-primary"
             >
               Add Another Teacher
             </button>
             <button
               type="button"
               onClick={() => navigate('/manager/teachers/view')}
-              style={{
-                padding: '9px 18px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                color: '#334155',
-                borderRadius: '4px',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
+              className="btn btn-secondary"
             >
               View All Teachers
             </button>
@@ -299,36 +271,14 @@ export const AddTeacherPage = () => {
               <button
                 type="button"
                 onClick={() => navigate('/manager/teachers/view')}
-                style={{
-                  padding: '9px 16px',
-                  fontSize: '13.5px',
-                  fontWeight: 500,
-                  border: '1px solid #cbd5e1',
-                  backgroundColor: '#ffffff',
-                  color: '#475569',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                }}
+                className="btn btn-secondary"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '9px 20px',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
-                  border: 'none',
-                  backgroundColor: '#0073aa',
-                  color: '#ffffff',
-                  borderRadius: '4px',
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                  opacity: isSubmitting ? 0.7 : 1,
-                }}
+                className="btn btn-primary"
               >
                 <GraduationCap size={16} />
                 <span>{isSubmitting ? 'Creating...' : 'Create Teacher'}</span>

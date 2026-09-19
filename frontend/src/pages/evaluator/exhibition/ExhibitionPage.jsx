@@ -53,22 +53,16 @@ export function ExhibitionPage() {
           <p style={{ fontSize: '13px' }}>You have not been assigned to evaluate any exhibition presentations.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: selectedGroup ? '1fr 1fr' : '1fr', gap: '24px' }}>
+        <div className={selectedGroup ? 'dashboard-dual-grid' : ''} style={selectedGroup ? {} : { display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
           {/* Groups List */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid #e2e8f0',
-            overflow: 'hidden',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          }}>
+          <div className="table-responsive-container" style={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                  <th style={{ padding: '12px 20px', fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Group</th>
-                  <th style={{ padding: '12px 20px', fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Course</th>
-                  <th style={{ padding: '12px 20px', fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Status</th>
-                  <th style={{ padding: '12px 20px', fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', textAlign: 'right' }}>Action</th>
+                  <th style={{ padding: '12px 20px', fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', minWidth: '120px' }}>Group</th>
+                  <th style={{ padding: '12px 20px', fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', minWidth: '120px' }}>Course</th>
+                  <th style={{ padding: '12px 20px', fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', minWidth: '100px' }}>Status</th>
+                  <th style={{ padding: '12px 20px', fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', textAlign: 'right', minWidth: '90px' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -119,19 +113,8 @@ export function ExhibitionPage() {
                         <button
                           type="button"
                           onClick={() => setSelectedGroup(g)}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '6px 12px',
-                            borderRadius: '6px',
-                            background: isSelected ? '#1e40af' : '#2563eb',
-                            color: '#ffffff',
-                            border: 'none',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
+                          className="btn btn-primary btn-sm"
+                          style={{ background: isSelected ? 'var(--primary-hover)' : undefined }}
                         >
                           <span>{g.evaluated ? 'View Score' : 'Evaluate'}</span>
                           <ChevronRight size={14} />

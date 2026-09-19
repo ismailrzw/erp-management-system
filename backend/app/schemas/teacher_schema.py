@@ -1,4 +1,4 @@
-# backend/app/schemas/teacher_schema.py
+﻿# backend/app/schemas/teacher_schema.py
 """
 Marshmallow validation schemas for teacher/evaluator data.
 

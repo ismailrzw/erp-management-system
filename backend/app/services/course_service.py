@@ -1,4 +1,4 @@
-# backend/app/services/course_service.py
+﻿# backend/app/services/course_service.py
 """Business logic for course CRUD operations."""
 
 from datetime import date, datetime, timezone
@@ -29,6 +29,12 @@ def _serialize(document: dict | None) -> dict | None:
         return None
     result = dict(document)
     result["id"] = str(result.pop(course_model.Field.ID))
+
+    # Normalize group_formation_deadline and deadline fields
+    dl = result.get("group_formation_deadline") or result.get("deadline")
+    result["group_formation_deadline"] = dl
+    result["deadline"] = dl
+
     for key, value in list(result.items()):
         if isinstance(value, ObjectId):
             result[key] = str(value)
@@ -53,7 +59,7 @@ def _has_active_groups(course_name: str) -> bool:
     }) is not None
 
 
-def create_course(name: str, dept: str, min_group: int, max_group: int, deadline: str) -> dict:
+def create_course(name: str, dept: str, min_group: int, max_group: int, group_formation_deadline: str | None = None, deadline: str | None = None) -> dict:
     """Create a new course. Raises ValueError on bad group sizes, unknown dept, or duplicate name."""
     name = name.strip()
     dept = dept.strip().upper()
@@ -65,7 +71,8 @@ def create_course(name: str, dept: str, min_group: int, max_group: int, deadline
     if not _department_exists(dept):
         raise ValueError(f"No active department with code '{dept}' exists.")
 
-    deadline = _parse_deadline(deadline)
+    effective_deadline = group_formation_deadline or deadline
+    parsed_dl = _parse_deadline(effective_deadline) if effective_deadline else None
 
     existing = mongo.db[course_model.COLLECTION].find_one({
         course_model.Field.NAME: name,
@@ -80,7 +87,8 @@ def create_course(name: str, dept: str, min_group: int, max_group: int, deadline
         course_model.Field.DEPT: dept,
         course_model.Field.MIN_GROUP: min_group,
         course_model.Field.MAX_GROUP: max_group,
-        course_model.Field.DEADLINE: deadline,
+        course_model.Field.GROUP_FORMATION_DEADLINE: parsed_dl,
+        course_model.Field.DEADLINE: parsed_dl,
         course_model.Field.DELETED: False,
         course_model.Field.DELETED_AT: None,
         course_model.Field.CREATED_AT: now,
@@ -114,6 +122,7 @@ def update_course(
     dept: str | None = None,
     min_group: int | None = None,
     max_group: int | None = None,
+    group_formation_deadline: str | None = None,
     deadline: str | None = None,
 ) -> dict | None:
     """Update a course's fields. Raises ValueError on bad group sizes, unknown dept, or duplicate name."""
@@ -151,8 +160,12 @@ def update_course(
         updates[course_model.Field.MIN_GROUP] = min_group
     if max_group is not None:
         updates[course_model.Field.MAX_GROUP] = max_group
-    if deadline is not None:
-        updates[course_model.Field.DEADLINE] = _parse_deadline(deadline)
+
+    effective_deadline = group_formation_deadline if group_formation_deadline is not None else deadline
+    if effective_deadline is not None:
+        parsed_dl = _parse_deadline(effective_deadline)
+        updates[course_model.Field.GROUP_FORMATION_DEADLINE] = parsed_dl
+        updates[course_model.Field.DEADLINE] = parsed_dl
 
     result = mongo.db[course_model.COLLECTION].find_one_and_update(
         {course_model.Field.ID: _object_id(course_id)},

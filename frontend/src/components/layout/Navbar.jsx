@@ -36,6 +36,23 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
     return labels[role] || role || 'User';
   };
 
+  const getPortalTitle = (role) => {
+    if (role === 'student') return 'Student Portal';
+    if (role === 'evaluator') return 'Evaluator Portal';
+    if (role === 'pbl_manager') return 'PBL Management Portal';
+    return 'PBL Portal';
+  };
+
+  const handleNotificationClick = () => {
+    if (user?.role === 'student') {
+      navigate('/student/dashboard');
+    } else if (user?.role === 'evaluator') {
+      navigate('/evaluator/dashboard');
+    } else {
+      navigate('/manager/dashboard');
+    }
+  };
+
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
 
   return (
@@ -51,27 +68,30 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: isMobileView ? '0 12px' : '0 20px',
+        padding: isMobileView ? '0 12px' : '0 20px 0 0',
         zIndex: 500,
+        boxSizing: 'border-box',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? '8px' : '14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
         {/* Desktop Brand Column */}
         {!isMobileView && (
           <div
             style={{
-              width: isSidebarCollapsed ? '64px' : '235px',
-              marginLeft: '-20px',
-              paddingLeft: '18px',
+              width: isSidebarCollapsed ? '64px' : '240px',
               height: '60px',
               backgroundColor: '#1f2d3a',
               color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+              padding: isSidebarCollapsed ? '0' : '0 18px',
               gap: '10px',
               transition: 'width 0.2s ease',
               overflow: 'hidden',
               flexShrink: 0,
+              boxSizing: 'border-box',
+              borderRight: '1px solid #1f2d3a',
             }}
           >
             <div
@@ -86,13 +106,14 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
                 fontWeight: 700,
                 fontSize: '13px',
                 flexShrink: 0,
+                color: '#ffffff',
               }}
             >
               PBL
             </div>
             {!isSidebarCollapsed && (
-              <div style={{ fontWeight: 600, fontSize: '14px', letterSpacing: '0.3px', whiteSpace: 'nowrap' }}>
-                PBL Portal
+              <div style={{ fontWeight: 600, fontSize: '13.5px', letterSpacing: '0.2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {getPortalTitle(user?.role)}
               </div>
             )}
           </div>
@@ -113,55 +134,64 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
               fontWeight: 700,
               fontSize: '12px',
               flexShrink: 0,
+              marginRight: '8px',
             }}
           >
             PBL
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          style={{
-            border: 'none',
-            background: 'none',
-            color: '#64748b',
-            cursor: 'pointer',
-            padding: '8px',
-            borderRadius: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            minWidth: '36px',
-            minHeight: '36px',
-            justifyContent: 'center',
-          }}
-          title="Toggle Navigation Menu"
-          aria-label="Toggle Navigation Menu"
-        >
-          <Menu size={20} />
-        </button>
+        {/* Menu Toggle Button */}
+        <div style={{ paddingLeft: isMobileView ? '0' : '16px' }}>
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            style={{
+              border: 'none',
+              background: 'none',
+              color: '#64748b',
+              cursor: 'pointer',
+              padding: '8px',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              minWidth: '36px',
+              minHeight: '36px',
+              justifyContent: 'center',
+              transition: 'background-color 0.15s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            title="Toggle Navigation Menu"
+            aria-label="Toggle Navigation Menu"
+          >
+            <Menu size={20} />
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? '8px' : '12px' }}>
-        <div
-          style={{
-            backgroundColor: '#eef6fb',
-            color: '#0073aa',
-            fontSize: '11px',
-            fontWeight: 700,
-            padding: '4px 8px',
-            borderRadius: '20px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.3px',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {getRoleLabel(user?.role)}
-        </div>
+        {!isMobileView && (
+          <div
+            style={{
+              backgroundColor: '#eef6fb',
+              color: '#0073aa',
+              fontSize: '11px',
+              fontWeight: 700,
+              padding: '4px 8px',
+              borderRadius: '20px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.3px',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {getRoleLabel(user?.role)}
+          </div>
+        )}
 
         <button
           type="button"
-          onClick={() => navigate('/manager/dashboard')}
+          onClick={handleNotificationClick}
           style={{
             border: 'none',
             background: 'none',
@@ -208,9 +238,11 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
             >
               {userInitial}
             </div>
-            <span style={{ fontSize: '13.5px', color: '#1e293b', fontWeight: 500 }}>
-              {user?.name || 'Manager'}
-            </span>
+            {!isMobileView && (
+              <span style={{ fontSize: '13.5px', color: '#1e293b', fontWeight: 500, maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user?.name || 'User'}
+              </span>
+            )}
             <ChevronDown size={15} color="#64748b" />
           </button>
 
@@ -242,9 +274,11 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
                 onClick={() => {
                   setDropdownOpen(false);
                   if (user?.role === 'student') {
-                    navigate('/student/profile');
+                    navigate('/student/settings');
+                  } else if (user?.role === 'evaluator') {
+                    navigate('/evaluator/settings');
                   } else {
-                    navigate('/manager/profile');
+                    navigate('/manager/settings');
                   }
                 }}
                 style={{

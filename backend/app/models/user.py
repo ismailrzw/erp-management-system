@@ -1,4 +1,4 @@
-# backend/app/models/user.py
+﻿# backend/app/models/user.py
 """
 User Model — field constants, role constants, and password helpers.
 
@@ -38,6 +38,8 @@ class UserFields:
     ROLL          = "roll"
     RECOVERY_EMAIL = "recovery_email"
     TYPE          = "type"
+    DOMAINS       = "domains"
+    ACTIVE_SUPERVISION_COUNT = "active_supervision_count"
     DELETED       = "deleted"
     DELETED_AT    = "deleted_at"
     CREATED_AT    = "created_at"
@@ -45,6 +47,10 @@ class UserFields:
     LAST_LOGIN_AT = "last_login_at"
     CURRENT_LOGIN_AT = "current_login_at"
     RECENT_ANNOUNCEMENTS = "recent_announcements"
+
+
+# ==================== SUPERVISION CONSTANTS ====================
+MAX_SUPERVISION_CAP = 4
 
 
 # ==================== ROLE CONSTANTS ====================
@@ -61,6 +67,7 @@ class Role:
     # Use tuples (immutable) instead of lists
     ALL:      ClassVar[tuple] = (MANAGER, STUDENT, EVALUATOR, HOD, HODIC, DEAN)
     OVERSIGHT: ClassVar[tuple] = (HOD, HODIC, DEAN)
+
 
 
 # ==================== PASSWORD HELPERS ====================

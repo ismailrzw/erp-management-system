@@ -6,6 +6,7 @@ import { AppShell } from './components/layout/AppShell';
 
 // Auth Pages
 import { SignInPage } from './pages/auth/SignInPage';
+import { SetPasswordPage } from './pages/auth/SetPasswordPage';
 
 // Manager Pages
 import { ManagerDashboard } from './pages/manager/ManagerDashboard';
@@ -91,6 +92,7 @@ export default function App() {
         <Routes>
           {/* Public Authentication Route */}
           <Route path="/login" element={<SignInPage />} />
+          <Route path="/set-password" element={<SetPasswordPage />} />
 
           {/* Root Redirect */}
           <Route path="/" element={<RootRedirect />} />
@@ -133,6 +135,7 @@ export default function App() {
             {/* Groups Management (Manager) */}
             <Route path="groups" element={<ManageGroupsPage />} />
             <Route path="groups/manage" element={<ManageGroupsPage />} />
+            <Route path="ungrouped-students" element={<Navigate to="/manager/groups?tab=ungrouped" replace />} />
 
             {/* Iterations Management (Manager) */}
             <Route path="iterations" element={<IterationsManagePage />} />
@@ -140,7 +143,8 @@ export default function App() {
             <Route path="iterations/:id/submissions" element={<IterationSubmissionsPage />} />
             <Route path="rubric-templates" element={<RubricTemplatesPage />} />
 
-            {/* Profile & Security */}
+            {/* Profile & Settings */}
+            <Route path="settings" element={<ManagerProfilePage />} />
             <Route path="profile" element={<ManagerProfilePage />} />
 
             {/* Fallback for other subpages */}
@@ -160,6 +164,7 @@ export default function App() {
             <Route path="group/my" element={<MyGroupPage />} />
             <Route path="group/create" element={<CreateGroupPage />} />
             <Route path="group/browse" element={<BrowseGroupsPage />} />
+            <Route path="settings" element={<StudentProfilePage />} />
             <Route path="profile" element={<StudentProfilePage />} />
 
             {/* Iterations (Student) */}
@@ -184,6 +189,8 @@ export default function App() {
             <Route path="groups/:groupId" element={<GroupEvalDetail />} />
             <Route path="exhibition" element={<ExhibitionPage />} />
             <Route path="meetings" element={<MeetingsPage />} />
+            <Route path="settings" element={<ManagerProfilePage />} />
+            <Route path="profile" element={<ManagerProfilePage />} />
 
             {/* Fallback for other subpages */}
             <Route path="*" element={<NotFoundPage />} />

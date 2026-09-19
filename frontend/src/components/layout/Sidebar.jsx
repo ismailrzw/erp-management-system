@@ -11,7 +11,7 @@ import {
   ChevronDown,
   Compass,
   PlusCircle,
-  User,
+  Settings,
   LogOut,
   X,
   Layers,
@@ -133,13 +133,10 @@ export const Sidebar = ({
       section: 'Groups',
       items: [
         {
-          type: 'menu',
-          key: 'groups',
+          type: 'link',
           text: 'Manage Groups',
+          to: '/manager/groups',
           icon: FolderGit2,
-          subitems: [
-            { text: 'All Project Groups', to: '/manager/groups/manage' },
-          ],
         },
       ],
     },
@@ -152,9 +149,8 @@ export const Sidebar = ({
           text: 'Manage Iterations',
           icon: Layers,
           subitems: [
-            { text: 'Milestones', to: '/manager/iterations' },
-            { text: 'Submissions', to: '/manager/iterations/submissions' },
-            { text: 'Rubrics', to: '/manager/rubric-templates' },
+            { text: 'Milestones & Rubrics', to: '/manager/iterations' },
+            { text: 'Rubric Templates', to: '/manager/rubric-templates' },
           ],
         },
       ],
@@ -180,9 +176,9 @@ export const Sidebar = ({
       items: [
         {
           type: 'link',
-          text: 'My Profile',
-          to: '/manager/profile',
-          icon: User,
+          text: 'Settings',
+          to: '/manager/settings',
+          icon: Settings,
         },
         {
           type: 'action',
@@ -246,9 +242,9 @@ export const Sidebar = ({
       items: [
         {
           type: 'link',
-          text: 'My Profile',
-          to: '/student/profile',
-          icon: User,
+          text: 'Settings',
+          to: '/student/settings',
+          icon: Settings,
         },
         {
           type: 'action',
@@ -300,6 +296,12 @@ export const Sidebar = ({
       section: 'Account',
       items: [
         {
+          type: 'link',
+          text: 'Settings',
+          to: '/evaluator/settings',
+          icon: Settings,
+        },
+        {
           type: 'action',
           text: 'Logout',
           onClick: handleLogout,
@@ -349,7 +351,7 @@ export const Sidebar = ({
   const isCollapsedView = !isMobileView && isCollapsed;
 
   return (
-    <aside style={sidebarStyle} aria-label="Sidebar Navigation">
+    <aside className="app-sidebar-nav" style={sidebarStyle} aria-label="Sidebar Navigation">
       {/* Mobile Header in Drawer */}
       {isMobileView && (
         <div
@@ -423,7 +425,10 @@ export const Sidebar = ({
           {sec.items.map((item, itemIdx) => {
             const Icon = item.icon;
             if (item.type === 'link') {
-              const isActive = location.pathname === item.to;
+              const isActive =
+                location.pathname === item.to ||
+                (item.to.endsWith('/settings') && location.pathname.endsWith('/profile')) ||
+                (item.to.endsWith('/profile') && location.pathname.endsWith('/settings'));
               return (
                 <NavLink
                   key={itemIdx}
@@ -438,10 +443,11 @@ export const Sidebar = ({
                     fontSize: '13.5px',
                     color: isActive ? '#0073aa' : '#334155',
                     backgroundColor: isActive ? '#eaf5fb' : 'transparent',
-                    borderRight: isActive && !isCollapsedView ? '3px solid #0073aa' : 'none',
+                    borderRight: isActive && !isCollapsedView ? '3px solid #0073aa' : '3px solid transparent',
                     fontWeight: isActive ? 600 : 500,
                     textDecoration: 'none',
-                    transition: 'background-color 0.15s ease',
+                    boxSizing: 'border-box',
+                    transition: 'background-color 0.15s ease, color 0.15s ease',
                   }}
                   title={isCollapsedView ? item.text : undefined}
                 >
@@ -474,6 +480,7 @@ export const Sidebar = ({
                     cursor: 'pointer',
                     fontWeight: 500,
                     textAlign: 'left',
+                    boxSizing: 'border-box',
                     transition: 'background-color 0.15s ease',
                   }}
                   onMouseEnter={(e) => {
@@ -511,6 +518,7 @@ export const Sidebar = ({
                     cursor: 'pointer',
                     fontWeight: hasActiveChild ? 600 : 500,
                     textAlign: 'left',
+                    boxSizing: 'border-box',
                   }}
                   title={isCollapsedView ? item.text : undefined}
                 >
@@ -545,7 +553,10 @@ export const Sidebar = ({
                             color: isSubActive ? '#0073aa' : '#64748b',
                             fontWeight: isSubActive ? 600 : 400,
                             backgroundColor: isSubActive ? '#eaf5fb' : 'transparent',
+                            borderRight: isSubActive ? '3px solid #0073aa' : '3px solid transparent',
                             textDecoration: 'none',
+                            boxSizing: 'border-box',
+                            transition: 'all 0.15s ease',
                           }}
                         >
                           {sub.text}

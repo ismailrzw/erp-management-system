@@ -1,11 +1,12 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../components/ui/PageHeader';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { iterationsApi } from '../../../api/iterationsApi';
 import { coursesApi } from '../../../api/coursesApi';
-import { ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Download, Users, Calendar, FileText, Search, FileDown, Flag, Eye, Sliders } from 'lucide-react';
+import { IterationsTabBar } from './IterationsTabBar';
+import { CheckCircle2, XCircle, AlertTriangle, Download, Users, Calendar, FileText, Search, FileDown } from 'lucide-react';
 
 const fmt = (s) => {
   if (!s) return '-';
@@ -35,9 +36,9 @@ const tabStyle = (active) => ({
   fontSize: '12.5px',
   fontWeight: 600,
   cursor: 'pointer',
-  border: active ? '1px solid #2563eb' : '1px solid #e2e8f0',
-  backgroundColor: active ? '#eff6ff' : '#ffffff',
-  color: active ? '#1d4ed8' : '#64748b',
+  border: active ? '1px solid var(--primary)' : '1px solid #e2e8f0',
+  backgroundColor: active ? 'var(--primary-light)' : '#ffffff',
+  color: active ? 'var(--primary)' : '#64748b',
   transition: 'all 0.15s ease',
 });
 
@@ -51,51 +52,94 @@ export const IterationSubmissionsPage = () => {
   const [selectedIterationId, setSelectedIterationId] = useState(id || '');
   const [summary, setSummary] = useState(null);
   const [submissions, setSubmissions] = useState([]);
+  const [ungroupedStudents, setUngroupedStudents] = useState([]);
+  const [isGroupFormation, setIsGroupFormation] = useState(false);
+  const [latePenaltyPercent, setLatePenaltyPercent] = useState(0);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // 1. Fetch initial iterations and courses list
+  // Helper to load submissions for a given iteration ID without tearing down page
+  const loadSubmissions = async (iterId) => {
+    if (!iterId) {
+      setSummary(null);
+      setSubmissions([]);
+      setUngroupedStudents([]);
+      setIsGroupFormation(false);
+      setLatePenaltyPercent(0);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await iterationsApi.getSubmissions(iterId);
+      const data = res.data || res;
+      setSummary(data.summary || null);
+      setSubmissions(data.submissions || []);
+      setUngroupedStudents(data.ungrouped_students || []);
+      setIsGroupFormation(Boolean(data.is_group_formation ?? data.summary?.is_group_formation));
+      setLatePenaltyPercent(data.late_penalty_percent ?? data.summary?.late_penalty_percent ?? 0);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to load submissions.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleIterationChange = (newId) => {
+    setSelectedIterationId(newId);
+    loadSubmissions(newId);
+  };
+
+  // Coordinated initial fetch: loads iterations, courses, and target iteration submissions in one smooth pass
   useEffect(() => {
+    let isCurrent = true;
     (async () => {
+      setLoading(true);
+      setError(null);
       try {
         const [iterRes, courseRes] = await Promise.all([
           iterationsApi.getAll(),
           coursesApi.list(),
         ]);
+        if (!isCurrent) return;
         const iters = iterRes.data || iterRes || [];
         const crs = courseRes.data?.items || courseRes.data || courseRes || [];
         setIterationsList(iters);
         setCoursesList(crs);
 
-        if (!id && iters.length > 0) {
-          setSelectedIterationId(iters[0]._id);
+        const targetId = id || (iters.length > 0 ? iters[0]._id : '');
+        setSelectedIterationId(targetId);
+
+        if (targetId) {
+          const subRes = await iterationsApi.getSubmissions(targetId);
+          if (!isCurrent) return;
+          const data = subRes.data || subRes;
+          setSummary(data.summary || null);
+          setSubmissions(data.submissions || []);
+          setUngroupedStudents(data.ungrouped_students || []);
+          setIsGroupFormation(Boolean(data.is_group_formation ?? data.summary?.is_group_formation));
+          setLatePenaltyPercent(data.late_penalty_percent ?? data.summary?.late_penalty_percent ?? 0);
+        } else {
+          setSummary(null);
+          setSubmissions([]);
+          setUngroupedStudents([]);
+          setIsGroupFormation(false);
+          setLatePenaltyPercent(0);
         }
       } catch (err) {
-        console.error('Failed to load initial data:', err);
+        if (isCurrent) {
+          setError(err.response?.data?.message || err.message || 'Failed to load submissions.');
+        }
+      } finally {
+        if (isCurrent) setLoading(false);
       }
     })();
-  }, [id]);
 
-  // 2. Fetch submission data for current selected iteration ID
-  useEffect(() => {
-    if (!selectedIterationId) {
-      setLoading(false);
-      return;
-    }
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await iterationsApi.getSubmissions(selectedIterationId);
-        const data = res.data || res;
-        setSummary(data.summary || null);
-        setSubmissions(data.submissions || []);
-      } catch (err) {
-        setError(err.response?.data?.message || err.message || 'Failed to load submissions.');
-      } finally { setLoading(false); }
-    })();
-  }, [selectedIterationId]);
+    return () => {
+      isCurrent = false;
+    };
+  }, [id]);
 
   // Filter iterations by selected course
   const availableIterations = useMemo(() => {
@@ -165,91 +209,8 @@ export const IterationSubmissionsPage = () => {
   return (
     <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
 
-      {/* Top 3 Navigation Tabs */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '24px',
-          borderBottom: '1px solid #e2e8f0',
-          marginBottom: '20px',
-          paddingBottom: '4px',
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => navigate('/manager/iterations')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '13.5px',
-            fontWeight: 500,
-            color: '#64748b',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '0 0 8px 0',
-            transition: 'color 0.15s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#1e293b')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-        >
-          <Flag size={15} />
-          <span>Milestones</span>
-        </button>
-
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '13.5px',
-            fontWeight: 600,
-            color: '#2563eb',
-            position: 'relative',
-            paddingBottom: '8px',
-            cursor: 'pointer',
-          }}
-        >
-          <Eye size={16} />
-          <span>Submissions</span>
-          <span
-            style={{
-              position: 'absolute',
-              bottom: '-5px',
-              left: 0,
-              right: 0,
-              height: '2px',
-              backgroundColor: '#2563eb',
-              borderRadius: '2px',
-            }}
-          />
-        </div>
-
-        <button
-          type="button"
-          onClick={() => navigate('/manager/rubric-templates')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '13.5px',
-            fontWeight: 500,
-            color: '#64748b',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '0 0 8px 0',
-            transition: 'color 0.15s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#1e293b')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-        >
-          <Sliders size={15} />
-          <span>Rubrics</span>
-        </button>
-      </div>
+      {/* Top Sub-Navigation Bar */}
+      <IterationsTabBar />
 
       <PageHeader
         title={summary ? summary.iteration_title : 'Group Submissions'}
@@ -259,25 +220,56 @@ export const IterationSubmissionsPage = () => {
           <button
             type="button"
             onClick={handleExportCSV}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              borderRadius: '6px',
-              border: '1px solid #cbd5e1',
-              backgroundColor: '#ffffff',
-              color: '#334155',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            className="btn btn-secondary btn-sm"
           >
             <FileDown size={15} />
             Export CSV
           </button>
         )}
       </PageHeader>
+
+      {/* Group Formation Cutoff Milestone Banner */}
+      {isGroupFormation && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            padding: '12px 16px',
+            backgroundColor: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderRadius: '10px',
+            marginBottom: '20px',
+            color: '#166534',
+            fontSize: '13.5px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Users size={18} style={{ color: '#16a34a', flexShrink: 0 }} />
+            <span>
+              <strong>Group Formation & Proposal Cutoff Milestone:</strong> Student groups formed after{' '}
+              <strong>{fmt(summary?.iteration_deadline)}</strong> incur a <strong>{latePenaltyPercent}%</strong> rubric penalty deduction.
+            </span>
+          </div>
+          {ungroupedStudents.length > 0 && (
+            <span
+              style={{
+                backgroundColor: '#fee2e2',
+                color: '#b91c1c',
+                border: '1px solid #fecaca',
+                padding: '3px 9px',
+                borderRadius: '12px',
+                fontSize: '12px',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {ungroupedStudents.length} Defaulter{ungroupedStudents.length === 1 ? '' : 's'} Ungrouped
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Top Filter Bar: Select Course & Milestone */}
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px 16px' }}>
@@ -292,7 +284,9 @@ export const IterationSubmissionsPage = () => {
               setSelectedCourse(c);
               const matching = iterationsList.filter((it) => !c || it.course === 'All Courses' || it.course === c);
               if (matching.length > 0) {
-                setSelectedIterationId(matching[0]._id);
+                handleIterationChange(matching[0]._id);
+              } else {
+                handleIterationChange('');
               }
             }}
             style={{ width: '100%', padding: '7px 32px 7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#ffffff' }}
@@ -312,7 +306,7 @@ export const IterationSubmissionsPage = () => {
           </label>
           <select
             value={selectedIterationId}
-            onChange={(e) => setSelectedIterationId(e.target.value)}
+            onChange={(e) => handleIterationChange(e.target.value)}
             style={{ width: '100%', padding: '7px 32px 7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#ffffff' }}
           >
             {availableIterations.length === 0 ? (
@@ -320,7 +314,7 @@ export const IterationSubmissionsPage = () => {
             ) : (
               availableIterations.map((it) => (
                 <option key={it._id} value={it._id}>
-                  {it.title} ({it.course})
+                  {it.title} ({it.course}){it.is_group_formation ? ' — 👥 Formation Cutoff' : ''}
                 </option>
               ))
             )}
@@ -329,7 +323,7 @@ export const IterationSubmissionsPage = () => {
       </div>
 
       {loading ? (
-        <Preloader label="Loading submissions..." />
+        <ContentLoader label="Loading submissions..." />
       ) : error ? (
         <EmptyState title="Could not load submissions" description={error} actionLabel="Go Back to Milestones" onAction={() => navigate('/manager/iterations')} />
       ) : (
@@ -351,7 +345,7 @@ export const IterationSubmissionsPage = () => {
                     style={{
                       width: `${progressPct}%`,
                       height: '100%',
-                      backgroundColor: progressPct === 100 ? '#16a34a' : progressPct > 50 ? '#2563eb' : '#d97706',
+                      backgroundColor: progressPct === 100 ? '#16a34a' : progressPct > 50 ? 'var(--primary)' : '#d97706',
                       borderRadius: '4px',
                       transition: 'width 0.4s ease',
                     }}
@@ -365,11 +359,15 @@ export const IterationSubmissionsPage = () => {
                   ['Total Groups', summary.total_groups, '#1e293b'],
                   ['Submitted', summary.submitted_count, '#16a34a'],
                   ['Not Submitted', summary.total_groups - summary.submitted_count, '#dc2626'],
-                  ['Late', summary.late_count, '#d97706'],
+                  ['Late Submissions', summary.late_count, '#d97706'],
+                  ...(isGroupFormation ? [
+                    ['Late Formations', summary.late_formation_count || 0, '#ea580c'],
+                    ['Ungrouped Defaulters', ungroupedStudents.length, '#b91c1c'],
+                  ] : []),
                 ].map(([label, value, color]) => (
-                  <div key={label} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '18px 24px', minWidth: '140px', flex: '1 1 140px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                    <div style={{ fontSize: '28px', fontWeight: 700, color }}>{value}</div>
-                    <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '4px' }}>{label}</div>
+                  <div key={label} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px 20px', minWidth: '130px', flex: '1 1 130px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                    <div style={{ fontSize: '26px', fontWeight: 700, color }}>{value}</div>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>{label}</div>
                   </div>
                 ))}
               </div>
@@ -424,7 +422,7 @@ export const IterationSubmissionsPage = () => {
               description={searchQuery || statusFilter !== 'all' ? 'Try adjusting your search or filter.' : 'No approved groups are enrolled in this course yet.'}
             />
           ) : (
-            <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <div className="table-responsive-container table-wide" style={{ borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
@@ -445,6 +443,13 @@ export const IterationSubmissionsPage = () => {
                         {row.project_title && (
                           <div style={{ fontSize: '12px', color: '#64748b', marginTop: '1px' }}>{row.project_title}</div>
                         )}
+                        {row.is_formation_late && (
+                          <div style={{ marginTop: '4px' }}>
+                            <span style={bdg('#fef2f2', '#b91c1c', '#fecaca')}>
+                              <AlertTriangle size={11} /> Late Formation {latePenaltyPercent ? `(-${latePenaltyPercent}%)` : ''}
+                            </span>
+                          </div>
+                        )}
                       </td>
                       <td style={tdS}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -462,7 +467,7 @@ export const IterationSubmissionsPage = () => {
                       <td style={tdS}>
                         {row.file_url
                           ? (
-                            <a href={row.file_url} target="_blank" rel="noreferrer" download={row.file_name} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#2563eb', fontSize: '13px', textDecoration: 'none', fontWeight: 500 }}>
+                            <a href={row.file_url} target="_blank" rel="noreferrer" download={row.file_name} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--primary)', fontSize: '13px', textDecoration: 'none', fontWeight: 500 }}>
                               <Download size={13} />{row.file_name}
                               {row.file_size ? <span style={{ color: '#94a3b8', fontWeight: 400, fontSize: '11px' }}>({fmtBytes(row.file_size)})</span> : null}
                             </a>
@@ -476,6 +481,66 @@ export const IterationSubmissionsPage = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Ungrouped Students / Defaulters Section */}
+          {isGroupFormation && ungroupedStudents.length > 0 && (
+            <div style={{ marginTop: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                <div>
+                  <h2 style={{ fontSize: '17px', fontWeight: 700, color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Users size={18} style={{ color: '#dc2626' }} />
+                    Ungrouped Students / Defaulters
+                    <span style={{ fontSize: '12px', fontWeight: 600, backgroundColor: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', padding: '2px 8px', borderRadius: '12px' }}>
+                      {ungroupedStudents.length} Students
+                    </span>
+                  </h2>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>
+                    Students enrolled in {summary?.course || 'this course'} who have not formed or joined any group by the cutoff deadline.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/manager/groups?tab=ungrouped')}
+                  className="btn btn-ghost btn-sm"
+                >
+                  Manage Ungrouped Students &rarr;
+                </button>
+              </div>
+
+              <div className="table-responsive-container" style={{ borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#fff1f2', borderBottom: '2px solid #fecdd3' }}>
+                      <th style={thS}>Roll Number</th>
+                      <th style={thS}>Student Name</th>
+                      <th style={thS}>Email</th>
+                      <th style={thS}>Dept / Section</th>
+                      <th style={thS}>Defaulter Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ungroupedStudents.map((st) => (
+                      <tr key={st.id || st.roll} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={tdS}><span style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px' }}>{st.roll}</span></td>
+                        <td style={tdS}><span style={{ color: '#334155', fontSize: '13px' }}>{st.name}</span></td>
+                        <td style={tdS}><span style={{ color: '#64748b', fontSize: '12.5px' }}>{st.email}</span></td>
+                        <td style={tdS}>
+                          <span style={{ fontSize: '12px', color: '#475569' }}>
+                            {st.dept || '-'} {st.section ? `(${st.section})` : ''}
+                          </span>
+                        </td>
+                        <td style={tdS}>
+                          <span style={bdg('#fee2e2', '#b91c1c', '#fecaca')}>
+                            <AlertTriangle size={12} /> Formation Defaulter
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>

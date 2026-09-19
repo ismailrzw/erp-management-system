@@ -1,4 +1,4 @@
-"""Field constants for attachment documents."""
+﻿"""Field constants for attachment documents."""
 
 
 COLLECTION = "attachments"

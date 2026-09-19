@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { authApi } from '../api/authApi';
+import { apiCache } from '../api/apiCache';
 import { AuthContext } from './AuthContextObject';
 
 export const AuthProvider = ({ children }) => {
@@ -10,9 +11,14 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => {
     return localStorage.getItem('pbl_token') || sessionStorage.getItem('pbl_token') || null;
   });
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    const savedToken = localStorage.getItem('pbl_token') || sessionStorage.getItem('pbl_token');
+    const savedUser = localStorage.getItem('pbl_user') || sessionStorage.getItem('pbl_user');
+    return !(savedToken && savedUser);
+  });
 
   const logout = useCallback(() => {
+    apiCache.clear();
     localStorage.removeItem('pbl_token');
     localStorage.removeItem('pbl_user');
     sessionStorage.removeItem('pbl_token');
@@ -54,6 +60,9 @@ export const AuthProvider = ({ children }) => {
   }, [logout]);
 
   const login = async (email, password, rememberMe = false) => {
+    // Purge all cached API responses so the new user never sees stale data
+    // from the previous session (root cause of "wrong profile shown after login switch")
+    apiCache.clear();
     const res = await authApi.login(email, password);
     if (res.success && res.data) {
       const { token: authToken, user: userData } = res.data;

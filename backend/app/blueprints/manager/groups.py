@@ -1,4 +1,4 @@
-# backend/app/blueprints/manager/groups.py
+﻿# backend/app/blueprints/manager/groups.py
 """
 Manager Project Group Management Blueprint & RESTX Namespace.
 

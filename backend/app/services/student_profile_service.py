@@ -1,4 +1,4 @@
-# backend/app/services/student_profile_service.py
+﻿# backend/app/services/student_profile_service.py
 """
 Business logic for a student's own profile management.
 
@@ -23,6 +23,7 @@ from app.extensions import mongo
 from app.models.user import Role, UserFields
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _serialize(document: dict) -> dict:
     """Strip sensitive fields and convert ObjectId / datetime to JSON-safe types."""
@@ -69,6 +70,7 @@ def _get_active_student(student_id: str) -> dict:
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
+
 
 def get_profile(student_id: str) -> dict:
     """

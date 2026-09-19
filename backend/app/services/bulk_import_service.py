@@ -84,7 +84,7 @@ def parse_excel(file: FileStorage) -> tuple[list[dict], list[dict]]:
     rows = _read_rows(file)
     if not rows:
         raise ValueError("The import file has no data rows.")
-    
+
     # Map raw headers to canonical column names using HEADER_ALIASES
     raw_header_map = {}
     for key in rows[0]:
@@ -145,7 +145,7 @@ def bulk_create_students(rows: list[dict]) -> dict:
             UserFields.DEPT: data["dept"].upper(),
             UserFields.SECTION: data["section"].upper(),
             UserFields.COURSE: data["course"],
-            UserFields.ROLL: data["roll"],
+            UserFields.ROLL: data["roll"].strip().lower(),
             "session": data["session"],
             "teacher": data["teacher"],
             UserFields.RECOVERY_EMAIL: data["recovery_email"],

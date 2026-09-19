@@ -28,7 +28,7 @@ import { PageHeader } from '../../../components/ui/PageHeader';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Toast } from '../../../components/ui/Toast';
-import { Preloader } from '../../../components/ui/Preloader';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { Modal } from '../../../components/ui/Modal';
 import { formatDate } from '../../../utils/dateUtils';
 
@@ -236,14 +236,22 @@ export const BrowseGroupsPage = () => {
     }
   };
 
-  if (loading) {
-    return <Preloader text="Loading Groups, Requests & Invitations..." />;
+  const pendingSentRequestsCount = !loading ? sentRequests.filter((r) => r.status === 'pending').length : 0;
+
+  if (loading && !refreshing && groups.length === 0 && !studentInfo) {
+    return (
+      <div className="page-frame-container">
+        <PageHeader
+          title="Group Discovery & Collaboration"
+          subtitle="Loading available groups, requests, and invitations..."
+        />
+        <ContentLoader label="Loading groups, requests & invitations..." />
+      </div>
+    );
   }
 
-  const pendingSentRequestsCount = sentRequests.filter((r) => r.status === 'pending').length;
-
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="page-frame-container">
       {/* Toast Notification */}
       {toast.message && (
         <Toast
@@ -262,19 +270,7 @@ export const BrowseGroupsPage = () => {
           type="button"
           onClick={() => loadData(true)}
           disabled={refreshing}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            fontSize: '13px',
-            fontWeight: 500,
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '6px',
-            color: '#334155',
-            cursor: refreshing ? 'not-allowed' : 'pointer',
-          }}
+          className="btn btn-ghost btn-sm"
         >
           <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
           <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
@@ -284,19 +280,7 @@ export const BrowseGroupsPage = () => {
           <button
             type="button"
             onClick={() => navigate('/student/group/create')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              backgroundColor: 'var(--primary)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-            }}
+            className="btn btn-primary"
           >
             <PlusCircle size={15} />
             <span>Create Group</span>
@@ -314,12 +298,12 @@ export const BrowseGroupsPage = () => {
             justifyContent: 'space-between',
             gap: '12px',
             padding: '12px 16px',
-            backgroundColor: '#eff6ff',
-            border: '1px solid #bfdbfe',
+            backgroundColor: 'var(--primary-light)',
+            border: '1px solid rgba(0, 115, 170, 0.2)',
             borderRadius: '8px',
             marginBottom: '20px',
             fontSize: '13px',
-            color: '#1e40af',
+            color: 'var(--primary)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
@@ -331,17 +315,8 @@ export const BrowseGroupsPage = () => {
           <button
             type="button"
             onClick={() => navigate('/student/group/my')}
-            style={{
-              padding: '5px 12px',
-              fontSize: '12px',
-              fontWeight: 600,
-              backgroundColor: '#ffffff',
-              color: '#1e40af',
-              border: '1px solid #93c5fd',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
+            className="btn btn-secondary btn-sm"
+            style={{ flexShrink: 0 }}
           >
             View My Group
           </button>
@@ -350,13 +325,10 @@ export const BrowseGroupsPage = () => {
 
       {/* Tabs Navigation */}
       <div
+        className="scrollable-tabs-bar"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
           borderBottom: '2px solid #e2e8f0',
           marginBottom: '20px',
-          flexWrap: 'wrap',
         }}
       >
         <button
@@ -675,16 +647,7 @@ export const BrowseGroupsPage = () => {
                         <button
                           type="button"
                           onClick={() => navigate('/student/group/my')}
-                          style={{
-                            padding: '4px 10px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            backgroundColor: '#0284c7',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '5px',
-                            cursor: 'pointer',
-                          }}
+                          className="btn btn-primary btn-sm"
                         >
                           View Group
                         </button>
@@ -712,16 +675,7 @@ export const BrowseGroupsPage = () => {
                             onClick={() => handleCancelJoinRequest(g.pending_request_id)}
                             disabled={isProcessing}
                             title="Cancel your pending join request"
-                            style={{
-                              padding: '3px 8px',
-                              fontSize: '11px',
-                              fontWeight: 500,
-                              backgroundColor: '#ffffff',
-                              color: '#dc2626',
-                              border: '1px solid #fecaca',
-                              borderRadius: '4px',
-                              cursor: isProcessing ? 'not-allowed' : 'pointer',
-                            }}
+                            className="btn btn-danger-outline btn-sm"
                           >
                             {isProcessing ? <Loader2 size={11} className="animate-spin" /> : 'Cancel'}
                           </button>
@@ -777,19 +731,7 @@ export const BrowseGroupsPage = () => {
                         <button
                           type="button"
                           onClick={() => handleOpenJoinModal(g)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            padding: '5px 12px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            backgroundColor: 'var(--primary)',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '5px',
-                            cursor: 'pointer',
-                          }}
+                          className="btn btn-primary btn-sm"
                         >
                           <UserPlus size={13} />
                           <span>Request to Join</span>
@@ -956,21 +898,7 @@ export const BrowseGroupsPage = () => {
                           type="button"
                           onClick={() => handleCancelJoinRequest(req.id)}
                           disabled={isProcessing}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '7px 14px',
-                            backgroundColor: '#ffffff',
-                            color: '#dc2626',
-                            border: '1px solid #fecaca',
-                            borderRadius: '6px',
-                            fontSize: '12.5px',
-                            fontWeight: 500,
-                            cursor: isProcessing ? 'not-allowed' : 'pointer',
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+                          className="btn btn-danger-outline btn-sm"
                         >
                           {isProcessing ? (
                             <Loader2 size={14} className="animate-spin" />
@@ -1125,20 +1053,7 @@ export const BrowseGroupsPage = () => {
                           onClick={() => handleAcceptInvite(inv.id)}
                           disabled={isProcessing || hasGroupBlocked}
                           title={hasGroupBlocked ? 'You must leave your current group before accepting.' : 'Accept and join group'}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '8px 16px',
-                            backgroundColor: hasGroupBlocked ? '#94a3b8' : 'var(--success)',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            cursor: hasGroupBlocked || isProcessing ? 'not-allowed' : 'pointer',
-                            opacity: hasGroupBlocked ? 0.7 : 1,
-                          }}
+                          className="btn btn-success"
                         >
                           {isProcessing ? (
                             <Loader2 size={15} className="animate-spin" />
@@ -1152,21 +1067,7 @@ export const BrowseGroupsPage = () => {
                           type="button"
                           onClick={() => handleDeclineInvite(inv.id)}
                           disabled={isProcessing}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '8px 14px',
-                            backgroundColor: '#ffffff',
-                            color: '#dc2626',
-                            border: '1px solid #fecaca',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            cursor: isProcessing ? 'not-allowed' : 'pointer',
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+                          className="btn btn-danger-outline"
                         >
                           <XCircle size={15} />
                           <span>Decline</span>
@@ -1211,15 +1112,15 @@ export const BrowseGroupsPage = () => {
             <div
               style={{
                 padding: '12px 14px',
-                backgroundColor: '#eff6ff',
-                border: '1px solid #bfdbfe',
+                backgroundColor: 'var(--primary-light)',
+                border: '1px solid rgba(0, 115, 170, 0.2)',
                 borderRadius: '6px',
                 fontSize: '13px',
-                color: '#1e40af',
+                color: 'var(--primary)',
               }}
             >
               <div>You are requesting to join: <b>{joinModalTarget.name}</b></div>
-              <div style={{ marginTop: '2px', color: '#3b82f6', fontSize: '12px' }}>
+              <div style={{ marginTop: '2px', color: 'var(--primary)', fontSize: '12px' }}>
                 Project: {joinModalTarget.project_title || 'Untitled Project'} • Leader: {joinModalTarget.leader_name}
               </div>
             </div>
@@ -1271,16 +1172,7 @@ export const BrowseGroupsPage = () => {
                 type="button"
                 onClick={() => setJoinModalTarget(null)}
                 disabled={submittingJoin}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  color: '#64748b',
-                  backgroundColor: 'transparent',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  cursor: submittingJoin ? 'not-allowed' : 'pointer',
-                }}
+                className="btn btn-secondary"
               >
                 Cancel
               </button>
@@ -1289,19 +1181,7 @@ export const BrowseGroupsPage = () => {
                 type="button"
                 onClick={handleSubmitJoinRequest}
                 disabled={submittingJoin}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 18px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#ffffff',
-                  backgroundColor: 'var(--primary)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: submittingJoin ? 'not-allowed' : 'pointer',
-                }}
+                className="btn btn-primary"
               >
                 {submittingJoin ? (
                   <Loader2 size={15} className="animate-spin" />

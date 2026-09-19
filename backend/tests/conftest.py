@@ -62,6 +62,10 @@ def reset_test_database(app):
         for collection_name in mongo.db.list_collection_names():
             if not collection_name.startswith("system."):
                 mongo.db[collection_name].delete_many({})
+        try:
+            mongo.db.users.drop_index("email_1")
+        except Exception:  # noqa: S110, BLE001
+            pass
         mongo.db.users.create_index("email", unique=True)
         mongo.db.users.replace_one(
             {"email": MANAGER_EMAIL},
@@ -133,10 +137,11 @@ def student_user(app, manager_headers, client) -> dict:
       - student_id, email, password (initial), name, roll, dept, section, course, teacher
     """
     import uuid
-    uid = uuid.uuid4().hex[:4].upper()
+    uid = uuid.uuid4().hex[:4]
+    num = int(uid, 16) % 9000 + 1000
     payload = {
         "name": "Sara Ahmed",
-        "roll": f"SE-F23-01{uid}",
+        "roll": f"f2023-{num}",
         "dept": "SE",
         "section": "A",
         "session": "Fall 2023",
@@ -145,7 +150,13 @@ def student_user(app, manager_headers, client) -> dict:
     }
     response = client.post("/api/manager/students/", json=payload, headers=manager_headers)
     assert response.status_code == 201, response.get_json()
-    return response.get_json()["data"]
+    data = response.get_json()["data"]
+    
+    from app.services.auth_service import AuthService
+    raw_token = AuthService.create_password_set_token(data["student_id"])
+    client.post("/api/auth/set-password", json={"token": raw_token, "new_password": "StudentPassword123!"})
+    data["password"] = "StudentPassword123!"
+    return data
 
 
 @pytest.fixture
@@ -169,10 +180,11 @@ def real_student_headers(student_token) -> dict[str, str]:
 def second_student_user(app, manager_headers, client) -> dict:
     """Create a second student in the same dept/section for invitation workflow tests."""
     import uuid
-    uid = uuid.uuid4().hex[:4].upper()
+    uid = uuid.uuid4().hex[:4]
+    num = int(uid, 16) % 9000 + 10000
     payload = {
         "name": "Ali Hassan",
-        "roll": f"SE-F23-02{uid}",
+        "roll": f"f2023-{num}",
         "dept": "SE",
         "section": "A",
         "session": "Fall 2023",
@@ -181,7 +193,13 @@ def second_student_user(app, manager_headers, client) -> dict:
     }
     response = client.post("/api/manager/students/", json=payload, headers=manager_headers)
     assert response.status_code == 201, response.get_json()
-    return response.get_json()["data"]
+    data = response.get_json()["data"]
+    
+    from app.services.auth_service import AuthService
+    raw_token = AuthService.create_password_set_token(data["student_id"])
+    client.post("/api/auth/set-password", json={"token": raw_token, "new_password": "StudentPassword123!"})
+    data["password"] = "StudentPassword123!"
+    return data
 
 
 @pytest.fixture
@@ -204,8 +222,9 @@ EVALUATOR_PASSWORD = "eval-password-123"
 @pytest.fixture
 def evaluator_user(app) -> dict:
     """Insert an evaluator user directly and return id + credentials."""
-    import bcrypt as _bcrypt
     from datetime import datetime, timezone
+
+    import bcrypt as _bcrypt
     with app.app_context():
         pw_hash = _bcrypt.hashpw(EVALUATOR_PASSWORD.encode(), _bcrypt.gensalt()).decode()
         doc = {
@@ -241,8 +260,9 @@ def evaluator_headers(evaluator_token) -> dict[str, str]:
 @pytest.fixture
 def approved_group(app, evaluator_user) -> dict:
     """Insert an approved group assigned to the evaluator."""
-    from bson import ObjectId as OID
     from datetime import datetime, timezone
+
+    from bson import ObjectId as OID
     with app.app_context():
         gid = mongo.db.groups.insert_one({
             "name":    "Alpha Team",
@@ -281,8 +301,9 @@ def iteration_with_rubrics(app, approved_group) -> dict:
 @pytest.fixture
 def submitted_evaluation(app, evaluator_user, approved_group, iteration_with_rubrics) -> dict:
     """Insert a pre-existing locked evaluation (for duplicate / lock tests)."""
-    from bson import ObjectId as OID
     from datetime import datetime, timezone
+
+    from bson import ObjectId as OID
     with app.app_context():
         eid = mongo.db.evaluations.insert_one({
             "group_id":             OID(approved_group["id"]),
