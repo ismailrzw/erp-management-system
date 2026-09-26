@@ -146,7 +146,6 @@ def student_user(app, manager_headers, client) -> dict:
         "section": "A",
         "session": "Fall 2023",
         "course": "Final Year Project",
-        "teacher": "Dr. Imran",
     }
     response = client.post("/api/manager/students/", json=payload, headers=manager_headers)
     assert response.status_code == 201, response.get_json()
@@ -189,7 +188,6 @@ def second_student_user(app, manager_headers, client) -> dict:
         "section": "A",
         "session": "Fall 2023",
         "course": "Final Year Project",
-        "teacher": "Dr. Imran",
     }
     response = client.post("/api/manager/students/", json=payload, headers=manager_headers)
     assert response.status_code == 201, response.get_json()

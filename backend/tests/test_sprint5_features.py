@@ -338,6 +338,8 @@ def test_supervisor_cap_enforced_per_course(client, manager_headers):
     3. The supervisor CAN still be assigned to a group in Course Beta.
     """
     client.post("/api/manager/departments/", json={"name": "EE", "code": "EE"}, headers=manager_headers)
+    client.post("/api/manager/courses/", json={"name": "Course Alpha", "dept": "EE", "min_group": 1, "max_group": 5}, headers=manager_headers)
+    client.post("/api/manager/courses/", json={"name": "Course Beta", "dept": "EE", "min_group": 1, "max_group": 5}, headers=manager_headers)
 
     # Create Evaluator
     t_res = client.post(

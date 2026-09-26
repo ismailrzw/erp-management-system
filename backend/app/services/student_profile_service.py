@@ -1,4 +1,4 @@
-﻿# backend/app/services/student_profile_service.py
+# backend/app/services/student_profile_service.py
 """
 Business logic for a student's own profile management.
 
@@ -74,19 +74,28 @@ def _get_active_student(student_id: str) -> dict:
 
 def get_profile(student_id: str) -> dict:
     """
-    Return the authenticated student's own profile.
-
-    Parameters
-    ----------
-    student_id:
-        The ``sub`` claim from the JWT (string ObjectId).
-
-    Returns
-    -------
-    dict
-        Serialized user document without ``password_hash``.
+    Return the authenticated student's own profile enriched with active group/supervisor details.
     """
-    return _serialize(_get_active_student(student_id))
+    user_doc = _get_active_student(student_id)
+    profile_data = _serialize(user_doc)
+
+    # Resolve group supervisor / evaluator dynamically
+    group = mongo.db.groups.find_one({
+        "member_ids": ObjectId(student_id),
+        "status": {"$ne": "deleted"},
+    })
+    if group:
+        profile_data["group_id"] = str(group["_id"])
+        profile_data["group_name"] = group.get("name")
+        profile_data["project_title"] = group.get("project_title")
+        profile_data["supervisor_name"] = group.get("supervisor_name") or group.get("evaluator_name")
+    else:
+        profile_data["group_id"] = None
+        profile_data["group_name"] = None
+        profile_data["project_title"] = None
+        profile_data["supervisor_name"] = None
+
+    return profile_data
 
 
 def update_profile(student_id: str, data: dict) -> dict:

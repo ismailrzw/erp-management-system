@@ -18,11 +18,11 @@ def create_department(client, manager_headers, code="SE", name="Software Enginee
 
 def create_course(
     client, manager_headers, name="Final Year Project - Fall 2025", dept="SE",
-    min_group=2, max_group=5, deadline="2026-08-15",
+    min_group=2, max_group=5,
 ):
     response = client.post(
         COURSES_URL,
-        json={"name": name, "dept": dept, "min_group": min_group, "max_group": max_group, "deadline": deadline},
+        json={"name": name, "dept": dept, "min_group": min_group, "max_group": max_group},
         headers=manager_headers,
     )
     assert response.status_code == 201, response.get_json()
@@ -36,14 +36,13 @@ def test_create_course_returns_created_record(client, manager_headers):
     assert course["dept"] == "SE"
     assert course["min_group"] == 2
     assert course["max_group"] == 5
-    assert course["deadline"] == "2026-08-15"
     assert "id" in course
 
 
 def test_create_course_rejects_unknown_department(client, manager_headers):
     response = client.post(
         COURSES_URL,
-        json={"name": "Ghost Course", "dept": "ZZ", "min_group": 2, "max_group": 5, "deadline": "2026-08-15"},
+        json={"name": "Ghost Course", "dept": "ZZ", "min_group": 2, "max_group": 5},
         headers=manager_headers,
     )
     assert response.status_code == 409, response.get_json()
@@ -55,7 +54,7 @@ def test_create_course_rejects_duplicate_name(client, manager_headers):
     create_course(client, manager_headers, name="Duplicate FYP")
     response = client.post(
         COURSES_URL,
-        json={"name": "Duplicate FYP", "dept": "SE", "min_group": 2, "max_group": 5, "deadline": "2026-08-15"},
+        json={"name": "Duplicate FYP", "dept": "SE", "min_group": 2, "max_group": 5},
         headers=manager_headers,
     )
     assert response.status_code == 409, response.get_json()
@@ -66,7 +65,7 @@ def test_create_course_rejects_max_group_below_min_group(client, manager_headers
     create_department(client, manager_headers)
     response = client.post(
         COURSES_URL,
-        json={"name": "Bad Sizing", "dept": "SE", "min_group": 5, "max_group": 2, "deadline": "2026-08-15"},
+        json={"name": "Bad Sizing", "dept": "SE", "min_group": 5, "max_group": 2},
         headers=manager_headers,
     )
     assert response.status_code == 422, response.get_json()
@@ -76,20 +75,16 @@ def test_create_course_rejects_min_group_below_one(client, manager_headers):
     create_department(client, manager_headers)
     response = client.post(
         COURSES_URL,
-        json={"name": "Bad Min", "dept": "SE", "min_group": 0, "max_group": 3, "deadline": "2026-08-15"},
+        json={"name": "Bad Min", "dept": "SE", "min_group": 0, "max_group": 3},
         headers=manager_headers,
     )
     assert response.status_code == 422, response.get_json()
 
 
-def test_create_course_rejects_invalid_deadline_format(client, manager_headers):
+def test_create_course_without_deadline_succeeds(client, manager_headers):
     create_department(client, manager_headers)
-    response = client.post(
-        COURSES_URL,
-        json={"name": "Bad Deadline", "dept": "SE", "min_group": 2, "max_group": 5, "deadline": "15-08-2026"},
-        headers=manager_headers,
-    )
-    assert response.status_code == 422, response.get_json()
+    course = create_course(client, manager_headers, name="No Deadline Course")
+    assert "deadline" not in course or course.get("deadline") is None
 
 
 def test_list_courses_returns_created_items(client, manager_headers):
@@ -239,7 +234,7 @@ def test_course_endpoints_require_manager_role(client):
     """Every course endpoint should reject requests without a valid manager token."""
     endpoints = [
         ("GET", COURSES_URL, None),
-        ("POST", COURSES_URL, {"name": "Test", "dept": "SE", "min_group": 1, "max_group": 2, "deadline": "2026-08-15"}),
+        ("POST", COURSES_URL, {"name": "Test", "dept": "SE", "min_group": 1, "max_group": 2}),
         ("GET", f"{COURSES_URL}64b64c8f0e2b2c3d4e5f6789", None),
         ("PUT", f"{COURSES_URL}64b64c8f0e2b2c3d4e5f6789", {"name": "Test"}),
         ("DELETE", f"{COURSES_URL}64b64c8f0e2b2c3d4e5f6789", None),

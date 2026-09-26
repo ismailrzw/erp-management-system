@@ -94,8 +94,8 @@ export const IterationsManagePage = () => {
     fetchIterations();
   }, [fetchIterations]);
 
-  const handleCreateNew = () => {
-    setEditingIteration(null);
+  const handleCreateNew = (defaultSprint = '') => {
+    setEditingIteration(defaultSprint ? { sprint_name: defaultSprint } : null);
     setIsFormOpen(true);
   };
 
@@ -152,6 +152,22 @@ export const IterationsManagePage = () => {
       return true;
     });
   }, [iterations, selectedCourse, statusFilter, searchQuery]);
+
+  // Group milestones by Sprint
+  const sprintGroups = useMemo(() => {
+    const groups = {};
+    filteredIterations.forEach((item) => {
+      const sName = item.sprint_name || 'Sprint 1';
+      if (!groups[sName]) groups[sName] = [];
+      groups[sName].push(item);
+    });
+    const sortedKeys = Object.keys(groups).sort();
+    const result = {};
+    sortedKeys.forEach((key) => {
+      result[key] = groups[key].sort((a, b) => (Number(a.milestone_order) || 1) - (Number(b.milestone_order) || 1));
+    });
+    return result;
+  }, [filteredIterations]);
 
   // Status counts for tabs
   const statusCounts = useMemo(() => {
@@ -290,6 +306,7 @@ export const IterationsManagePage = () => {
       </div>
 
       {/* Main Milestones Table */}
+      {/* Main Milestones Grouped by Sprint */}
       {loading ? (
         <ContentLoader label="Loading milestones..." />
       ) : filteredIterations.length === 0 ? (
@@ -301,262 +318,338 @@ export const IterationsManagePage = () => {
               : 'No iteration milestones have been created yet.'
           }
           actionLabel="Create First Milestone"
-          onAction={handleCreateNew}
+          onAction={() => handleCreateNew('')}
         />
       ) : (
-        <div className="table-responsive-container table-wide" style={{ borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)', marginBottom: '24px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '220px' }}>
-                  Milestone & Deliverable
-                </th>
-                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '160px' }}>
-                  Status & Schedule
-                </th>
-                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '160px' }}>
-                  Deliverable Progress
-                </th>
-                <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '100px', textAlign: 'right' }}>
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredIterations.map((item, idx) => {
-                const dl = new Date(item.deadline);
-                const isCompleted = dl < new Date();
-                const stats = item.submission_stats || {};
-                const totalGroups = stats.total_groups || 0;
-                const submitted = stats.submitted_count || 0;
-                const pct = totalGroups > 0 ? Math.round((submitted / totalGroups) * 100) : 0;
-                const rubricCount = item.rubrics?.length || 0;
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {Object.keys(sprintGroups).map((sprintName) => {
+            const sprintItems = sprintGroups[sprintName];
+            return (
+              <div
+                key={sprintName}
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Sprint Header */}
+                <div
+                  style={{
+                    padding: '14px 20px',
+                    backgroundColor: '#f8fafc',
+                    borderBottom: '1px solid #e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '10px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
+                      🏃 {sprintName}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        backgroundColor: '#e0e7ff',
+                        color: '#4338ca',
+                        border: '1px solid #c7d2fe',
+                      }}
+                    >
+                      {sprintItems.length} Milestone{sprintItems.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
 
-                return (
-                  <tr
-                    key={item._id}
-                    style={{
-                      borderBottom: '1px solid #f1f5f9',
-                      transition: 'background-color 0.15s ease',
-                    }}
+                  <button
+                    type="button"
+                    onClick={() => handleCreateNew(sprintName)}
+                    className="btn btn-ghost btn-sm"
+                    style={{ fontSize: '12px', fontWeight: 600, color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                   >
-                    {/* 1. Milestone & Deliverable */}
-                    <td style={{ padding: '16px 18px', verticalAlign: 'top' }}>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                        {/* Milestone Badge (e.g. M1, M2) */}
-                        <div
-                          style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '8px',
-                            backgroundColor: isCompleted ? '#f1f5f9' : 'var(--primary-light)',
-                            border: `1px solid ${isCompleted ? '#e2e8f0' : '#bfdbfe'}`,
-                            color: isCompleted ? '#64748b' : 'var(--primary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            flexShrink: 0,
-                            marginTop: '2px',
-                          }}
-                        >
-                          M{idx + 1}
-                        </div>
+                    <Plus size={14} /> Add Milestone to {sprintName}
+                  </button>
+                </div>
 
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '14.5px', fontWeight: 600, color: '#0f172a' }}>
-                              {item.title}
-                            </span>
-                            {item.course && (
-                              <span
-                                style={{
-                                  fontSize: '11px',
-                                  fontWeight: 600,
-                                  padding: '1px 7px',
-                                  borderRadius: '10px',
-                                  backgroundColor: item.course === 'All Courses' ? '#f3e8ff' : '#f1f5f9',
-                                  color: item.course === 'All Courses' ? '#7c3aed' : '#475569',
-                                  border: `1px solid ${item.course === 'All Courses' ? '#ddd6fe' : '#e2e8f0'}`,
-                                }}
-                              >
-                                {item.course}
-                              </span>
-                            )}
-                            {item.is_group_formation && (
-                              <span
-                                style={{
-                                  fontSize: '11px',
-                                  fontWeight: 600,
-                                  padding: '1px 7px',
-                                  borderRadius: '10px',
-                                  backgroundColor: '#ecfdf5',
-                                  color: '#059669',
-                                  border: '1px solid #a7f3d0',
-                                }}
-                              >
-                                👥 Formation Cutoff {item.late_penalty_percent ? `(-${item.late_penalty_percent}%)` : ''}
-                              </span>
-                            )}
-                          </div>
-                          {item.details && (
-                            <p
-                              style={{
-                                margin: '4px 0 0',
-                                fontSize: '12.5px',
-                                color: '#64748b',
-                                lineHeight: 1.4,
-                                maxWidth: '420px',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {item.details}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </td>
+                {/* Milestones Table */}
+                <div className="table-responsive-container table-wide">
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #e2e8f0' }}>
+                        <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '240px' }}>
+                          Milestone & Deliverable
+                        </th>
+                        <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '160px' }}>
+                          Status & Schedule
+                        </th>
+                        <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '160px' }}>
+                          Deliverable Progress
+                        </th>
+                        <th style={{ padding: '12px 18px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '100px', textAlign: 'right' }}>
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sprintItems.map((item, idx) => {
+                        const dl = new Date(item.deadline);
+                        const isCompleted = dl < new Date();
+                        const stats = item.submission_stats || {};
+                        const totalGroups = stats.total_groups || 0;
+                        const submitted = stats.submitted_count || 0;
+                        const pct = totalGroups > 0 ? Math.round((submitted / totalGroups) * 100) : 0;
+                        const rubricCount = item.rubrics?.length || 0;
+                        const isGroupFormation = Boolean(item.is_group_formation || item.milestone_type === 'group_formation');
 
-                    {/* 2. Status & Schedule (ONLY status active/completed + due date) */}
-                    <td style={{ padding: '16px 18px', verticalAlign: 'top' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <div>
-                          {isCompleted ? (
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '2px 8px',
-                                borderRadius: '12px',
-                                fontSize: '11.5px',
-                                fontWeight: 600,
-                                backgroundColor: '#f1f5f9',
-                                color: '#475569',
-                                border: '1px solid #cbd5e1',
-                              }}
-                            >
-                              <CheckCircle2 size={12} /> Completed
-                            </span>
-                          ) : (
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '2px 8px',
-                                borderRadius: '12px',
-                                fontSize: '11.5px',
-                                fontWeight: 600,
-                                backgroundColor: '#ecfdf5',
-                                color: '#059669',
-                                border: '1px solid #a7f3d0',
-                              }}
-                            >
-                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                              Active
-                            </span>
-                          )}
-                        </div>
-
-                        <div style={{ fontSize: '12.5px', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Calendar size={13} style={{ color: '#94a3b8' }} />
-                          <span>Due: {formatHumanDate(item.deadline)}</span>
-                          {formatHumanTime(item.deadline) && (
-                            <span style={{ color: '#94a3b8' }}>• {formatHumanTime(item.deadline)}</span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* 3. Deliverable Progress */}
-                    <td style={{ padding: '16px 18px', verticalAlign: 'top' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
-                          <span style={{ fontWeight: 600, color: '#334155' }}>
-                            {submitted} / {totalGroups} Groups
-                          </span>
-                          <span style={{ fontWeight: 600, color: pct > 0 ? '#10b981' : '#94a3b8' }}>
-                            {pct}%
-                          </span>
-                        </div>
-
-                        {/* Clean Progress Bar */}
-                        <div
-                          style={{
-                            width: '100%',
-                            height: '6px',
-                            borderRadius: '3px',
-                            backgroundColor: '#f1f5f9',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          <div
+                        return (
+                          <tr
+                            key={item._id}
                             style={{
-                              width: `${pct}%`,
-                              height: '100%',
-                              backgroundColor: pct === 100 ? '#10b981' : 'var(--primary)',
-                              borderRadius: '3px',
-                              transition: 'width 0.3s ease',
+                              borderBottom: idx === sprintItems.length - 1 ? 'none' : '1px solid #f1f5f9',
+                              transition: 'background-color 0.15s ease',
                             }}
-                          />
-                        </div>
-                      </div>
-                    </td>
+                          >
+                            {/* 1. Milestone & Deliverable */}
+                            <td style={{ padding: '16px 18px', verticalAlign: 'top' }}>
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                {/* Milestone Badge (e.g. M1, M2) */}
+                                <div
+                                  style={{
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '8px',
+                                    backgroundColor: isCompleted ? '#f1f5f9' : 'var(--primary-light)',
+                                    border: `1px solid ${isCompleted ? '#e2e8f0' : '#bfdbfe'}`,
+                                    color: isCompleted ? '#64748b' : 'var(--primary)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '13px',
+                                    fontWeight: 700,
+                                    flexShrink: 0,
+                                    marginTop: '2px',
+                                  }}
+                                >
+                                  M{item.milestone_order || idx + 1}
+                                </div>
 
-                    {/* 4. Actions */}
-                    <td style={{ padding: '16px 18px', verticalAlign: 'middle', textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        {/* Submissions Icon Button */}
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/manager/iterations/${item._id}/submissions`)}
-                          title="View Group Submissions"
-                          className="btn btn-ghost btn-sm"
-                        >
-                          <Eye size={17} />
-                        </button>
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: '14.5px', fontWeight: 600, color: '#0f172a' }}>
+                                      {item.title}
+                                    </span>
+                                    {item.course && (
+                                      <span
+                                        style={{
+                                          fontSize: '11px',
+                                          fontWeight: 600,
+                                          padding: '1px 7px',
+                                          borderRadius: '10px',
+                                          backgroundColor: item.course === 'All Courses' ? '#f3e8ff' : '#f1f5f9',
+                                          color: item.course === 'All Courses' ? '#7c3aed' : '#475569',
+                                          border: `1px solid ${item.course === 'All Courses' ? '#ddd6fe' : '#e2e8f0'}`,
+                                        }}
+                                      >
+                                        {item.course}
+                                      </span>
+                                    )}
+                                    {isGroupFormation ? (
+                                      <span
+                                        style={{
+                                          fontSize: '11px',
+                                          fontWeight: 600,
+                                          padding: '1px 7px',
+                                          borderRadius: '10px',
+                                          backgroundColor: '#ecfdf5',
+                                          color: '#059669',
+                                          border: '1px solid #a7f3d0',
+                                        }}
+                                      >
+                                        👥 Formation Cutoff {item.late_penalty_percent ? `(-${item.late_penalty_percent}%)` : ''}
+                                      </span>
+                                    ) : item.milestone_type === 'presentation' ? (
+                                      <span
+                                        style={{
+                                          fontSize: '11px',
+                                          fontWeight: 600,
+                                          padding: '1px 7px',
+                                          borderRadius: '10px',
+                                          backgroundColor: '#fef3c7',
+                                          color: '#b45309',
+                                          border: '1px solid #fde68a',
+                                        }}
+                                      >
+                                        🎤 Presentation / Demo
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  {item.details && (
+                                    <p
+                                      style={{
+                                        margin: '4px 0 0',
+                                        fontSize: '12.5px',
+                                        color: '#64748b',
+                                        lineHeight: 1.4,
+                                        maxWidth: '420px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                      }}
+                                    >
+                                      {item.details}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
 
-                        {/* Rubrics Icon Button */}
-                        <button
-                          type="button"
-                          onClick={() => handleOpenRubrics(item)}
-                          title={rubricCount > 0 ? `Configure Rubrics (${rubricCount} criteria)` : 'Configure Rubrics'}
-                          className="btn btn-ghost btn-sm"
-                          style={{ color: rubricCount > 0 ? 'var(--primary)' : undefined }}
-                        >
-                          <Sliders size={17} />
-                        </button>
+                            {/* 2. Status & Schedule */}
+                            <td style={{ padding: '16px 18px', verticalAlign: 'top' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                <div>
+                                  {isCompleted ? (
+                                    <span
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '2px 8px',
+                                        borderRadius: '12px',
+                                        fontSize: '11.5px',
+                                        fontWeight: 600,
+                                        backgroundColor: '#f1f5f9',
+                                        color: '#475569',
+                                        border: '1px solid #cbd5e1',
+                                      }}
+                                    >
+                                      <CheckCircle2 size={12} /> Completed
+                                    </span>
+                                  ) : (
+                                    <span
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '2px 8px',
+                                        borderRadius: '12px',
+                                        fontSize: '11.5px',
+                                        fontWeight: 600,
+                                        backgroundColor: '#ecfdf5',
+                                        color: '#059669',
+                                        border: '1px solid #a7f3d0',
+                                      }}
+                                    >
+                                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                                      Active
+                                    </span>
+                                  )}
+                                </div>
 
-                        {/* Edit Icon Button */}
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(item)}
-                          title="Edit Milestone"
-                          className="btn btn-ghost btn-sm"
-                        >
-                          <Edit2 size={16} />
-                        </button>
+                                <div style={{ fontSize: '12.5px', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <Calendar size={13} style={{ color: '#94a3b8' }} />
+                                  <span>Due: {formatHumanDate(item.deadline)}</span>
+                                  {formatHumanTime(item.deadline) && (
+                                    <span style={{ color: '#94a3b8' }}>• {formatHumanTime(item.deadline)}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
 
-                        {/* Delete Icon Button */}
-                        <button
-                          type="button"
-                          onClick={() => setIterationToDelete(item)}
-                          title="Delete Milestone"
-                          className="btn btn-danger-outline btn-sm"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                            {/* 3. Deliverable Progress */}
+                            <td style={{ padding: '16px 18px', verticalAlign: 'top' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+                                  <span style={{ fontWeight: 600, color: '#334155' }}>
+                                    {submitted} / {totalGroups} Groups
+                                  </span>
+                                  <span style={{ fontWeight: 600, color: pct > 0 ? '#10b981' : '#94a3b8' }}>
+                                    {pct}%
+                                  </span>
+                                </div>
+
+                                {/* Clean Progress Bar */}
+                                <div
+                                  style={{
+                                    width: '100%',
+                                    height: '6px',
+                                    borderRadius: '3px',
+                                    backgroundColor: '#f1f5f9',
+                                    overflow: 'hidden',
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      width: `${pct}%`,
+                                      height: '100%',
+                                      backgroundColor: pct === 100 ? '#10b981' : 'var(--primary)',
+                                      borderRadius: '3px',
+                                      transition: 'width 0.3s ease',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* 4. Actions */}
+                            <td style={{ padding: '16px 18px', verticalAlign: 'middle', textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                {/* Submissions Icon Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(`/manager/iterations/${item._id}/submissions`)}
+                                  title="View Group Submissions & Defaulters"
+                                  className="btn btn-ghost btn-sm"
+                                >
+                                  <Eye size={17} />
+                                </button>
+
+                                {/* Rubrics Icon Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenRubrics(item)}
+                                  title={rubricCount > 0 ? `Configure Rubrics (${rubricCount} criteria)` : 'Configure Rubrics'}
+                                  className="btn btn-ghost btn-sm"
+                                  style={{ color: rubricCount > 0 ? 'var(--primary)' : undefined }}
+                                >
+                                  <Sliders size={17} />
+                                </button>
+
+                                {/* Edit Icon Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleEdit(item)}
+                                  title="Edit Milestone"
+                                  className="btn btn-ghost btn-sm"
+                                >
+                                  <Edit2 size={16} />
+                                </button>
+
+                                {/* Delete Icon Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => setIterationToDelete(item)}
+                                  title="Delete Milestone"
+                                  className="btn btn-danger-outline btn-sm"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

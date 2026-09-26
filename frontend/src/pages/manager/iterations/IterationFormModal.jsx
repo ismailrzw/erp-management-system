@@ -28,6 +28,9 @@ export const IterationFormModal = ({
     rubric_template_id: '',
     is_group_formation: false,
     late_penalty_percent: 10,
+    sprint_name: 'Sprint 1',
+    milestone_order: 1,
+    milestone_type: 'deliverable',
   });
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -54,9 +57,11 @@ export const IterationFormModal = ({
         rubric_template_id: currentIteration.rubric_template_id || '',
         is_group_formation: !!currentIteration.is_group_formation,
         late_penalty_percent: currentIteration.late_penalty_percent !== undefined ? currentIteration.late_penalty_percent : 10,
+        sprint_name: currentIteration.sprint_name || 'Sprint 1',
+        milestone_order: currentIteration.milestone_order || 1,
+        milestone_type: currentIteration.milestone_type || (currentIteration.is_group_formation ? 'group_formation' : 'deliverable'),
       });
     } else {
-      // BUG FIX: default course to '' so manager must explicitly choose
       setFormData({
         title: '',
         course: '',
@@ -67,6 +72,9 @@ export const IterationFormModal = ({
         rubric_template_id: '',
         is_group_formation: false,
         late_penalty_percent: 10,
+        sprint_name: 'Sprint 1',
+        milestone_order: 1,
+        milestone_type: 'deliverable',
       });
     }
     setError('');
@@ -85,8 +93,11 @@ export const IterationFormModal = ({
     try {
       const payload = {
         ...formData,
-        is_group_formation: Boolean(formData.is_group_formation),
+        is_group_formation: Boolean(formData.is_group_formation || formData.milestone_type === 'group_formation'),
         late_penalty_percent: Number(formData.late_penalty_percent) || 0,
+        milestone_order: Number(formData.milestone_order) || 1,
+        sprint_name: (formData.sprint_name || 'Sprint 1').trim(),
+        milestone_type: formData.milestone_type || 'deliverable',
       };
       // Only send rubric_template_id if selected and creating new
       if (!payload.rubric_template_id) {
@@ -126,18 +137,78 @@ export const IterationFormModal = ({
           </div>
         )}
 
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+              Sprint Category <span style={{ color: '#dc2626' }}>*</span>
+            </label>
+            <input
+              type="text"
+              list="sprint-options"
+              placeholder="e.g. Sprint 1"
+              value={formData.sprint_name}
+              onChange={(e) => setFormData({ ...formData, sprint_name: e.target.value })}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+              required
+            />
+            <datalist id="sprint-options">
+              <option value="Sprint 1" />
+              <option value="Sprint 2" />
+              <option value="Sprint 3" />
+              <option value="Sprint 4" />
+            </datalist>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+              Milestone # <span style={{ color: '#dc2626' }}>*</span>
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="20"
+              value={formData.milestone_order}
+              onChange={(e) => setFormData({ ...formData, milestone_order: e.target.value })}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+              required
+            />
+          </div>
+        </div>
+
         <div>
           <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-            Title <span style={{ color: '#dc2626' }}>*</span>
+            Milestone Title <span style={{ color: '#dc2626' }}>*</span>
           </label>
           <input
             type="text"
-            placeholder="e.g. Project Proposal Submission"
+            placeholder="e.g. Group Formation Cutoff & Initial Proposal"
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
             required
           />
+        </div>
+
+        <div>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+            Milestone Type
+          </label>
+          <select
+            value={formData.milestone_type}
+            onChange={(e) => {
+              const val = e.target.value;
+              setFormData({
+                ...formData,
+                milestone_type: val,
+                is_group_formation: val === 'group_formation' ? true : formData.is_group_formation,
+              });
+            }}
+            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', backgroundColor: '#ffffff' }}
+          >
+            <option value="deliverable">📄 Deliverable / Project Submission</option>
+            <option value="group_formation">👥 Group Formation & Proposal Cutoff (Milestone 1)</option>
+            <option value="presentation">🎤 Presentation / Demo / Evaluation</option>
+          </select>
         </div>
 
         <div>

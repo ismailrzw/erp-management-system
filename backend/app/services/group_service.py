@@ -260,15 +260,6 @@ def compute_formation_status(course_name: str, dept: str, created_at: datetime) 
 
     if iter_doc and iter_doc.get("deadline"):
         deadline_str = iter_doc.get("deadline")
-    else:
-        # 3. Fallback check: course record deadline if present
-        course_doc = mongo.db.courses.find_one({
-            "name": course_name,
-            "dept": dept.upper() if dept else "",
-            "deleted": {"$ne": True},
-        })
-        if course_doc:
-            deadline_str = course_doc.get("group_formation_deadline") or course_doc.get("deadline")
 
     if not deadline_str:
         return FormationStatus.ON_TIME

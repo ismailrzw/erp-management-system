@@ -1,4 +1,4 @@
-﻿# backend/app/models/iteration.py
+# backend/app/models/iteration.py
 """Constants for the 'iterations' and 'submissions' collections."""
 
 COLLECTION_ITERATIONS = "iterations"
@@ -13,6 +13,9 @@ class Field:
     RUBRICS             = "rubrics"
     IS_GROUP_FORMATION  = "is_group_formation"
     LATE_PENALTY_PERCENT = "late_penalty_percent"
+    SPRINT_NAME         = "sprint_name"
+    MILESTONE_ORDER     = "milestone_order"
+    MILESTONE_TYPE      = "milestone_type"
     CREATED_AT          = "createdAt"
     UPDATED_AT          = "updatedAt"
 

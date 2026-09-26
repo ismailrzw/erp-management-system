@@ -411,10 +411,10 @@ export const StudentProfilePage = () => {
 
             <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
               <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                Assigned Teacher / Evaluator
+                Project Supervisor / Evaluator
               </div>
               <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a', marginTop: '3px' }}>
-                {profile?.teacher || 'Not Assigned'}
+                {profile?.supervisor_name || 'Not Assigned (Group-based)'}
               </div>
             </div>
 

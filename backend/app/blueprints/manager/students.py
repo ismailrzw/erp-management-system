@@ -55,7 +55,6 @@ student_model = students_ns.model("Student", {
     "section":        fields.String(required=True,  description="Section"),
     "session":        fields.String(required=True,  description="Academic session"),
     "course":         fields.String(required=True,  description="Course name"),
-    "teacher":        fields.String(required=True,  description="Assigned teacher"),
     "recovery_email": fields.String(description="Optional recovery email address"),
 })
 
@@ -63,7 +62,6 @@ student_update_model = students_ns.model("StudentUpdate", {
     "name":           fields.String(description="Student full name"),
     "section":        fields.String(description="Section"),
     "course":         fields.String(description="Course name"),
-    "teacher":        fields.String(description="Assigned teacher"),
     "recovery_email": fields.String(description="Optional recovery email address"),
 })
 
@@ -335,7 +333,7 @@ class UngroupedStudentsExport(Resource):
             ws = wb.active
             ws.title = "Ungrouped Students"
 
-            headers = ["Serial No.", "Roll Number", "Name", "Department", "Section", "Course", "Session", "Teacher", "Email"]
+            headers = ["Serial No.", "Roll Number", "Name", "Department", "Section", "Course", "Session", "Email"]
             ws.append(headers)
 
             # Styling header
@@ -363,7 +361,6 @@ class UngroupedStudentsExport(Resource):
                     s.get("section", ""),
                     s.get("course", ""),
                     s.get("session", ""),
-                    s.get("teacher", ""),
                     s.get("email", ""),
                 ])
 

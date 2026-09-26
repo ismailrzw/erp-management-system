@@ -17,7 +17,7 @@ from app.services.student_service import (
     generate_student_email,
 )
 
-REQUIRED_COLUMNS = ("Name", "Roll", "Department", "Section", "Session", "Course", "Teacher", "Recovery Email")
+REQUIRED_COLUMNS = ("Name", "Roll", "Department", "Section", "Session", "Course", "Recovery Email")
 _COLUMN_MAP = {column.casefold(): column for column in REQUIRED_COLUMNS}
 
 HEADER_ALIASES = {
@@ -55,7 +55,6 @@ def _normalise_row(row: dict) -> dict:
         "section": str(row.get("Section") or "").strip(),
         "session": str(row.get("Session") or "").strip(),
         "course": str(row.get("Course") or "").strip(),
-        "teacher": str(row.get("Teacher") or "").strip(),
         "recovery_email": str(row.get("Recovery Email") or "").strip() or None,
     }
 
@@ -147,7 +146,6 @@ def bulk_create_students(rows: list[dict]) -> dict:
             UserFields.COURSE: data["course"],
             UserFields.ROLL: data["roll"].strip().lower(),
             "session": data["session"],
-            "teacher": data["teacher"],
             UserFields.RECOVERY_EMAIL: data["recovery_email"],
             UserFields.DELETED: False,
             UserFields.DELETED_AT: None,

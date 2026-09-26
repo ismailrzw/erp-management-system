@@ -4,7 +4,6 @@ import { UserPlus, ArrowLeft, CheckCircle2, AlertCircle, Upload, Download, Refre
 import { studentsApi } from '../../../api/studentsApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { coursesApi } from '../../../api/coursesApi';
-import { teachersApi } from '../../../api/teachersApi';
 import { Toast } from '../../../components/ui/Toast';
 import { Modal } from '../../../components/ui/Modal';
 
@@ -16,13 +15,11 @@ export const AddStudentPage = () => {
     section: '',
     session: '',
     course: '',
-    teacher: '',
     recovery_email: '',
   });
 
   const [departments, setDepartments] = useState([]);
   const [courses, setCourses] = useState([]);
-  const [teachers, setTeachers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdStudent, setCreatedStudent] = useState(null);
   const [formError, setFormError] = useState('');
@@ -38,10 +35,9 @@ export const AddStudentPage = () => {
     let isMounted = true;
     const loadRefs = async () => {
       try {
-        const [dRes, cRes, tRes] = await Promise.all([
+        const [dRes, cRes] = await Promise.all([
           departmentsApi.list({ limit: 100 }),
           coursesApi.list({ limit: 100 }),
-          teachersApi.list({ limit: 100 }),
         ]);
 
         if (isMounted) {
@@ -52,10 +48,6 @@ export const AddStudentPage = () => {
           if (cRes.success && cRes.data) {
             const cItems = cRes.data.items || cRes.data || [];
             setCourses(cItems);
-          }
-          if (tRes.success && tRes.data) {
-            const tItems = tRes.data.items || tRes.data || [];
-            setTeachers(tItems);
           }
         }
       } catch {
@@ -95,7 +87,6 @@ export const AddStudentPage = () => {
         section: formData.section.trim() || undefined,
         session: formData.session.trim() || undefined,
         course: formData.course.trim() || undefined,
-        teacher: formData.teacher.trim() || undefined,
         recovery_email: formData.recovery_email.trim() || undefined,
       };
 
@@ -125,9 +116,9 @@ export const AddStudentPage = () => {
 
   const handleDownloadTemplate = () => {
     const csvContent =
-      'Name,Roll,Department,Section,Session,Course,Teacher,Recovery Email\n' +
-      'Muhammad Ali,f2023-101,CS,A,Fall 2025,Final Year Project,Dr. Sarah Ahmed,ali@example.com\n' +
-      'Fatima Zahra,f2023-102,CS,B,Fall 2025,Final Year Project,Dr. Sarah Ahmed,fatima@example.com\n';
+      'Name,Roll,Department,Section,Session,Course,Recovery Email\n' +
+      'Muhammad Ali,f2023-101,CS,A,Fall 2025,Final Year Project,ali@example.com\n' +
+      'Fatima Zahra,f2023-102,CS,B,Fall 2025,Final Year Project,fatima@example.com\n';
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -274,7 +265,7 @@ export const AddStudentPage = () => {
 
               <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', marginBottom: '16px', fontSize: '12.5px', color: '#475569' }}>
                 <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '4px' }}>Required Columns:</div>
-                <code>Name, Roll, Department, Section, Session, Course, Teacher, Recovery Email</code>
+                <code>Name, Roll, Department, Section, Session, Course, Recovery Email</code>
                 <div style={{ marginTop: '8px' }}>
                   <button
                     type="button"
@@ -431,7 +422,6 @@ export const AddStudentPage = () => {
                   section: '',
                   session: '',
                   course: '',
-                  teacher: '',
                   recovery_email: '',
                 });
               }}
@@ -556,34 +546,16 @@ export const AddStudentPage = () => {
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '6px' }}>
-                  Assigned Teacher / Evaluator (Optional)
+                  Recovery Email Address (Optional)
                 </label>
-                <select
-                  value={formData.teacher}
-                  onChange={(e) => setFormData({ ...formData, teacher: e.target.value })}
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
-                >
-                  <option value="">-- Select Teacher --</option>
-                  {teachers.map((t) => (
-                    <option key={t.id || t._id || t.email} value={t.name}>
-                      {t.name} ({t.dept || 'Faculty'})
-                    </option>
-                  ))}
-                </select>
+                <input
+                  type="email"
+                  value={formData.recovery_email}
+                  onChange={(e) => setFormData({ ...formData, recovery_email: e.target.value })}
+                  placeholder="e.g. personal.email@gmail.com"
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
+                />
               </div>
-            </div>
-
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '6px' }}>
-                Recovery Email Address (Optional)
-              </label>
-              <input
-                type="email"
-                value={formData.recovery_email}
-                onChange={(e) => setFormData({ ...formData, recovery_email: e.target.value })}
-                placeholder="e.g. personal.email@gmail.com"
-                style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
-              />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>

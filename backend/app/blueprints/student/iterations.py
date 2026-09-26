@@ -1,4 +1,4 @@
-﻿# backend/app/blueprints/student/iterations.py
+# backend/app/blueprints/student/iterations.py
 from datetime import datetime, timezone
 
 from bson import ObjectId
@@ -96,6 +96,23 @@ class StudentIterationListResource(Resource):
 
             item['submission'] = sub_info
             item['has_submitted'] = sub_info is not None
+
+            # Attach student evaluation if available
+            student_eval = mongo.db.student_evaluations.find_one({
+                "iteration_id": item_id,
+                "student_id": ObjectId(student_id)
+            })
+            if student_eval:
+                item['student_evaluation'] = {
+                    "id": str(student_eval['_id']),
+                    "total_weighted_score": student_eval.get("total_weighted_score", 0),
+                    "max_possible_score": student_eval.get("max_possible_score", 0),
+                    "percentage": student_eval.get("percentage", 0),
+                    "is_defaulter": student_eval.get("is_defaulter", False),
+                }
+            else:
+                item['student_evaluation'] = None
+
             result.append(item)
 
         return success_response("Student iterations retrieved.", data=result)
@@ -156,6 +173,28 @@ class StudentIterationDetailResource(Resource):
 
         iteration['submission'] = sub_info
         iteration['has_submitted'] = sub_info is not None
+
+        # Attach student evaluation if available (e.g. graded defaulter or individual rubric marking)
+        student_eval = mongo.db.student_evaluations.find_one({
+            "iteration_id": oid,
+            "student_id": ObjectId(student_id)
+        })
+        if student_eval:
+            iteration['student_evaluation'] = {
+                "id": str(student_eval['_id']),
+                "scores": student_eval.get("scores", {}),
+                "rubric_snapshot": student_eval.get("rubric_snapshot", []),
+                "total_weighted_score": student_eval.get("total_weighted_score", 0),
+                "max_possible_score": student_eval.get("max_possible_score", 0),
+                "percentage": student_eval.get("percentage", 0),
+                "feedback": student_eval.get("feedback", ""),
+                "evaluator_name": student_eval.get("evaluator_name", "PBL Manager"),
+                "is_defaulter": student_eval.get("is_defaulter", False),
+                "graded_at": student_eval.get("graded_at").isoformat() if student_eval.get("graded_at") else None,
+            }
+        else:
+            iteration['student_evaluation'] = None
+
         return success_response("Iteration detail retrieved.", data=iteration)
 
 

@@ -1,15 +1,18 @@
-﻿# backend/app/schemas/student_schema.py
+# backend/app/schemas/student_schema.py
 """Validation schemas for student data."""
 
 import re
 
-from marshmallow import Schema, ValidationError, fields, validate, validates
+from marshmallow import EXCLUDE, Schema, ValidationError, fields, validate, validates
 
 ROLL_REGEX = re.compile(r"^f\d{4}-\d+$", re.IGNORECASE)
 
 
 class CreateStudentSchema(Schema):
     """Schema for creating a new student."""
+
+    class Meta:
+        unknown = EXCLUDE
 
     name = fields.Str(
         required=True,
@@ -37,10 +40,6 @@ class CreateStudentSchema(Schema):
         required=False,
         load_default="",
     )
-    teacher = fields.Str(
-        required=False,
-        load_default="",
-    )
     recovery_email = fields.Email(
         load_default=None,
         allow_none=True,
@@ -60,6 +59,9 @@ class CreateStudentSchema(Schema):
 class UpdateStudentSchema(Schema):
     """Schema for updating an existing student."""
 
+    class Meta:
+        unknown = EXCLUDE
+
     name = fields.Str(
         validate=validate.Length(min=2, max=100),
         load_default=None
@@ -69,7 +71,6 @@ class UpdateStudentSchema(Schema):
         load_default=None
     )
     course = fields.Str(load_default=None)
-    teacher = fields.Str(load_default=None)
     recovery_email = fields.Email(
         load_default=None,
         allow_none=True

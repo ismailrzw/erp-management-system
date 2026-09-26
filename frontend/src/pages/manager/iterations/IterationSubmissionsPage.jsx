@@ -3,10 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { EmptyState } from '../../../components/ui/EmptyState';
+import { Toast } from '../../../components/ui/Toast';
 import { iterationsApi } from '../../../api/iterationsApi';
 import { coursesApi } from '../../../api/coursesApi';
 import { IterationsTabBar } from './IterationsTabBar';
-import { CheckCircle2, XCircle, AlertTriangle, Download, Users, Calendar, FileText, Search, FileDown } from 'lucide-react';
+import { ManagerStudentGradingModal } from './ManagerStudentGradingModal';
+import { CheckCircle2, XCircle, AlertTriangle, Download, Users, Calendar, FileText, Search, FileDown, Award } from 'lucide-react';
 
 const fmt = (s) => {
   if (!s) return '-';
@@ -53,11 +55,17 @@ export const IterationSubmissionsPage = () => {
   const [summary, setSummary] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [ungroupedStudents, setUngroupedStudents] = useState([]);
+  const [rubrics, setRubrics] = useState([]);
   const [isGroupFormation, setIsGroupFormation] = useState(false);
   const [latePenaltyPercent, setLatePenaltyPercent] = useState(0);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [toast, setToast] = useState(null);
+
+  // Student Grading Modal state
+  const [gradingStudent, setGradingStudent] = useState(null);
+  const [isGradingOpen, setIsGradingOpen] = useState(false);
 
   // Helper to load submissions for a given iteration ID without tearing down page
   const loadSubmissions = async (iterId) => {
@@ -65,6 +73,7 @@ export const IterationSubmissionsPage = () => {
       setSummary(null);
       setSubmissions([]);
       setUngroupedStudents([]);
+      setRubrics([]);
       setIsGroupFormation(false);
       setLatePenaltyPercent(0);
       return;
@@ -77,6 +86,7 @@ export const IterationSubmissionsPage = () => {
       setSummary(data.summary || null);
       setSubmissions(data.submissions || []);
       setUngroupedStudents(data.ungrouped_students || []);
+      setRubrics(data.rubrics || []);
       setIsGroupFormation(Boolean(data.is_group_formation ?? data.summary?.is_group_formation));
       setLatePenaltyPercent(data.late_penalty_percent ?? data.summary?.late_penalty_percent ?? 0);
     } catch (err) {
@@ -118,6 +128,7 @@ export const IterationSubmissionsPage = () => {
           setSummary(data.summary || null);
           setSubmissions(data.submissions || []);
           setUngroupedStudents(data.ungrouped_students || []);
+          setRubrics(data.rubrics || []);
           setIsGroupFormation(Boolean(data.is_group_formation ?? data.summary?.is_group_formation));
           setLatePenaltyPercent(data.late_penalty_percent ?? data.summary?.late_penalty_percent ?? 0);
         } else {
@@ -208,6 +219,7 @@ export const IterationSubmissionsPage = () => {
 
   return (
     <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
+      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
       {/* Top Sub-Navigation Bar */}
       <IterationsTabBar />
@@ -518,6 +530,8 @@ export const IterationSubmissionsPage = () => {
                       <th style={thS}>Email</th>
                       <th style={thS}>Dept / Section</th>
                       <th style={thS}>Defaulter Status</th>
+                      <th style={thS}>Rubric Marks</th>
+                      <th style={{ ...thS, textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -536,6 +550,39 @@ export const IterationSubmissionsPage = () => {
                             <AlertTriangle size={12} /> Formation Defaulter
                           </span>
                         </td>
+                        <td style={tdS}>
+                          {st.evaluation ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <span style={bdg('#ecfdf5', '#15803d', '#bbf7d0')}>
+                                <CheckCircle2 size={12} /> {st.evaluation.total_weighted_score} / {st.evaluation.max_possible_score} pts ({st.evaluation.percentage}%)
+                              </span>
+                              {st.evaluation.feedback && (
+                                <span style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  "{st.evaluation.feedback}"
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={bdg('#f1f5f9', '#64748b', '#cbd5e1')}>
+                              Not Graded
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ ...tdS, textAlign: 'right' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setGradingStudent(st);
+                              setIsGradingOpen(true);
+                            }}
+                            className={st.evaluation ? "btn btn-secondary btn-sm" : "btn btn-primary btn-sm"}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px' }}
+                            title={st.evaluation ? "Edit Student Evaluation" : "Grade Defaulter with Rubrics"}
+                          >
+                            <Award size={14} />
+                            <span>{st.evaluation ? 'Edit Mark' : 'Mark Student'}</span>
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -545,6 +592,23 @@ export const IterationSubmissionsPage = () => {
           )}
         </>
       )}
+
+      {/* Interactive Manager Student Grading Modal */}
+      <ManagerStudentGradingModal
+        isOpen={isGradingOpen}
+        onClose={() => {
+          setIsGradingOpen(false);
+          setGradingStudent(null);
+        }}
+        student={gradingStudent}
+        iterationId={selectedIterationId}
+        iterationTitle={summary?.iteration_title}
+        rubrics={rubrics}
+        onSuccess={(msg) => {
+          setToast({ type: 'success', message: msg });
+          loadSubmissions(selectedIterationId);
+        }}
+      />
     </div>
   );
 };

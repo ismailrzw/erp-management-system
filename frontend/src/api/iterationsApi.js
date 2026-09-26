@@ -40,4 +40,15 @@ export const iterationsApi = {
     const response = await api.get(`/manager/iterations/${iterationId}/submissions`);
     return response.data;
   },
+
+  getStudentEvaluations: async (iterationId) => {
+    const response = await api.get(`/manager/iterations/${iterationId}/student-evaluations`);
+    return response.data;
+  },
+
+  gradeStudent: async (iterationId, payload) => {
+    const response = await api.post(`/manager/iterations/${iterationId}/student-evaluations`, payload);
+    return response.data;
+  },
 };
+

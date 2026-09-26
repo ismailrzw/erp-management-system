@@ -215,7 +215,7 @@ def test_accept_auto_declines_other_pending_invites(client, real_student_headers
     # Create a third student and have them invite second_student too
     r3 = client.post("/api/manager/students/", json={
         "name": "Third Student", "roll": "f2023-9003", "dept": "SE",
-        "section": "A", "session": "Fall 2023", "course": "Final Year Project", "teacher": "Dr. X",
+        "section": "A", "session": "Fall 2023", "course": "Final Year Project",
     }, headers=manager_headers)
     assert r3.status_code == 201, r3.get_json()
     third = r3.get_json()["data"]

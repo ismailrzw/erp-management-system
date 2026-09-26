@@ -12,6 +12,7 @@ import {
   X,
   File,
   Paperclip,
+  Award,
 } from 'lucide-react';
 
 const formatHumanDate = (dateStr) => {
@@ -112,12 +113,18 @@ export const IterationDetailPage = () => {
   const rubrics = iteration.rubrics || [];
   const totalPoints = rubrics.reduce((sum, r) => sum + Number(r.weight || 0), 0);
 
+  const studentEval = iteration.student_evaluation;
+
   // Work Status pill calculation
   let statusText = 'Assigned';
   let statusBg = '#e8f0fe';
   let statusColor = '#1a73e8';
 
-  if (hasSubmission) {
+  if (studentEval) {
+    statusText = `Graded: ${studentEval.total_weighted_score}/${studentEval.max_possible_score || totalPoints}`;
+    statusBg = '#e6f4ea';
+    statusColor = '#137333';
+  } else if (hasSubmission) {
     if (submission?.is_late) {
       statusText = 'Turned in (Late)';
       statusBg = '#fef3c7';
@@ -250,7 +257,115 @@ export const IterationDetailPage = () => {
             </div>
           )}
 
+          {/* Official Rubric Evaluation Results Card (if evaluated by manager or evaluator) */}
+          {studentEval && (
+            <div
+              style={{
+                marginTop: '28px',
+                border: '1px solid #bbf7d0',
+                borderRadius: '12px',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  padding: '16px 20px',
+                  backgroundColor: '#f0fdf4',
+                  borderBottom: '1px solid #bbf7d0',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '10px',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#166534' }}>
+                    <Award size={20} />
+                    <span style={{ fontSize: '15px', fontWeight: 700 }}>Official Rubric Evaluation</span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#15803d', marginTop: '2px' }}>
+                    Graded by {studentEval.evaluator_name || 'PBL Manager'}
+                    {studentEval.graded_at && ` on ${new Date(studentEval.graded_at).toLocaleDateString()}`}
+                  </div>
+                </div>
 
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                  <span style={{ fontSize: '22px', fontWeight: 800, color: '#15803d' }}>
+                    {studentEval.total_weighted_score}
+                  </span>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#166534' }}>
+                    / {studentEval.max_possible_score} pts ({studentEval.percentage}%)
+                  </span>
+                </div>
+              </div>
+
+              {/* Rubric Criteria Breakdown */}
+              <div style={{ padding: '16px 20px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '12px' }}>
+                  Criteria Breakdown
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {(studentEval.rubric_snapshot || rubrics).map((r, idx) => {
+                    const key = String(r.id ?? idx + 1);
+                    const lvl = studentEval.scores?.[key] !== undefined ? studentEval.scores[key] : 0;
+                    const weight = Number(r.weight) || 0;
+                    const earned = Math.round((lvl / 5.0) * weight * 100) / 100;
+                    const desc = r.levels?.[String(lvl)] || r.levels?.[lvl] || '';
+
+                    return (
+                      <div
+                        key={key}
+                        style={{
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0',
+                          backgroundColor: '#f8fafc',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
+                            {idx + 1}. {r.question}
+                          </span>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#059669', whiteSpace: 'nowrap' }}>
+                            {earned} / {weight} pts (Level {lvl})
+                          </span>
+                        </div>
+                        {desc && (
+                          <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+                            {desc}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Manager Feedback */}
+                {studentEval.feedback && (
+                  <div
+                    style={{
+                      marginTop: '16px',
+                      padding: '12px 16px',
+                      backgroundColor: '#f8fafc',
+                      borderRadius: '8px',
+                      borderLeft: '4px solid #16a34a',
+                    }}
+                  >
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Instructor Feedback
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                      {studentEval.feedback}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* RIGHT COLUMN: Google Classroom "Your work" & Comments Cards */}

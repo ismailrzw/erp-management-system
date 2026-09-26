@@ -39,6 +39,9 @@ def _serialize_doc(document: dict | None) -> dict | None:
     if "_id" in result:
         result["id"] = str(result.pop("_id"))
     result.pop(UserFields.PASSWORD_HASH, None)
+    result.pop("teacher", None)
+    result.pop("assigned_teacher_id", None)
+    result.pop("assigned_evaluator_id", None)
     for key, value in list(result.items()):
         if isinstance(value, ObjectId):
             result[key] = str(value)
@@ -80,7 +83,6 @@ def create_student(data: dict) -> dict:
         UserFields.COURSE: data.get("course", "").strip(),
         UserFields.ROLL: roll,
         "session": data.get("session", "").strip(),
-        "teacher": data.get("teacher", "").strip(),
         UserFields.RECOVERY_EMAIL: (data.get("recovery_email") or "").strip().lower() or None,
         "password_set": False,
         "password_set_at": None,
@@ -110,7 +112,6 @@ def create_student(data: dict) -> dict:
         "dept": student_doc[UserFields.DEPT],
         "section": student_doc[UserFields.SECTION],
         "course": student_doc[UserFields.COURSE],
-        "teacher": student_doc["teacher"],
         "email": email,
         "password_set_email_sent": email_sent,
     }
@@ -172,7 +173,15 @@ def list_students(filters: dict | None = None, page: int = 1, limit: int = 20) -
 
 def update_student(student_id: str, data: dict) -> dict:
     """Update a student."""
-    protected = [UserFields.EMAIL, UserFields.ROLL, UserFields.PASSWORD_HASH, UserFields.ROLE]
+    protected = [
+        UserFields.EMAIL,
+        UserFields.ROLL,
+        UserFields.PASSWORD_HASH,
+        UserFields.ROLE,
+        "teacher",
+        "assigned_teacher_id",
+        "assigned_evaluator_id",
+    ]
     for field in protected:
         data.pop(field, None)
 
@@ -314,7 +323,6 @@ def list_ungrouped_students(dept: str | None = None, course: str | None = None) 
             "section": doc.get(UserFields.SECTION, ""),
             "course": doc.get(UserFields.COURSE, ""),
             "session": doc.get("session", ""),
-            "teacher": doc.get("teacher", ""),
             "email": doc.get(UserFields.EMAIL, ""),
             "recovery_email": doc.get(UserFields.RECOVERY_EMAIL, ""),
             "created_at": doc.get(UserFields.CREATED_AT).isoformat() if isinstance(doc.get(UserFields.CREATED_AT), datetime) else None,
