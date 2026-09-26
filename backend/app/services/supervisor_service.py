@@ -71,11 +71,11 @@ def list_available_supervisors(
     available_only: bool = False,
 ) -> list[dict]:
     """
-    List all evaluators/instructors with their expertise domains, project count in course,
+    List all teachers/supervisors with their expertise domains, project count in course,
     and availability status (active count in course < 4).
     """
     query = {
-        UserFields.ROLE: Role.EVALUATOR,
+        UserFields.ROLE: Role.TEACHER,
         UserFields.DELETED: {"$ne": True},
     }
 
@@ -86,10 +86,10 @@ def list_available_supervisors(
         dom_regex = re.compile(re.escape(domain.strip()), re.IGNORECASE)
         query[UserFields.DOMAINS] = dom_regex
 
-    evaluators = list(mongo.db.users.find(query, {UserFields.PASSWORD_HASH: 0}).sort(UserFields.NAME, 1))
+    teachers = list(mongo.db.users.find(query, {UserFields.PASSWORD_HASH: 0}).sort(UserFields.NAME, 1))
 
     results = []
-    for ev in evaluators:
+    for ev in teachers:
         ev_id = str(ev["_id"])
         active_count = get_evaluator_active_count(ev_id, course_name=course)
         is_available = active_count < MAX_SUPERVISION_CAP
@@ -113,16 +113,16 @@ def list_available_supervisors(
 
 
 def update_evaluator_domains(evaluator_id: str, domains: list[str]) -> dict:
-    """Update domain tags / expertise for an evaluator."""
+    """Update domain tags / expertise for a teacher/supervisor."""
     clean_domains = [d.strip() for d in domains if isinstance(d, str) and d.strip()]
     now = datetime.now(timezone.utc)
 
     res = mongo.db.users.update_one(
-        {"_id": _oid(evaluator_id), UserFields.ROLE: Role.EVALUATOR, UserFields.DELETED: {"$ne": True}},
+        {"_id": _oid(evaluator_id), UserFields.ROLE: Role.TEACHER, UserFields.DELETED: {"$ne": True}},
         {"$set": {UserFields.DOMAINS: clean_domains, UserFields.UPDATED_AT: now}},
     )
     if res.matched_count == 0:
-        raise ValueError("Evaluator not found.")
+        raise ValueError("Teacher/Supervisor not found.")
 
     return {"updated": True, "evaluator_id": evaluator_id, "domains": clean_domains}
 
@@ -162,10 +162,10 @@ def create_supervisor_request(
     if pending:
         raise ValueError("Your group already has a pending supervisor request. Please cancel it before sending a new one.")
 
-    # 3. Validate Evaluator
+    # 3. Validate Teacher / Supervisor
     evaluator = mongo.db.users.find_one({
         UserFields.ID: e_oid,
-        UserFields.ROLE: Role.EVALUATOR,
+        UserFields.ROLE: Role.TEACHER,
         UserFields.DELETED: {"$ne": True},
     })
     if not evaluator:

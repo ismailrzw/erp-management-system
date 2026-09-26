@@ -102,6 +102,9 @@ def create_app(config_class=Config):
     from app.blueprints.manager.teachers import teachers_ns
     api.add_namespace(teachers_ns, path="/api/manager/teachers")
 
+    from app.blueprints.manager.evaluators import evaluators_ns
+    api.add_namespace(evaluators_ns, path="/api/manager/evaluators")
+
     from app.blueprints.manager.groups import manager_groups_ns
     api.add_namespace(manager_groups_ns, path="/api/manager/groups")
 
@@ -147,7 +150,11 @@ def create_app(config_class=Config):
     api.add_namespace(student_supervisors_ns, path="/api/student/supervisors")
     api.add_namespace(student_supervisor_requests_ns, path="/api/student/supervisor-requests")
 
-    # ── Evaluator Blueprint (Sprint 4) ───────────────────────────────────────
+    # ── Teacher Blueprint (Supervisors) ──────────────────────────────────────
+    from app.blueprints.teacher import teacher_bp
+    app.register_blueprint(teacher_bp, url_prefix='/api/teacher')
+
+    # ── Evaluator Blueprint (Exhibition Day) ─────────────────────────────────
     from app.blueprints.evaluator import evaluator_bp
     app.register_blueprint(evaluator_bp, url_prefix='/api/evaluator')
 

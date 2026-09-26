@@ -40,6 +40,7 @@ export const Sidebar = ({
     depts: false,
     courses: false,
     teachers: false,
+    evaluators: false,
     groups: false,
     iterations: false,
     survey: false,
@@ -51,6 +52,7 @@ export const Sidebar = ({
   };
 
   const isStudent = user?.role === 'student';
+  const isTeacher = user?.role === 'teacher';
   const isEvaluator = user?.role === 'evaluator';
 
   const managerNavSections = [
@@ -130,13 +132,34 @@ export const Sidebar = ({
       ],
     },
     {
+      section: 'Evaluators',
+      items: [
+        {
+          type: 'menu',
+          key: 'evaluators',
+          text: 'Manage Evaluators',
+          icon: Award,
+          subitems: [
+            { text: 'Add New Evaluator', to: '/manager/evaluators/add' },
+            { text: 'View All Evaluators', to: '/manager/evaluators/view' },
+            { text: 'View Recycle Bin', to: '/manager/evaluators/trash' },
+          ],
+        },
+      ],
+    },
+    {
       section: 'Groups',
       items: [
         {
-          type: 'link',
+          type: 'menu',
+          key: 'groups',
           text: 'Manage Groups',
-          to: '/manager/groups',
           icon: FolderGit2,
+          subitems: [
+            { text: 'View All Groups', to: '/manager/groups' },
+            { text: 'Broadcast Mail', to: '/manager/groups/broadcast' },
+            { text: 'Ungrouped Students', to: '/manager/groups/ungrouped' },
+          ],
         },
       ],
     },
@@ -178,6 +201,55 @@ export const Sidebar = ({
           type: 'link',
           text: 'Settings',
           to: '/manager/settings',
+          icon: Settings,
+        },
+        {
+          type: 'action',
+          text: 'Logout',
+          onClick: handleLogout,
+          icon: LogOut,
+          danger: true,
+        },
+      ],
+    },
+  ];
+
+  const teacherNavSections = [
+    {
+      section: 'Navigation',
+      items: [
+        {
+          type: 'link',
+          text: 'Dashboard',
+          to: '/teacher/dashboard',
+          icon: LayoutDashboard,
+        },
+      ],
+    },
+    {
+      section: 'Supervision & FYP',
+      items: [
+        {
+          type: 'link',
+          text: 'My Groups',
+          to: '/teacher/groups',
+          icon: FolderGit2,
+        },
+        {
+          type: 'link',
+          text: 'Supervised Students',
+          to: '/teacher/students',
+          icon: Users,
+        },
+      ],
+    },
+    {
+      section: 'Account',
+      items: [
+        {
+          type: 'link',
+          text: 'Supervisor Profile',
+          to: '/teacher/profile',
           icon: Settings,
         },
         {
@@ -312,7 +384,13 @@ export const Sidebar = ({
     },
   ];
 
-  const navSections = isStudent ? studentNavSections : isEvaluator ? evaluatorNavSections : managerNavSections;
+  const navSections = isStudent
+    ? studentNavSections
+    : isTeacher
+    ? teacherNavSections
+    : isEvaluator
+    ? evaluatorNavSections
+    : managerNavSections;
 
   const sidebarStyle = isMobileView
     ? {

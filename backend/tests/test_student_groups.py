@@ -474,3 +474,49 @@ def test_leader_reject_join_request(client, real_student_headers, second_student
     r3 = client.get(f"{GROUPS_URL}my/sent-requests", headers=second_student_headers)
     items = r3.get_json()["data"]["items"]
     assert items[0]["status"] == "rejected"
+
+
+def test_member_can_leave_approved_group(client, real_student_headers, second_student_headers, second_student_user):
+    """A member must be able to leave an approved group as well as a pending one."""
+    group = create_group(client, real_student_headers)
+
+    # Add second student
+    r1 = client.post(
+        f"{GROUPS_URL}{group['id']}/join-request",
+        headers=second_student_headers,
+    )
+    req_id = r1.get_json()["data"]["id"]
+    client.post(f"{GROUPS_URL}join-requests/{req_id}/accept", headers=real_student_headers)
+
+    # Set group status to approved in DB
+    from app.extensions import mongo
+    from bson import ObjectId
+    mongo.db.groups.update_one({"_id": ObjectId(group["id"])}, {"$set": {"status": "approved"}})
+
+    # Member leaves approved group
+    leave_res = client.post(f"{GROUPS_URL}leave", headers=second_student_headers)
+    assert leave_res.status_code == 200, leave_res.get_json()
+    assert "left group" in leave_res.get_json()["message"].lower()
+
+    # Member no longer in group
+    my_group_res = client.get(MY_GROUP_URL, headers=second_student_headers)
+    assert my_group_res.status_code == 200
+    assert my_group_res.get_json()["data"] is None
+
+
+def test_manager_send_broadcast_mail_to_groups(client, manager_headers, real_student_headers):
+    """Manager can broadcast emails to groups."""
+    group = create_group(client, real_student_headers)
+
+    res = client.post(
+        "/api/manager/groups/send-mail",
+        json={
+            "recipient_filter": "all",
+            "subject": "Important Announcement",
+            "body": "Please make sure to review the upcoming rubric guidelines.",
+        },
+        headers=manager_headers,
+    )
+    assert res.status_code == 200, res.get_json()
+    assert res.get_json()["data"]["emails_dispatched"] >= 1
+

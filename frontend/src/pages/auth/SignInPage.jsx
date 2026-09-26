@@ -5,10 +5,10 @@ import { User, Lock, AlertCircle, Loader2 } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
   { role: 'PBL Manager', login: 'zamanaziz@bnu.edu.pk', pass: '11223344' },
-  { role: 'Evaluator — Saif Ali Khan', login: 'saifali@bnu.edu.pk', pass: '11223344' },
-  { role: 'Student - Abrar Ahmed', login: 'F2023-111@bnu.edu.pk', pass: '11223344' },
-  { role: 'Student - Ismail', login: 'F2023-551@bnu.edu.pk', pass: '11223344' },
-  { role: 'Student 2', login: 'F2023-990@bnu.edu.pk', pass: '11223344' },
+  { role: 'Teacher (Supervisor) — Dr. Saif Ali', login: 'saifali@bnu.edu.pk', pass: '11223344' },
+  { role: 'Evaluator (External) — Kashif Mehmood', login: 'kashif.mehmood@techvista.com', pass: '11223344' },
+  { role: 'Student Leader — Abrar Ahmed', login: 'F2023-111@bnu.edu.pk', pass: '11223344' },
+  { role: 'Student — Ismail', login: 'F2023-551@bnu.edu.pk', pass: '11223344' },
 ];
 
 export const SignInPage = () => {
@@ -44,6 +44,8 @@ export const SignInPage = () => {
       
       if (user.role === 'student') {
         navigate('/student/dashboard', { replace: true });
+      } else if (user.role === 'teacher') {
+        navigate('/teacher/dashboard', { replace: true });
       } else if (user.role === 'evaluator') {
         navigate('/evaluator/dashboard', { replace: true });
       } else if (user.role === 'pbl_manager') {

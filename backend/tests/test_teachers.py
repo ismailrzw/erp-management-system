@@ -1,4 +1,4 @@
-"""Teacher/Evaluator CRUD API contract tests."""
+"""Teacher (FYP Supervisor) CRUD API contract tests."""
 
 TEACHERS_URL = "/api/manager/teachers/"
 
@@ -6,14 +6,17 @@ TEACHERS_URL = "/api/manager/teachers/"
 def create_teacher(
     client,
     manager_headers,
-    email="test.evaluator@bnu.edu.pk",
-    name="Test Evaluator",
+    email="test.teacher@bnu.edu.pk",
+    name="Test Teacher",
     dept="SE",
-    type_="Internal Faculty",
+    domains=None,
 ):
+    payload = {"name": name, "email": email, "dept": dept}
+    if domains:
+        payload["domains"] = domains
     response = client.post(
         TEACHERS_URL,
-        json={"name": name, "email": email, "dept": dept, "type": type_},
+        json=payload,
         headers=manager_headers,
     )
     assert response.status_code == 201, response.get_json()
@@ -21,40 +24,25 @@ def create_teacher(
 
 
 def test_create_teacher_returns_created_record(client, manager_headers):
-    teacher = create_teacher(client, manager_headers)
-    assert teacher["name"] == "Test Evaluator"
-    assert teacher["email"] == "test.evaluator@bnu.edu.pk"
+    teacher = create_teacher(client, manager_headers, domains=["Machine Learning", "Cloud"])
+    assert teacher["name"] == "Test Teacher"
+    assert teacher["email"] == "test.teacher@bnu.edu.pk"
     assert teacher["dept"] == "SE"
-    assert teacher["type"] == "Internal Faculty"
-    assert teacher["role"] == "evaluator"
+    assert teacher["role"] == "teacher"
+    assert teacher["domains"] == ["Machine Learning", "Cloud"]
     assert "id" in teacher
     assert "initial_password" in teacher
     assert "password_hash" not in teacher
 
 
-def test_create_teacher_rejects_invalid_type(client, manager_headers):
-    response = client.post(
-        TEACHERS_URL,
-        json={
-            "name": "Bad Type",
-            "email": "bad.type@bnu.edu.pk",
-            "dept": "SE",
-            "type": "Freelancer",
-        },
-        headers=manager_headers,
-    )
-    assert response.status_code == 422, response.get_json()
-
-
 def test_create_teacher_rejects_duplicate_email(client, manager_headers):
-    create_teacher(client, manager_headers, email="dup.evaluator@bnu.edu.pk")
+    create_teacher(client, manager_headers, email="dup.teacher@bnu.edu.pk")
     response = client.post(
         TEACHERS_URL,
         json={
-            "name": "Duplicate Evaluator",
-            "email": "dup.evaluator@bnu.edu.pk",
+            "name": "Duplicate Teacher",
+            "email": "dup.teacher@bnu.edu.pk",
             "dept": "CS",
-            "type": "External Industry",
         },
         headers=manager_headers,
     )
@@ -63,13 +51,13 @@ def test_create_teacher_rejects_duplicate_email(client, manager_headers):
 
 
 def test_list_teachers_returns_created_items(client, manager_headers):
-    create_teacher(client, manager_headers, email="list.evaluator@bnu.edu.pk", dept="EE")
+    create_teacher(client, manager_headers, email="list.teacher@bnu.edu.pk", dept="EE")
     response = client.get(TEACHERS_URL, headers=manager_headers)
     assert response.status_code == 200, response.get_json()
     data = response.get_json()["data"]
     assert "items" in data
     assert data["total"] >= 1
-    assert any(item["email"] == "list.evaluator@bnu.edu.pk" for item in data["items"])
+    assert any(item["email"] == "list.teacher@bnu.edu.pk" for item in data["items"])
 
 
 def test_list_teachers_filters_by_dept(client, manager_headers):
@@ -82,10 +70,10 @@ def test_list_teachers_filters_by_dept(client, manager_headers):
 
 
 def test_get_teacher_by_id(client, manager_headers):
-    teacher = create_teacher(client, manager_headers, email="getbyid.evaluator@bnu.edu.pk")
+    teacher = create_teacher(client, manager_headers, email="getbyid.teacher@bnu.edu.pk")
     response = client.get(f"{TEACHERS_URL}{teacher['id']}", headers=manager_headers)
     assert response.status_code == 200, response.get_json()
-    assert response.get_json()["data"]["email"] == "getbyid.evaluator@bnu.edu.pk"
+    assert response.get_json()["data"]["email"] == "getbyid.teacher@bnu.edu.pk"
     assert "password_hash" not in response.get_json()["data"]
 
 
@@ -101,15 +89,16 @@ def test_get_teacher_with_malformed_id_returns_404(client, manager_headers):
 
 
 def test_update_teacher(client, manager_headers):
-    teacher = create_teacher(client, manager_headers, email="update.evaluator@bnu.edu.pk", dept="SE")
+    teacher = create_teacher(client, manager_headers, email="update.teacher@bnu.edu.pk", dept="SE")
     response = client.put(
         f"{TEACHERS_URL}{teacher['id']}",
-        json={"dept": "CS"},
+        json={"dept": "CS", "domains": ["Cybersecurity"]},
         headers=manager_headers,
     )
     assert response.status_code == 200, response.get_json()
     assert response.get_json()["data"]["dept"] == "CS"
-    assert response.get_json()["data"]["name"] == "Test Evaluator"
+    assert response.get_json()["data"]["name"] == "Test Teacher"
+    assert response.get_json()["data"]["domains"] == ["Cybersecurity"]
 
     fetched = client.get(f"{TEACHERS_URL}{teacher['id']}", headers=manager_headers).get_json()["data"]
     assert fetched["dept"] == "CS"
@@ -126,7 +115,7 @@ def test_update_teacher_rejects_email_change(client, manager_headers):
 
 
 def test_soft_delete_then_restore_teacher(client, manager_headers):
-    teacher = create_teacher(client, manager_headers, email="softdelete.evaluator@bnu.edu.pk")
+    teacher = create_teacher(client, manager_headers, email="softdelete.teacher@bnu.edu.pk")
     teacher_url = f"{TEACHERS_URL}{teacher['id']}"
 
     deleted = client.delete(teacher_url, headers=manager_headers)
@@ -145,7 +134,7 @@ def test_soft_delete_then_restore_teacher(client, manager_headers):
 
 
 def test_permanent_delete_requires_soft_delete_first(client, manager_headers):
-    teacher = create_teacher(client, manager_headers, email="permanentdelete.evaluator@bnu.edu.pk")
+    teacher = create_teacher(client, manager_headers, email="permanentdelete.teacher@bnu.edu.pk")
     teacher_url = f"{TEACHERS_URL}{teacher['id']}"
 
     response = client.delete(f"{teacher_url}/permanent", headers=manager_headers)
@@ -163,7 +152,7 @@ def test_teacher_endpoints_require_manager_role(client):
     """Every teacher endpoint should reject requests without a valid manager token."""
     endpoints = [
         ("GET", TEACHERS_URL, None),
-        ("POST", TEACHERS_URL, {"name": "Test", "email": "noauth@bnu.edu.pk", "dept": "SE", "type": "Internal Faculty"}),
+        ("POST", TEACHERS_URL, {"name": "Test", "email": "noauth@bnu.edu.pk", "dept": "SE"}),
         ("GET", f"{TEACHERS_URL}64b64c8f0e2b2c3d4e5f6789", None),
         ("PUT", f"{TEACHERS_URL}64b64c8f0e2b2c3d4e5f6789", {"dept": "SE"}),
         ("DELETE", f"{TEACHERS_URL}64b64c8f0e2b2c3d4e5f6789", None),

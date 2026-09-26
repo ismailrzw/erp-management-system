@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   FolderGit2,
   CheckCircle2,
@@ -14,6 +14,7 @@ import {
   FileText,
   UserCheck,
   UserX,
+  Users,
   Mail,
   Send,
 } from 'lucide-react';
@@ -32,6 +33,7 @@ import { formatDate } from '../../../utils/dateUtils';
 
 export const ManageGroupsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const initialTab = searchParams.get('tab') || 'all';
 
   const [groups, setGroups] = useState([]);
@@ -422,7 +424,17 @@ export const ManageGroupsPage = () => {
         title="Manage Project Groups"
         subtitle="Review, approve, or provide revision feedback on student group formation requests."
       >
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => navigate('/manager/groups/broadcast')}
+            className="btn btn-secondary"
+            title="Send broadcast email notification to project groups"
+          >
+            <Mail size={14} />
+            <span>Broadcast Mail</span>
+          </button>
+
           {statusFilter === 'ungrouped' ? (
             <button
               type="button"
@@ -978,6 +990,9 @@ export const ManageGroupsPage = () => {
                       <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '150px' }}>
                         LEADER & SUPERVISOR
                       </th>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '90px' }}>
+                        MEMBERS
+                      </th>
                       <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '130px' }}>
                         COURSE & DEPT
                       </th>
@@ -1026,6 +1041,25 @@ export const ManageGroupsPage = () => {
                               <span>Sup: {g.supervisor_name}</span>
                             </div>
                           )}
+                        </td>
+
+                        <td style={{ padding: '14px 16px' }}>
+                          <span
+                            style={{
+                              backgroundColor: '#f1f5f9',
+                              color: '#334155',
+                              padding: '3px 9px',
+                              borderRadius: '12px',
+                              fontSize: '11.5px',
+                              fontWeight: 600,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <Users size={12} />
+                            {g.member_count || (g.members ? g.members.length : 1)}
+                          </span>
                         </td>
 
                         <td style={{ padding: '14px 16px' }}>

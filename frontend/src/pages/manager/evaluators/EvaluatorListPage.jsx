@@ -6,24 +6,25 @@ import {
   Trash2,
   Edit2,
   RefreshCw,
-  GraduationCap,
-  Users,
+  Award,
+  Building,
+  Briefcase,
 } from 'lucide-react';
-import { teachersApi } from '../../../api/teachersApi';
+import { evaluatorsApi } from '../../../api/evaluatorsApi';
 import { departmentsApi } from '../../../api/departmentsApi';
-import { supervisorsApi } from '../../../api/supervisorsApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
 
-export const TeacherListPage = () => {
-  const [teachers, setTeachers] = useState([]);
+export const EvaluatorListPage = () => {
+  const [evaluators, setEvaluators] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedDept, setSelectedDept] = useState('');
+  const [selectedType, setSelectedType] = useState('');
   const [toast, setToast] = useState({ message: '', type: 'success' });
 
   // Modals
@@ -32,28 +33,30 @@ export const TeacherListPage = () => {
     id: null,
     name: '',
     dept: '',
+    evaluator_type: 'internal',
     domainsInput: '',
   });
-  const [teacherToDelete, setTeacherToDelete] = useState(null);
+  const [evaluatorToDelete, setEvaluatorToDelete] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   const navigate = useNavigate();
 
-  const fetchTeachers = useCallback(
+  const fetchEvaluators = useCallback(
     async (isRefresh = false) => {
       if (isRefresh) setRefreshing(true);
       try {
-        const params = { deleted: false, limit: 100 };
+        const params = { deleted: false };
         if (search.trim()) params.search = search.trim();
         if (selectedDept) params.dept = selectedDept;
+        if (selectedType) params.evaluator_type = selectedType;
 
-        const res = await teachersApi.list(params);
+        const res = await evaluatorsApi.list(params);
         if (res.success && res.data) {
-          setTeachers(res.data.items || res.data || []);
+          setEvaluators(res.data.items || res.data || []);
         }
       } catch (err) {
         setToast({
-          message: err.response?.data?.message || 'Failed to fetch teachers',
+          message: err.response?.data?.message || 'Failed to fetch evaluators',
           type: 'error',
         });
       } finally {
@@ -61,26 +64,26 @@ export const TeacherListPage = () => {
         setRefreshing(false);
       }
     },
-    [search, selectedDept]
+    [search, selectedDept, selectedType]
   );
 
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
       try {
-        const [tRes, dRes] = await Promise.all([
-          teachersApi.list({ deleted: false, limit: 100 }),
+        const [eRes, dRes] = await Promise.all([
+          evaluatorsApi.list({ deleted: false }),
           departmentsApi.list({ deleted: false, limit: 100 }),
         ]);
 
         if (isMounted) {
-          if (tRes.success && tRes.data) setTeachers(tRes.data.items || tRes.data || []);
+          if (eRes.success && eRes.data) setEvaluators(eRes.data.items || eRes.data || []);
           if (dRes.success && dRes.data) setDepartments(dRes.data.items || dRes.data || []);
         }
       } catch (err) {
         if (isMounted) {
           setToast({
-            message: err.response?.data?.message || 'Failed to load teachers',
+            message: err.response?.data?.message || 'Failed to load evaluators',
             type: 'error',
           });
         }
@@ -98,15 +101,16 @@ export const TeacherListPage = () => {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchTeachers(true);
+    fetchEvaluators(true);
   };
 
-  const handleOpenEdit = (teacher) => {
-    const rawDomains = teacher.domains || [];
+  const handleOpenEdit = (ev) => {
+    const rawDomains = ev.domains || [];
     setEditFormData({
-      id: teacher.id || teacher._id,
-      name: teacher.name,
-      dept: teacher.dept || 'CS',
+      id: ev.id || ev._id,
+      name: ev.name,
+      dept: ev.dept || 'CS',
+      evaluator_type: ev.evaluator_type || 'internal',
       domainsInput: Array.isArray(rawDomains) ? rawDomains.join(', ') : '',
     });
     setIsEditModalOpen(true);
@@ -121,20 +125,19 @@ export const TeacherListPage = () => {
         .map((d) => d.trim())
         .filter(Boolean);
 
-      await teachersApi.update(editFormData.id, {
+      await evaluatorsApi.update(editFormData.id, {
         name: editFormData.name.trim(),
         dept: editFormData.dept,
+        evaluator_type: editFormData.evaluator_type,
         domains: parsedDomains,
       });
 
-      await supervisorsApi.updateTeacherDomains(editFormData.id, parsedDomains);
-
-      setToast({ message: 'Teacher profile and expertise domains updated', type: 'success' });
+      setToast({ message: 'Evaluator details updated successfully', type: 'success' });
       setIsEditModalOpen(false);
-      fetchTeachers(true);
+      fetchEvaluators(true);
     } catch (err) {
       setToast({
-        message: err.response?.data?.message || 'Failed to update teacher',
+        message: err.response?.data?.message || 'Failed to update evaluator',
         type: 'error',
       });
     } finally {
@@ -143,16 +146,16 @@ export const TeacherListPage = () => {
   };
 
   const handleConfirmDelete = async () => {
-    if (!teacherToDelete) return;
+    if (!evaluatorToDelete) return;
     try {
       setActionLoading(true);
-      await teachersApi.delete(teacherToDelete.id || teacherToDelete._id);
-      setToast({ message: 'Teacher moved to Recycle Bin', type: 'success' });
-      setTeacherToDelete(null);
-      fetchTeachers(true);
+      await evaluatorsApi.delete(evaluatorToDelete.id || evaluatorToDelete._id);
+      setToast({ message: 'Evaluator moved to Recycle Bin', type: 'success' });
+      setEvaluatorToDelete(null);
+      fetchEvaluators(true);
     } catch (err) {
       setToast({
-        message: err.response?.data?.message || 'Failed to delete teacher',
+        message: err.response?.data?.message || 'Failed to delete evaluator',
         type: 'error',
       });
     } finally {
@@ -160,19 +163,19 @@ export const TeacherListPage = () => {
     }
   };
 
-  if (loading && !refreshing && teachers.length === 0) {
+  if (loading && !refreshing && evaluators.length === 0) {
     return (
       <div className="page-frame-container">
         <PageHeader
-          title="Teachers & Supervisors Management"
-          subtitle="Manage faculty members, domain specializations, and supervisory group capacity."
+          title="Project Exhibition Evaluators"
+          subtitle="Manage internal faculty and external industry experts invited for Showcase Day evaluations."
           breadcrumbs={[
             { label: 'Home', to: '/manager/dashboard' },
-            { label: 'Teachers', to: '/manager/teachers' },
-            { label: 'View All Faculty' },
+            { label: 'Evaluators', to: '/manager/evaluators' },
+            { label: 'View All Evaluators' },
           ]}
         />
-        <ContentLoader label="Loading teachers..." />
+        <ContentLoader label="Loading evaluators..." />
       </div>
     );
   }
@@ -187,26 +190,26 @@ export const TeacherListPage = () => {
 
       {/* Unified Page Header */}
       <PageHeader
-        title="Teachers & Supervisors Management"
-        subtitle="Manage faculty members, domain specializations, and supervisory group capacity."
+        title="Project Exhibition Evaluators"
+        subtitle="Manage internal faculty and external industry experts invited for Showcase Day evaluations."
         breadcrumbs={[
           { label: 'Home', to: '/manager/dashboard' },
-          { label: 'Teachers', to: '/manager/teachers' },
-          { label: 'View All Faculty' },
+          { label: 'Evaluators', to: '/manager/evaluators' },
+          { label: 'View All Evaluators' },
         ]}
       >
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             type="button"
-            onClick={() => navigate('/manager/teachers/add')}
+            onClick={() => navigate('/manager/evaluators/add')}
             className="btn btn-primary"
           >
             <Plus size={15} />
-            <span>Add New Teacher</span>
+            <span>Add New Evaluator</span>
           </button>
           <button
             type="button"
-            onClick={() => navigate('/manager/teachers/trash')}
+            onClick={() => navigate('/manager/evaluators/trash')}
             className="btn btn-secondary"
           >
             <Trash2 size={15} />
@@ -214,7 +217,7 @@ export const TeacherListPage = () => {
           </button>
           <button
             type="button"
-            onClick={() => fetchTeachers(true)}
+            onClick={() => fetchEvaluators(true)}
             disabled={refreshing}
             className="btn btn-ghost btn-sm"
           >
@@ -257,7 +260,7 @@ export const TeacherListPage = () => {
             />
           </div>
 
-          <div style={{ flex: '0 1 200px' }}>
+          <div style={{ flex: '0 1 180px' }}>
             <select
               value={selectedDept}
               onChange={(e) => setSelectedDept(e.target.value)}
@@ -282,6 +285,28 @@ export const TeacherListPage = () => {
             </select>
           </div>
 
+          <div style={{ flex: '0 1 180px' }}>
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 32px 8px 11px',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: '#334155',
+                outline: 'none',
+                backgroundColor: '#ffffff',
+              }}
+            >
+              <option value="">All Evaluator Types</option>
+              <option value="internal">Internal (University)</option>
+              <option value="external">External (Industry)</option>
+            </select>
+          </div>
+
           <button
             type="submit"
             className="btn btn-primary btn-sm"
@@ -294,7 +319,8 @@ export const TeacherListPage = () => {
             onClick={() => {
               setSearch('');
               setSelectedDept('');
-              fetchTeachers(true);
+              setSelectedType('');
+              fetchEvaluators(true);
             }}
             disabled={refreshing}
             className="btn btn-secondary btn-sm"
@@ -305,7 +331,7 @@ export const TeacherListPage = () => {
         </form>
       </div>
 
-      {/* Teachers Table Card */}
+      {/* Evaluators Table Card */}
       <div
         style={{
           backgroundColor: '#ffffff',
@@ -319,29 +345,29 @@ export const TeacherListPage = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
             <thead>
               <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '150px' }}>Faculty Name</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '150px' }}>Evaluator Name</th>
                 <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '180px' }}>Email</th>
                 <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '80px' }}>Dept</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '220px' }}>Expertise Domains</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '130px' }}>Active Supervision</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '130px' }}>Type</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '200px' }}>Expertise Domains</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '120px' }}>Assigned Groups</th>
                 <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, textAlign: 'right', minWidth: '110px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {teachers.length === 0 ? (
+              {evaluators.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: '36px 20px', textAlign: 'center', color: '#94a3b8' }}>
-                    <GraduationCap size={36} style={{ margin: '0 auto 10px', opacity: 0.5 }} />
-                    <div style={{ fontWeight: 600, color: '#475569', fontSize: '14px' }}>No teachers or supervisors found</div>
+                  <td colSpan={7} style={{ padding: '36px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                    <Award size={36} style={{ margin: '0 auto 10px', opacity: 0.5 }} />
+                    <div style={{ fontWeight: 600, color: '#475569', fontSize: '14px' }}>No exhibition evaluators found</div>
                   </td>
                 </tr>
               ) : (
-                teachers.map((t) => {
-                  const activeCap = t.active_supervision_count || 0;
-                  const isCapped = activeCap >= 4;
+                evaluators.map((ev) => {
+                  const isExternal = ev.evaluator_type === 'external';
                   return (
                     <tr
-                      key={t.id || t._id || t.email}
+                      key={ev.id || ev._id || ev.email}
                       style={{ borderBottom: '1px solid #f1f5f9' }}
                     >
                       <td style={{ padding: '12px 16px', fontWeight: 600, color: '#1e293b' }}>
@@ -351,8 +377,8 @@ export const TeacherListPage = () => {
                               width: '32px',
                               height: '32px',
                               borderRadius: '50%',
-                              backgroundColor: '#e0f2fe',
-                              color: '#0284c7',
+                              backgroundColor: isExternal ? '#fef3c7' : '#e0e7ff',
+                              color: isExternal ? '#b45309' : '#4338ca',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -361,12 +387,12 @@ export const TeacherListPage = () => {
                               flexShrink: 0,
                             }}
                           >
-                            {t.name?.charAt(0)?.toUpperCase() || 'T'}
+                            {isExternal ? <Briefcase size={15} /> : <Building size={15} />}
                           </div>
-                          <span>{t.name}</span>
+                          <span>{ev.name}</span>
                         </div>
                       </td>
-                      <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12.5px' }}>{t.email}</td>
+                      <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12.5px' }}>{ev.email}</td>
                       <td style={{ padding: '12px 16px' }}>
                         <span
                           style={{
@@ -378,13 +404,30 @@ export const TeacherListPage = () => {
                             fontWeight: 600,
                           }}
                         >
-                          {t.dept || 'CS'}
+                          {ev.dept || 'CS'}
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px' }}>
-                        <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', maxWidth: '280px' }}>
-                          {t.domains && t.domains.length > 0 ? (
-                            t.domains.map((dom, idx) => (
+                        <span
+                          style={{
+                            backgroundColor: isExternal ? '#fef3c7' : '#ecfdf5',
+                            color: isExternal ? '#b45309' : '#047857',
+                            padding: '3px 9px',
+                            borderRadius: '12px',
+                            fontSize: '11.5px',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          {isExternal ? 'External Industry' : 'Internal Faculty'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', maxWidth: '240px' }}>
+                          {ev.domains && ev.domains.length > 0 ? (
+                            ev.domains.map((dom, idx) => (
                               <span
                                 key={idx}
                                 style={{
@@ -405,30 +448,25 @@ export const TeacherListPage = () => {
                         </div>
                       </td>
                       <td style={{ padding: '12px 16px' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                          <span
-                            style={{
-                              backgroundColor: isCapped ? '#fee2e2' : '#f0fdf4',
-                              color: isCapped ? '#b91c1c' : '#15803d',
-                              padding: '3px 9px',
-                              borderRadius: '12px',
-                              fontSize: '11.5px',
-                              fontWeight: 600,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                          >
-                            <Users size={12} />
-                            {activeCap} / 4 Groups
-                          </span>
-                        </div>
+                        <span
+                          style={{
+                            backgroundColor: '#f8fafc',
+                            color: '#475569',
+                            padding: '3px 8px',
+                            borderRadius: '10px',
+                            fontSize: '11.5px',
+                            fontWeight: 600,
+                            border: '1px solid #e2e8f0',
+                          }}
+                        >
+                          {ev.assigned_groups_count || 0} Groups
+                        </span>
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: '6px' }}>
                           <button
                             type="button"
-                            onClick={() => handleOpenEdit(t)}
+                            onClick={() => handleOpenEdit(ev)}
                             className="btn btn-ghost btn-sm"
                           >
                             <Edit2 size={13} />
@@ -436,7 +474,7 @@ export const TeacherListPage = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setTeacherToDelete(t)}
+                            onClick={() => setEvaluatorToDelete(ev)}
                             className="btn btn-danger-outline btn-sm"
                           >
                             <Trash2 size={13} />
@@ -453,8 +491,8 @@ export const TeacherListPage = () => {
         </div>
       </div>
 
-      {/* Modal: Edit Teacher */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Teacher / Supervisor Profile">
+      {/* Modal: Edit Evaluator */}
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Exhibition Evaluator">
         <form onSubmit={handleSaveEdit}>
           <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '5px' }}>
@@ -487,20 +525,32 @@ export const TeacherListPage = () => {
             </select>
           </div>
 
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+              Evaluator Type *
+            </label>
+            <select
+              value={editFormData.evaluator_type}
+              onChange={(e) => setEditFormData({ ...editFormData, evaluator_type: e.target.value })}
+              required
+              style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 34px 8px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
+            >
+              <option value="internal">Internal (University Faculty)</option>
+              <option value="external">External (Industry Expert)</option>
+            </select>
+          </div>
+
           <div style={{ marginBottom: '18px' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
-              Expertise & Domains (Comma-separated)
+              Specialization & Evaluation Domains (Comma-separated)
             </label>
             <input
               type="text"
               value={editFormData.domainsInput}
               onChange={(e) => setEditFormData({ ...editFormData, domainsInput: e.target.value })}
-              placeholder="e.g. Machine Learning, Cloud Computing, Web Systems"
+              placeholder="e.g. Quality Assurance, Cloud Architecture, UX Evaluation"
               style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '8px 12px', fontSize: '13.5px', outline: 'none' }}
             />
-            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-              These domain tags allow student groups to filter and submit supervision requests for their projects.
-            </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
@@ -523,14 +573,14 @@ export const TeacherListPage = () => {
       </Modal>
 
       {/* Modal: Delete Confirmation */}
-      <Modal isOpen={!!teacherToDelete} onClose={() => setTeacherToDelete(null)} title="Move to Recycle Bin" maxWidth="420px">
+      <Modal isOpen={!!evaluatorToDelete} onClose={() => setEvaluatorToDelete(null)} title="Move to Recycle Bin" maxWidth="420px">
         <div style={{ fontSize: '13.5px', color: '#475569', lineHeight: 1.5, marginBottom: '20px' }}>
-          Are you sure you want to delete teacher <strong>{teacherToDelete?.name}</strong>?
+          Are you sure you want to move evaluator <strong>{evaluatorToDelete?.name}</strong> to the Recycle Bin?
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
           <button
             type="button"
-            onClick={() => setTeacherToDelete(null)}
+            onClick={() => setEvaluatorToDelete(null)}
             className="btn btn-secondary"
           >
             Cancel

@@ -22,24 +22,24 @@ export const supervisorsApi = {
     return response.data;
   },
 
-  // Evaluator-facing endpoints
+  // Teacher / Supervisor-facing endpoints
   listEvaluatorRequests: async () => {
-    const response = await api.get('/evaluator/supervisor-requests/');
+    const response = await api.get('/teacher/supervisor-requests/');
     return response.data;
   },
 
   acceptRequest: async (requestId) => {
-    const response = await api.post(`/evaluator/supervisor-requests/${requestId}/accept`);
+    const response = await api.post(`/teacher/supervisor-requests/${requestId}/accept`);
     return response.data;
   },
 
   rejectRequest: async (requestId, reason = '') => {
-    const response = await api.post(`/evaluator/supervisor-requests/${requestId}/reject`, { reason });
+    const response = await api.post(`/teacher/supervisor-requests/${requestId}/reject`, { reason });
     return response.data;
   },
 
   updateEvaluatorDomains: async (domains) => {
-    const response = await api.put('/evaluator/profile/domains', { domains });
+    const response = await api.put('/teacher/profile/domains', { domains });
     return response.data;
   },
 
@@ -49,3 +49,4 @@ export const supervisorsApi = {
     return response.data;
   },
 };
+

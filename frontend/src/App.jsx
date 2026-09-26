@@ -31,8 +31,14 @@ import { TeacherListPage } from './pages/manager/teachers/TeacherListPage';
 import { AddTeacherPage } from './pages/manager/teachers/AddTeacherPage';
 import { TeacherTrashPage } from './pages/manager/teachers/TeacherTrashPage';
 
+// Evaluators Management (Manager)
+import { EvaluatorListPage } from './pages/manager/evaluators/EvaluatorListPage';
+import { AddEvaluatorPage } from './pages/manager/evaluators/AddEvaluatorPage';
+import { EvaluatorTrashPage } from './pages/manager/evaluators/EvaluatorTrashPage';
+
 // Groups Management (Manager)
 import { ManageGroupsPage } from './pages/manager/groups/ManageGroupsPage';
+import { BroadcastMailPage } from './pages/manager/groups/BroadcastMailPage';
 
 // Manager Profile
 import { ManagerProfilePage } from './pages/manager/profile/ManagerProfilePage';
@@ -41,6 +47,13 @@ import { ManagerProfilePage } from './pages/manager/profile/ManagerProfilePage';
 import { IterationsManagePage } from './pages/manager/iterations/IterationsManagePage';
 import { IterationSubmissionsPage } from './pages/manager/iterations/IterationSubmissionsPage';
 import { RubricTemplatesPage } from './pages/manager/iterations/RubricTemplatesPage';
+
+// Teacher Portal Pages
+import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
+import { TeacherGroupListPage } from './pages/teacher/groups/TeacherGroupListPage';
+import { TeacherGroupDetailPage } from './pages/teacher/groups/TeacherGroupDetailPage';
+import { TeacherStudentDirectoryPage } from './pages/teacher/students/TeacherStudentDirectoryPage';
+import { TeacherProfilePage } from './pages/teacher/profile/TeacherProfilePage';
 
 // Student Pages
 import { StudentDashboard } from './pages/student/StudentDashboard';
@@ -81,6 +94,7 @@ const RootRedirect = () => {
 
   if (!isAuthed) return <Navigate to="/login" replace />;
   if (effectiveUser?.role === 'student') return <Navigate to="/student/dashboard" replace />;
+  if (effectiveUser?.role === 'teacher') return <Navigate to="/teacher/dashboard" replace />;
   if (effectiveUser?.role === 'evaluator') return <Navigate to="/evaluator/dashboard" replace />;
   return <Navigate to="/manager/dashboard" replace />;
 };
@@ -126,15 +140,25 @@ export default function App() {
             <Route path="courses/add" element={<AddCoursePage />} />
             <Route path="courses/trash" element={<CourseTrashPage />} />
 
-            {/* Teachers / Evaluators Management CRUD */}
+            {/* Teachers / Supervisors Management CRUD */}
             <Route path="teachers" element={<TeacherListPage />} />
             <Route path="teachers/view" element={<TeacherListPage />} />
             <Route path="teachers/add" element={<AddTeacherPage />} />
             <Route path="teachers/trash" element={<TeacherTrashPage />} />
 
+            {/* Evaluators Management CRUD */}
+            <Route path="evaluators" element={<EvaluatorListPage />} />
+            <Route path="evaluators/view" element={<EvaluatorListPage />} />
+            <Route path="evaluators/add" element={<AddEvaluatorPage />} />
+            <Route path="evaluators/trash" element={<EvaluatorTrashPage />} />
+
             {/* Groups Management (Manager) */}
             <Route path="groups" element={<ManageGroupsPage />} />
+            <Route path="groups/view" element={<ManageGroupsPage />} />
             <Route path="groups/manage" element={<ManageGroupsPage />} />
+            <Route path="groups/broadcast" element={<BroadcastMailPage />} />
+            <Route path="groups/send-mail" element={<BroadcastMailPage />} />
+            <Route path="groups/ungrouped" element={<Navigate to="/manager/groups?tab=ungrouped" replace />} />
             <Route path="ungrouped-students" element={<Navigate to="/manager/groups?tab=ungrouped" replace />} />
 
             {/* Iterations Management (Manager) */}
@@ -146,6 +170,26 @@ export default function App() {
             {/* Profile & Settings */}
             <Route path="settings" element={<ManagerProfilePage />} />
             <Route path="profile" element={<ManagerProfilePage />} />
+
+            {/* Fallback for other subpages */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+
+          {/* Protected Teacher Routes */}
+          <Route
+            path="/teacher"
+            element={
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <AppShell />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="dashboard" element={<TeacherDashboard />} />
+            <Route path="groups" element={<TeacherGroupListPage />} />
+            <Route path="groups/:groupId" element={<TeacherGroupDetailPage />} />
+            <Route path="students" element={<TeacherStudentDirectoryPage />} />
+            <Route path="profile" element={<TeacherProfilePage />} />
+            <Route path="settings" element={<TeacherProfilePage />} />
 
             {/* Fallback for other subpages */}
             <Route path="*" element={<NotFoundPage />} />

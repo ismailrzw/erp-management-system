@@ -1,21 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
-import { teachersApi } from '../../../api/teachersApi';
+import { Award, ArrowLeft, CheckCircle2, AlertCircle, Building, Briefcase } from 'lucide-react';
+import { evaluatorsApi } from '../../../api/evaluatorsApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { Toast } from '../../../components/ui/Toast';
 
-export const AddTeacherPage = () => {
+export const AddEvaluatorPage = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     dept: 'CS',
+    evaluator_type: 'internal',
     domainsInput: '',
   });
 
   const [departments, setDepartments] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [createdTeacher, setCreatedTeacher] = useState(null);
+  const [createdEvaluator, setCreatedEvaluator] = useState(null);
   const [error, setError] = useState('');
   const [toast, setToast] = useState({ message: '', type: 'success' });
 
@@ -50,8 +51,8 @@ export const AddTeacherPage = () => {
     const cleanName = formData.name.trim();
     const cleanEmail = formData.email.trim().toLowerCase();
 
-    if (!cleanName || !cleanEmail || !formData.dept) {
-      setError('Please fill in Name, Email, and Department.');
+    if (!cleanName || !cleanEmail || !formData.dept || !formData.evaluator_type) {
+      setError('Please fill in Name, Email, Department, and Evaluator Type.');
       return;
     }
 
@@ -62,19 +63,20 @@ export const AddTeacherPage = () => {
 
     try {
       setIsSubmitting(true);
-      const res = await teachersApi.create({
+      const res = await evaluatorsApi.create({
         name: cleanName,
         email: cleanEmail,
         dept: formData.dept,
+        evaluator_type: formData.evaluator_type,
         domains: parsedDomains,
       });
 
       if (res.success && res.data) {
-        setCreatedTeacher(res.data);
-        setToast({ message: 'Teacher created successfully!', type: 'success' });
+        setCreatedEvaluator(res.data);
+        setToast({ message: 'Evaluator registered successfully!', type: 'success' });
       }
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to create teacher';
+      const msg = err.response?.data?.message || err.message || 'Failed to register evaluator';
       setError(msg);
       setToast({ message: msg, type: 'error' });
     } finally {
@@ -93,18 +95,18 @@ export const AddTeacherPage = () => {
       <div style={{ marginBottom: '20px' }}>
         <button
           type="button"
-          onClick={() => navigate('/manager/teachers/view')}
+          onClick={() => navigate('/manager/evaluators')}
           className="btn btn-back"
           style={{ marginBottom: '10px' }}
         >
           <ArrowLeft size={16} />
-          <span>Back to Teachers List</span>
+          <span>Back to Evaluators List</span>
         </button>
         <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-          Add New Teacher / Supervisor
+          Add Exhibition Day Evaluator
         </h1>
         <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-          Create a university faculty member account. An initial login password will be generated.
+          Register an internal faculty evaluator or external industry expert for Project Showcase Day evaluations.
         </div>
       </div>
 
@@ -128,7 +130,7 @@ export const AddTeacherPage = () => {
         </div>
       )}
 
-      {createdTeacher ? (
+      {createdEvaluator ? (
         <div
           style={{
             backgroundColor: '#ffffff',
@@ -141,10 +143,10 @@ export const AddTeacherPage = () => {
         >
           <CheckCircle2 size={48} color="#16a34a" style={{ margin: '0 auto 12px' }} />
           <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#1e293b', marginBottom: '8px' }}>
-            Teacher / Supervisor Created!
+            Evaluator Account Created!
           </h2>
           <p style={{ color: '#64748b', fontSize: '13.5px', marginBottom: '24px' }}>
-            Account for <strong>{createdTeacher.name}</strong> is active. Credentials:
+            Account for <strong>{createdEvaluator.name}</strong> ({createdEvaluator.evaluator_type === 'external' ? 'External Industry' : 'Internal Faculty'}) is ready:
           </p>
 
           <div
@@ -160,11 +162,11 @@ export const AddTeacherPage = () => {
             }}
           >
             <div style={{ marginBottom: '8px' }}>
-              <strong>Email:</strong> <code>{createdTeacher.email}</code>
+              <strong>Email:</strong> <code>{createdEvaluator.email}</code>
             </div>
-            {createdTeacher.initial_password && (
+            {createdEvaluator.initial_password && (
               <div>
-                <strong>Initial Password:</strong> <code style={{ backgroundColor: '#fef08a', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>{createdTeacher.initial_password}</code>
+                <strong>Initial Password:</strong> <code style={{ backgroundColor: '#fef08a', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>{createdEvaluator.initial_password}</code>
               </div>
             )}
           </div>
@@ -173,24 +175,25 @@ export const AddTeacherPage = () => {
             <button
               type="button"
               onClick={() => {
-                setCreatedTeacher(null);
+                setCreatedEvaluator(null);
                 setFormData({
                   name: '',
                   email: '',
                   dept: departments[0]?.code || 'CS',
+                  evaluator_type: 'internal',
                   domainsInput: '',
                 });
               }}
               className="btn btn-primary"
             >
-              Add Another Teacher
+              Add Another Evaluator
             </button>
             <button
               type="button"
-              onClick={() => navigate('/manager/teachers/view')}
+              onClick={() => navigate('/manager/evaluators')}
               className="btn btn-secondary"
             >
-              View All Teachers
+              View All Evaluators
             </button>
           </div>
         </div>
@@ -205,6 +208,64 @@ export const AddTeacherPage = () => {
           }}
         >
           <form onSubmit={handleSubmit}>
+            {/* Evaluator Type Selection Cards */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>
+                Evaluator Type *
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div
+                  onClick={() => setFormData({ ...formData, evaluator_type: 'internal' })}
+                  style={{
+                    border: formData.evaluator_type === 'internal' ? '2px solid #0073aa' : '1px solid #cbd5e1',
+                    backgroundColor: formData.evaluator_type === 'internal' ? '#eaf5fb' : '#ffffff',
+                    borderRadius: '8px',
+                    padding: '14px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <Building size={20} color={formData.evaluator_type === 'internal' ? '#0073aa' : '#64748b'} />
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '13.5px', color: '#1e293b' }}>
+                      Internal Faculty
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                      University instructor evaluating projects outside their course
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => setFormData({ ...formData, evaluator_type: 'external' })}
+                  style={{
+                    border: formData.evaluator_type === 'external' ? '2px solid #b45309' : '1px solid #cbd5e1',
+                    backgroundColor: formData.evaluator_type === 'external' ? '#fef3c7' : '#ffffff',
+                    borderRadius: '8px',
+                    padding: '14px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <Briefcase size={20} color={formData.evaluator_type === 'external' ? '#b45309' : '#64748b'} />
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '13.5px', color: '#1e293b' }}>
+                      External Industry Expert
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                      Guest industry professional invited for final grading
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '6px' }}>
                 Full Name *
@@ -213,7 +274,7 @@ export const AddTeacherPage = () => {
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g. Dr. Sarah Ahmed"
+                placeholder="e.g. Mr. Kashif Mehmood or Dr. Usman Farooq"
                 required
                 style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
               />
@@ -227,7 +288,7 @@ export const AddTeacherPage = () => {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="e.g. sarah.ahmed@bnu.edu.pk"
+                placeholder="e.g. kashif@techcorp.com or usman@bnu.edu.pk"
                 required
                 style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
               />
@@ -257,24 +318,21 @@ export const AddTeacherPage = () => {
 
             <div style={{ marginBottom: '24px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                Expertise & Domains (Comma-separated)
+                Evaluation Specialization Domains (Comma-separated)
               </label>
               <input
                 type="text"
                 value={formData.domainsInput}
                 onChange={(e) => setFormData({ ...formData, domainsInput: e.target.value })}
-                placeholder="e.g. Machine Learning, NLP, Data Science"
+                placeholder="e.g. Industry Best Practices, UI/UX, Scalability"
                 style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
               />
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-                Students can search and filter available supervisors by these expertise areas.
-              </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button
                 type="button"
-                onClick={() => navigate('/manager/teachers/view')}
+                onClick={() => navigate('/manager/evaluators')}
                 className="btn btn-secondary"
               >
                 Cancel
@@ -284,8 +342,8 @@ export const AddTeacherPage = () => {
                 disabled={isSubmitting}
                 className="btn btn-primary"
               >
-                <GraduationCap size={16} />
-                <span>{isSubmitting ? 'Creating...' : 'Create Teacher'}</span>
+                <Award size={16} />
+                <span>{isSubmitting ? 'Registering...' : 'Register Evaluator'}</span>
               </button>
             </div>
           </form>

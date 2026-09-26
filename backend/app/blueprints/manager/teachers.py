@@ -1,6 +1,6 @@
-﻿# backend/app/blueprints/manager/teachers.py
+# backend/app/blueprints/manager/teachers.py
 """
-Manager teacher/evaluator API endpoints.
+Manager teacher (supervisor) API endpoints.
 
 Data lifecycle enforced here:
   1. Raw JSON arrives at the endpoint.
@@ -19,7 +19,6 @@ from flask_restx import Namespace, Resource, fields, inputs
 from marshmallow import ValidationError
 
 from app.extensions import mongo
-from app.models.teacher import TeacherType
 from app.models.user import Role
 from app.schemas.teacher_schema import CreateTeacherSchema, UpdateTeacherSchema
 from app.services.teacher_service import (
@@ -34,7 +33,7 @@ from app.services.teacher_service import (
 from app.utils.audit import log_audit
 from app.utils.decorators import role_required
 
-teachers_ns = Namespace("manager_teachers", description="Manager teacher/evaluator operations")
+teachers_ns = Namespace("manager_teachers", description="Manager teacher / supervisor operations")
 
 # ── Swagger models ──────────────────────────────────────────
 teacher_model = teachers_ns.model("Teacher", {
@@ -42,20 +41,21 @@ teacher_model = teachers_ns.model("Teacher", {
     "name":       fields.String(required=True),
     "email":      fields.String(required=True),
     "dept":       fields.String(required=True),
-    "type":       fields.String(required=True, enum=TeacherType.ALL),
+    "domains":    fields.List(fields.String(), description="Expertise domains"),
+    "active_supervision_count": fields.Integer(readonly=True),
     "deleted":    fields.Boolean(readonly=True),
     "created_at": fields.String(readonly=True),
 })
 create_model = teachers_ns.model("TeacherCreate", {
-    "name":  fields.String(required=True),
-    "email": fields.String(required=True),
-    "dept":  fields.String(required=True),
-    "type":  fields.String(required=True, enum=TeacherType.ALL),
+    "name":    fields.String(required=True),
+    "email":   fields.String(required=True),
+    "dept":    fields.String(required=True),
+    "domains": fields.List(fields.String(), required=False),
 })
 update_model = teachers_ns.model("TeacherUpdate", {
-    "name": fields.String(required=False),
-    "dept": fields.String(required=False),
-    "type": fields.String(required=False, enum=TeacherType.ALL),
+    "name":    fields.String(required=False),
+    "dept":    fields.String(required=False),
+    "domains": fields.List(fields.String(), required=False),
 })
 
 list_parser = teachers_ns.parser()
@@ -78,7 +78,7 @@ class TeacherList(Resource):
     @teachers_ns.expect(create_model)
     @role_required(Role.MANAGER)
     def post(self):
-        """Add a new teacher/evaluator.  An initial password is auto-generated and returned once."""
+        """Add a new teacher / supervisor. An initial password is auto-generated and returned once."""
         # Check 1 — schema validation
         try:
             payload = CreateTeacherSchema().load(request.get_json() or {})
@@ -87,7 +87,12 @@ class TeacherList(Resource):
 
         # Check 2 — service-layer (email uniqueness, password hash, DB insert)
         try:
-            teacher = create_teacher(payload["name"], payload["email"], payload["dept"], payload["type"])
+            teacher = create_teacher(
+                name=payload["name"],
+                email=payload["email"],
+                dept=payload["dept"],
+                domains=payload.get("domains"),
+            )
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 409
 
@@ -104,7 +109,7 @@ class TeacherDetail(Resource):
     @teachers_ns.doc(security="Bearer Auth")
     @role_required(Role.MANAGER)
     def get(self, teacher_id):
-        """Get a single teacher/evaluator by ID."""
+        """Get a single teacher by ID."""
         teacher = get_teacher_by_id(teacher_id)
         if teacher is None:
             return {"success": False, "message": "Teacher not found."}, 404
@@ -114,7 +119,7 @@ class TeacherDetail(Resource):
     @teachers_ns.expect(update_model)
     @role_required(Role.MANAGER)
     def put(self, teacher_id):
-        """Update a teacher's name, dept, and/or type.  Email is immutable."""
+        """Update a teacher's name, dept, and/or domains. Email is immutable."""
         raw_body = request.get_json() or {}
 
         # Check 1 — schema validation (email is excluded from UpdateTeacherSchema)
@@ -134,7 +139,12 @@ class TeacherDetail(Resource):
 
         # Check 2 — service-layer persistence
         try:
-            teacher = update_teacher(teacher_id, payload.get("name"), payload.get("dept"), payload.get("type"))
+            teacher = update_teacher(
+                teacher_id,
+                name=payload.get("name"),
+                dept=payload.get("dept"),
+                domains=payload.get("domains"),
+            )
         except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 422
 

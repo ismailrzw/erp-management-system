@@ -500,11 +500,11 @@ def leave_group(student_id: str, group_id: str) -> dict:
     """
     group = mongo.db[COLLECTION].find_one({
         Field.ID:        _oid(group_id),
-        Field.STATUS:    Status.PENDING,
+        Field.STATUS:    {"$in": [Status.PENDING, Status.APPROVED]},
         Field.MEMBER_IDS: _oid(student_id),
     })
     if group is None:
-        raise ValueError("Group not found, or you are not a member of this pending group.")
+        raise ValueError("Group not found, or you are not a member of this group.")
 
     now = _now()
     is_leader = group[Field.LEADER_ID] == _oid(student_id)

@@ -20,4 +20,10 @@ export const managerGroupsApi = {
     const response = await api.post(`/manager/groups/${groupId}/reject`, { reason });
     return response.data;
   },
+
+  sendMail: async (payload) => {
+    const response = await api.post('/manager/groups/send-mail', payload);
+    return response.data;
+  },
 };
+

@@ -1,4 +1,4 @@
-﻿# backend/app/blueprints/evaluator/__init__.py
+# backend/app/blueprints/evaluator/__init__.py
 """
 Evaluator Blueprint Package — Sprint 4.
 
@@ -13,5 +13,4 @@ from app.blueprints.evaluator import (
     exhibition,  # noqa: F401
     meetings,  # noqa: F401
     routes,  # noqa: F401
-    supervisor_requests,  # noqa: F401
 )

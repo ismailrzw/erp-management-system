@@ -1,4 +1,4 @@
-"""Business logic for teacher/evaluator operations."""
+"""Business logic for teacher (supervisor) operations."""
 
 import random
 import string
@@ -13,7 +13,7 @@ from app.models.user import Role, UserFields
 
 
 def generate_initial_password(length: int = 10) -> str:
-    """Generate a random initial password for a new evaluator."""
+    """Generate a random initial password for a new teacher."""
     alphabet = string.ascii_letters + string.digits
     return "".join(random.choice(alphabet) for _ in range(length))
 
@@ -29,6 +29,9 @@ def _serialize(doc: dict | None) -> dict | None:
     result = dict(doc)
     result["id"] = str(result.pop(UserFields.ID))
     result.pop(UserFields.PASSWORD_HASH, None)
+    result.pop("type", None)
+    result.pop("teacher_type", None)
+    result.pop("evaluator_type", None)
     result["domains"] = result.get(UserFields.DOMAINS) or []
 
     # Calculate real-time active groups supervised by this teacher
@@ -61,7 +64,7 @@ def _serialize(doc: dict | None) -> dict | None:
     return result
 
 
-def create_teacher(name: str, email: str, dept: str, type_: str, domains: list[str] | None = None) -> dict:
+def create_teacher(name: str, email: str, dept: str, domains: list[str] | None = None) -> dict:
     if mongo.db[UserFields.COLLECTION].find_one({UserFields.EMAIL: email}):
         raise ValueError(f"A user with email '{email}' already exists.")
 
@@ -74,8 +77,7 @@ def create_teacher(name: str, email: str, dept: str, type_: str, domains: list[s
         UserFields.NAME: name,
         UserFields.EMAIL: email,
         UserFields.DEPT: dept,
-        UserFields.TYPE: type_,
-        UserFields.ROLE: Role.EVALUATOR,
+        UserFields.ROLE: Role.TEACHER,
         UserFields.DOMAINS: clean_domains,
         UserFields.ACTIVE_SUPERVISION_COUNT: 0,
         UserFields.PASSWORD_HASH: password_hash,
@@ -94,10 +96,10 @@ def create_teacher(name: str, email: str, dept: str, type_: str, domains: list[s
 
 
 def list_teachers(deleted: bool = False, dept: str | None = None) -> list[dict]:
-    query = {UserFields.ROLE: Role.EVALUATOR, UserFields.DELETED: deleted}
+    query = {UserFields.ROLE: Role.TEACHER, UserFields.DELETED: deleted}
     if dept:
         query[UserFields.DEPT] = dept
-    teachers = mongo.db[UserFields.COLLECTION].find(query)
+    teachers = mongo.db[UserFields.COLLECTION].find(query).sort(UserFields.NAME, 1)
     return [_serialize(t) for t in teachers]
 
 
@@ -107,12 +109,12 @@ def get_teacher_by_id(teacher_id: str) -> dict | None:
     except InvalidId:
         return None
     doc = mongo.db[UserFields.COLLECTION].find_one(
-        {UserFields.ID: oid, UserFields.ROLE: Role.EVALUATOR}
+        {UserFields.ID: oid, UserFields.ROLE: Role.TEACHER}
     )
     return _serialize(doc) if doc else None
 
 
-def update_teacher(teacher_id: str, name: str | None, dept: str | None, type_: str | None) -> dict | None:
+def update_teacher(teacher_id: str, name: str | None = None, dept: str | None = None, domains: list[str] | None = None) -> dict | None:
     try:
         oid = ObjectId(teacher_id)
     except InvalidId:
@@ -123,15 +125,15 @@ def update_teacher(teacher_id: str, name: str | None, dept: str | None, type_: s
         updates[UserFields.NAME] = name
     if dept is not None:
         updates[UserFields.DEPT] = dept
-    if type_ is not None:
-        updates[UserFields.TYPE] = type_
+    if domains is not None:
+        updates[UserFields.DOMAINS] = [d.strip() for d in domains if isinstance(d, str) and d.strip()]
     if not updates:
         return get_teacher_by_id(teacher_id)
 
     updates[UserFields.UPDATED_AT] = datetime.now(timezone.utc)
 
     result = mongo.db[UserFields.COLLECTION].find_one_and_update(
-        {UserFields.ID: oid, UserFields.ROLE: Role.EVALUATOR},
+        {UserFields.ID: oid, UserFields.ROLE: Role.TEACHER},
         {"$set": updates},
         return_document=True,
     )
@@ -147,7 +149,7 @@ def soft_delete_teacher(teacher_id: str) -> dict | None:
     result = mongo.db[UserFields.COLLECTION].find_one_and_update(
         {
             UserFields.ID: oid,
-            UserFields.ROLE: Role.EVALUATOR,
+            UserFields.ROLE: Role.TEACHER,
             UserFields.DELETED: False,
         },
         {"$set": {UserFields.DELETED: True, UserFields.DELETED_AT: now, UserFields.UPDATED_AT: now}},
@@ -165,7 +167,7 @@ def restore_teacher(teacher_id: str) -> dict | None:
     result = mongo.db[UserFields.COLLECTION].find_one_and_update(
         {
             UserFields.ID: oid,
-            UserFields.ROLE: Role.EVALUATOR,
+            UserFields.ROLE: Role.TEACHER,
             UserFields.DELETED: True,
         },
         {"$set": {UserFields.DELETED: False, UserFields.DELETED_AT: None, UserFields.UPDATED_AT: now}},
@@ -182,7 +184,7 @@ def permanent_delete_teacher(teacher_id: str) -> dict | None:
     doc = mongo.db[UserFields.COLLECTION].find_one(
         {
             UserFields.ID: oid,
-            UserFields.ROLE: Role.EVALUATOR,
+            UserFields.ROLE: Role.TEACHER,
             UserFields.DELETED: True,
         }
     )
@@ -190,3 +192,4 @@ def permanent_delete_teacher(teacher_id: str) -> dict | None:
         return None
     mongo.db[UserFields.COLLECTION].delete_one({UserFields.ID: oid})
     return _serialize(doc)
+
