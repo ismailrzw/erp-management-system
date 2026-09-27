@@ -1,4 +1,4 @@
-﻿# backend/app/blueprints/student/dashboard.py
+# backend/app/blueprints/student/dashboard.py
 """
 Student Dashboard API endpoint.
 
@@ -21,6 +21,7 @@ Security
     if their collections are empty or do not yet exist).
 """
 
+from datetime import datetime
 import logging
 
 from bson import ObjectId
@@ -104,6 +105,25 @@ class StudentDashboard(Resource):
 
             recent_ann_count = sum(1 for a in announcements if a.get("is_recent"))
 
+            # ── Upcoming Milestones ────────────────────────────
+            try:
+                student_course = profile.get("course") or (group.get("course") if group else None)
+                m_query = {}
+                if student_course:
+                    m_query["$or"] = [{"course": student_course}, {"course": "All Courses"}, {"course": {"$exists": False}}]
+                raw_milestones = list(mongo.db.iterations.find(m_query).sort("deadline", 1).limit(5))
+                upcoming_milestones = []
+                for m in raw_milestones:
+                    clean_m = dict(m)
+                    clean_m["id"] = str(clean_m.pop("_id"))
+                    for k, v in list(clean_m.items()):
+                        if isinstance(v, datetime):
+                            clean_m[k] = v.isoformat()
+                    upcoming_milestones.append(clean_m)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Error fetching upcoming milestones for student: %s", exc)
+                upcoming_milestones = []
+
             return {
                 "success": True,
                 "message": "Dashboard data retrieved.",
@@ -114,6 +134,7 @@ class StudentDashboard(Resource):
                     "announcements":             announcements,
                     "recent_announcements_count": recent_ann_count,
                     "attachments":               attachments,
+                    "upcoming_milestones":       upcoming_milestones,
                 },
             }, 200
 

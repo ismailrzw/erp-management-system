@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Flag, Eye, Sliders } from 'lucide-react';
+import { Layers, Eye, Sliders } from 'lucide-react';
 
 export const IterationsTabBar = () => {
   const location = useLocation();
@@ -7,7 +7,7 @@ export const IterationsTabBar = () => {
 
   const isSubmissions = location.pathname.includes('/submissions');
   const isRubrics = location.pathname.includes('/rubric-templates');
-  const isMilestones = !isSubmissions && !isRubrics;
+  const isSprints = !isSubmissions && !isRubrics;
 
   const handleNav = (targetPath, isActive) => {
     if (!isActive) {
@@ -17,18 +17,11 @@ export const IterationsTabBar = () => {
 
   const tabs = [
     {
-      key: 'milestones',
-      label: 'Milestones',
-      icon: Flag,
+      key: 'sprints',
+      label: 'Sprints',
+      icon: Layers,
       path: '/manager/iterations',
-      active: isMilestones,
-    },
-    {
-      key: 'submissions',
-      label: 'Submissions',
-      icon: Eye,
-      path: '/manager/iterations/submissions',
-      active: isSubmissions,
+      active: isSprints,
     },
     {
       key: 'rubrics',
@@ -36,6 +29,13 @@ export const IterationsTabBar = () => {
       icon: Sliders,
       path: '/manager/rubric-templates',
       active: isRubrics,
+    },
+    {
+      key: 'submissions',
+      label: 'Submissions',
+      icon: Eye,
+      path: '/manager/iterations/submissions',
+      active: isSubmissions,
     },
   ];
 

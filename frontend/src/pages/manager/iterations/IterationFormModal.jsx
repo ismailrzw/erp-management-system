@@ -3,6 +3,7 @@ import { Modal } from '../../../components/ui/Modal';
 import { Select } from '../../../components/ui/Select';
 import { DateTimePicker } from '../../../components/ui/DateTimePicker';
 import { iterationsApi } from '../../../api/iterationsApi';
+import { sprintsApi } from '../../../api/sprintsApi';
 import { rubricTemplatesApi } from '../../../api/rubricTemplatesApi';
 import { attachmentsApi } from '../../../api/attachmentsApi';
 import { FileText, GraduationCap, Paperclip, Upload, X } from 'lucide-react';
@@ -33,6 +34,7 @@ export const IterationFormModal = ({
     milestone_type: 'deliverable',
   });
   const [templates, setTemplates] = useState([]);
+  const [sprintOptions, setSprintOptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [error, setError] = useState('');
@@ -43,6 +45,11 @@ export const IterationFormModal = ({
     rubricTemplatesApi.getAll().then((res) => {
       setTemplates(res.data || []);
     }).catch(() => setTemplates([]));
+
+    // Fetch active sprints
+    sprintsApi.getAll().then((res) => {
+      setSprintOptions(res.data || []);
+    }).catch(() => setSprintOptions([]));
   }, [isOpen]);
 
   useEffect(() => {
@@ -140,23 +147,52 @@ export const IterationFormModal = ({
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-              Sprint Category <span style={{ color: '#dc2626' }}>*</span>
+              Target Sprint <span style={{ color: '#dc2626' }}>*</span>
             </label>
-            <input
-              type="text"
-              list="sprint-options"
-              placeholder="e.g. Sprint 1"
-              value={formData.sprint_name}
-              onChange={(e) => setFormData({ ...formData, sprint_name: e.target.value })}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
-              required
-            />
-            <datalist id="sprint-options">
-              <option value="Sprint 1" />
-              <option value="Sprint 2" />
-              <option value="Sprint 3" />
-              <option value="Sprint 4" />
-            </datalist>
+            <select
+              value={
+                sprintOptions.some((s) => s.name === formData.sprint_name) ||
+                ['Sprint 1', 'Sprint 2', 'Sprint 3', 'Sprint 4', 'Sprint 5'].includes(formData.sprint_name)
+                  ? formData.sprint_name
+                  : 'custom'
+              }
+              onChange={(e) => {
+                if (e.target.value === 'custom') {
+                  setFormData({ ...formData, sprint_name: '' });
+                } else {
+                  setFormData({ ...formData, sprint_name: e.target.value });
+                }
+              }}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', backgroundColor: '#ffffff' }}
+            >
+              {sprintOptions.length > 0 ? (
+                sprintOptions.map((s) => (
+                  <option key={s.id || s.name} value={s.name}>
+                    🏃 {s.name} {s.course && s.course !== 'All Courses' ? `(${s.course})` : ''}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value="Sprint 1">Sprint 1 (Planning & Inception)</option>
+                  <option value="Sprint 2">Sprint 2 (Core Development)</option>
+                  <option value="Sprint 3">Sprint 3 (Integration & Testing)</option>
+                  <option value="Sprint 4">Sprint 4 (Final Delivery & Showcase)</option>
+                  <option value="Sprint 5">Sprint 5 (Post-Review)</option>
+                </>
+              )}
+              <option value="custom">Custom Sprint Name...</option>
+            </select>
+            {(sprintOptions.length === 0 || !sprintOptions.some((s) => s.name === formData.sprint_name)) &&
+              !['Sprint 1', 'Sprint 2', 'Sprint 3', 'Sprint 4', 'Sprint 5'].includes(formData.sprint_name) && (
+                <input
+                  type="text"
+                  placeholder="Enter custom sprint name (e.g. Sprint Alpha)"
+                  value={formData.sprint_name}
+                  onChange={(e) => setFormData({ ...formData, sprint_name: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', marginTop: '6px' }}
+                  required
+                />
+              )}
           </div>
 
           <div>

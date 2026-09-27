@@ -257,6 +257,64 @@ export const IterationDetailPage = () => {
             </div>
           )}
 
+          {/* Rubric Criteria Preview (Before Grading) */}
+          {!studentEval && rubrics && rubrics.length > 0 && (
+            <div
+              style={{
+                marginTop: '24px',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  padding: '14px 20px',
+                  backgroundColor: '#f8fafc',
+                  borderBottom: '1px solid #e2e8f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e293b' }}>
+                  <Award size={18} color="#4f46e5" />
+                  <span style={{ fontSize: '14.5px', fontWeight: 700 }}>Grading Rubric Criteria</span>
+                </div>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  {rubrics.length} Criteria • Total {totalPoints} Points
+                </span>
+              </div>
+
+              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {rubrics.map((r, idx) => (
+                  <div
+                    key={r.id || idx}
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0',
+                      backgroundColor: '#f8fafc',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
+                        {idx + 1}. {r.question}
+                      </span>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#4f46e5' }}>
+                        {r.weight} pts
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Official Rubric Evaluation Results Card (if evaluated by manager or evaluator) */}
           {studentEval && (
             <div

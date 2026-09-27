@@ -111,7 +111,10 @@ def create_app(config_class=Config):
     from app.blueprints.manager.reports import manager_reports_ns
     api.add_namespace(manager_reports_ns, path="/api/manager/reports")
 
-    # ── Iterations Namespaces (Sprint 3) ─────────────────
+    # ── Sprints & Iterations Namespaces (Sprint 3) ─────────────────
+    from app.blueprints.manager.sprints import sprints_ns
+    api.add_namespace(sprints_ns, path='/api/manager/sprints')
+
     from app.blueprints.manager.iterations import iterations_ns
     api.add_namespace(iterations_ns, path='/api/manager/iterations')
 
