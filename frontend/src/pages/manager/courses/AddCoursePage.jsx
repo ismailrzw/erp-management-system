@@ -4,6 +4,7 @@ import { BookOpen, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { coursesApi } from '../../../api/coursesApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { Toast } from '../../../components/ui/Toast';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 export const AddCoursePage = () => {
   const [formData, setFormData] = useState({
@@ -89,30 +90,33 @@ export const AddCoursePage = () => {
   };
 
   return (
-    <div style={{ maxWidth: '650px', margin: '0 auto' }}>
+    <div className="page-frame-container">
       <Toast
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      <div style={{ marginBottom: '20px' }}>
+      <PageHeader
+        title="Add New Course"
+        subtitle="Configure a course with department and student group size boundaries."
+        breadcrumbs={[
+          { label: 'Home', to: '/manager/dashboard' },
+          { label: 'Courses', to: '/manager/courses/view' },
+          { label: 'Add New Course' },
+        ]}
+      >
         <button
           type="button"
           onClick={() => navigate('/manager/courses/view')}
-          className="btn btn-back"
-          style={{ marginBottom: '10px' }}
+          className="btn btn-secondary"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={15} />
           <span>Back to Courses List</span>
         </button>
-        <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-          Add New Course
-        </h1>
-        <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-          Configure a course with department and student group size boundaries.
-        </div>
-      </div>
+      </PageHeader>
+
+      <div style={{ maxWidth: '650px', margin: '0 auto' }}>
 
       {error && (
         <div
@@ -275,6 +279,7 @@ export const AddCoursePage = () => {
           </form>
         </div>
       )}
+      </div>
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { Award, ArrowLeft, CheckCircle2, AlertCircle, Building, Briefcase } from
 import { evaluatorsApi } from '../../../api/evaluatorsApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { Toast } from '../../../components/ui/Toast';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 export const AddEvaluatorPage = () => {
   const [formData, setFormData] = useState({
@@ -85,30 +86,33 @@ export const AddEvaluatorPage = () => {
   };
 
   return (
-    <div style={{ maxWidth: '650px', margin: '0 auto' }}>
+    <div className="page-frame-container">
       <Toast
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      <div style={{ marginBottom: '20px' }}>
+      <PageHeader
+        title="Add Exhibition Day Evaluator"
+        subtitle="Register an internal faculty evaluator or external industry expert for Project Showcase Day evaluations."
+        breadcrumbs={[
+          { label: 'Home', to: '/manager/dashboard' },
+          { label: 'Evaluators', to: '/manager/evaluators/view' },
+          { label: 'Add New Evaluator' },
+        ]}
+      >
         <button
           type="button"
-          onClick={() => navigate('/manager/evaluators')}
-          className="btn btn-back"
-          style={{ marginBottom: '10px' }}
+          onClick={() => navigate('/manager/evaluators/view')}
+          className="btn btn-secondary"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={15} />
           <span>Back to Evaluators List</span>
         </button>
-        <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-          Add Exhibition Day Evaluator
-        </h1>
-        <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-          Register an internal faculty evaluator or external industry expert for Project Showcase Day evaluations.
-        </div>
-      </div>
+      </PageHeader>
+
+      <div style={{ maxWidth: '650px', margin: '0 auto' }}>
 
       {error && (
         <div
@@ -332,7 +336,7 @@ export const AddEvaluatorPage = () => {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button
                 type="button"
-                onClick={() => navigate('/manager/evaluators')}
+                onClick={() => navigate('/manager/evaluators/view')}
                 className="btn btn-secondary"
               >
                 Cancel
@@ -349,6 +353,7 @@ export const AddEvaluatorPage = () => {
           </form>
         </div>
       )}
+      </div>
     </div>
   );
 };

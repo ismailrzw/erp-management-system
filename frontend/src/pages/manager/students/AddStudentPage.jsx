@@ -6,6 +6,7 @@ import { departmentsApi } from '../../../api/departmentsApi';
 import { coursesApi } from '../../../api/coursesApi';
 import { Toast } from '../../../components/ui/Toast';
 import { Modal } from '../../../components/ui/Modal';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 export const AddStudentPage = () => {
   const [formData, setFormData] = useState({
@@ -161,30 +162,23 @@ export const AddStudentPage = () => {
   };
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+    <div className="page-frame-container">
       <Toast
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      <div style={{ marginBottom: '20px' }}>
-        <button
-          type="button"
-          onClick={() => navigate('/manager/students/view')}
-          className="btn btn-back"
-          style={{ marginBottom: '10px' }}
-        >
-          <ArrowLeft size={16} />
-          <span>Back to Students List</span>
-        </button>
-        <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-          Add New Student
-        </h1>
-        <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-          Create an individual student account or bulk import students via spreadsheet. A password setup email is dispatched automatically.
-        </div>
-        <div style={{ marginTop: '14px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+      <PageHeader
+        title="Add New Student"
+        subtitle="Create an individual student account or bulk import students via spreadsheet. A password setup email is dispatched automatically."
+        breadcrumbs={[
+          { label: 'Home', to: '/manager/dashboard' },
+          { label: 'Students', to: '/manager/students/view' },
+          { label: 'Add New Student' },
+        ]}
+      >
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => { setImportReport(null); setImportFile(null); setIsImportModalOpen(true); }}
@@ -193,7 +187,18 @@ export const AddStudentPage = () => {
             <Upload size={15} />
             <span>Bulk Import Students</span>
           </button>
+          <button
+            type="button"
+            onClick={() => navigate('/manager/students/view')}
+            className="btn btn-secondary"
+          >
+            <ArrowLeft size={15} />
+            <span>Back to Students List</span>
+          </button>
         </div>
+      </PageHeader>
+
+      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
 
         {/* Bulk Import Modal */}
         <Modal
@@ -329,9 +334,8 @@ export const AddStudentPage = () => {
             </form>
           )}
         </Modal>
-      </div>
 
-      {formError && (
+        {formError && (
         <div
           style={{
             backgroundColor: '#fdecea',
@@ -578,6 +582,7 @@ export const AddStudentPage = () => {
           </form>
         </div>
       )}
+      </div>
     </div>
   );
 };

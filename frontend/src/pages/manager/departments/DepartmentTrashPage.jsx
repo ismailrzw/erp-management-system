@@ -5,6 +5,7 @@ import { departmentsApi } from '../../../api/departmentsApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 export const DepartmentTrashPage = () => {
   const [deletedDepts, setDeletedDepts] = useState([]);
@@ -96,51 +97,44 @@ export const DepartmentTrashPage = () => {
   };
 
   return loading ? (
-    <div><ContentLoader label="Loading deleted departments..." /></div>
+    <div className="page-frame-container"><ContentLoader label="Loading deleted departments..." /></div>
   ) : (
-    <div>
+    <div className="page-frame-container">
       <Toast
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '20px',
-        }}
+      <PageHeader
+        title="Departments Recycle Bin"
+        subtitle="Manage soft-deleted departments. You can restore them or permanently remove them."
+        breadcrumbs={[
+          { label: 'Home', to: '/manager/dashboard' },
+          { label: 'Departments', to: '/manager/departments/view' },
+          { label: 'View Recycle Bin' },
+        ]}
       >
-        <div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => navigate('/manager/departments/view')}
-            className="btn btn-back"
-            style={{ marginBottom: '10px' }}
+            className="btn btn-secondary"
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={15} />
             <span>Back to Active Departments</span>
           </button>
-          <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-            Departments Recycle Bin
-          </h1>
-          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-            Manage soft-deleted departments.
-          </div>
+          <button
+            type="button"
+            onClick={() => fetchDeleted(true)}
+            disabled={refreshing}
+            className="btn btn-ghost btn-sm"
+          >
+            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+            <span>Refresh</span>
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={() => fetchDeleted(true)}
-          disabled={refreshing}
-          className="btn btn-secondary btn-sm"
-        >
-          <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
-          <span>Refresh</span>
-        </button>
-      </div>
+      </PageHeader>
 
       <div
         style={{

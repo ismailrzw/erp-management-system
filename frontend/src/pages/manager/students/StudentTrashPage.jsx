@@ -5,6 +5,7 @@ import { studentsApi } from '../../../api/studentsApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 export const StudentTrashPage = () => {
   const [deletedStudents, setDeletedStudents] = useState([]);
@@ -96,51 +97,44 @@ export const StudentTrashPage = () => {
   };
 
   return loading ? (
-    <div><ContentLoader label="Loading deleted students..." /></div>
+    <div className="page-frame-container"><ContentLoader label="Loading deleted students..." /></div>
   ) : (
-    <div>
+    <div className="page-frame-container">
       <Toast
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '20px',
-        }}
+      <PageHeader
+        title="Students Recycle Bin"
+        subtitle="Manage soft-deleted students. You can restore them or permanently remove them."
+        breadcrumbs={[
+          { label: 'Home', to: '/manager/dashboard' },
+          { label: 'Students', to: '/manager/students/view' },
+          { label: 'View Recycle Bin' },
+        ]}
       >
-        <div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => navigate('/manager/students/view')}
-            className="btn btn-back"
-            style={{ marginBottom: '10px' }}
+            className="btn btn-secondary"
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={15} />
             <span>Back to Active Students</span>
           </button>
-          <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-            Students Recycle Bin
-          </h1>
-          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-            Manage soft-deleted students. You can restore them or permanently remove them.
-          </div>
+          <button
+            type="button"
+            onClick={() => fetchDeleted(true)}
+            disabled={refreshing}
+            className="btn btn-ghost btn-sm"
+          >
+            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+            <span>Refresh</span>
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={() => fetchDeleted(true)}
-          disabled={refreshing}
-          className="btn btn-secondary btn-sm"
-        >
-          <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
-          <span>Refresh</span>
-        </button>
-      </div>
+      </PageHeader>
 
       <div
         style={{

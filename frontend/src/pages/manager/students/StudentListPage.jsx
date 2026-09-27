@@ -213,7 +213,7 @@ export const StudentListPage = () => {
           subtitle="Manage student enrollment, course associations, and departments."
           breadcrumbs={[
             { label: 'Home', to: '/manager/dashboard' },
-            { label: 'Students', to: '/manager/students' },
+            { label: 'Students', to: '/manager/students/view' },
             { label: 'View All Students' },
           ]}
         />

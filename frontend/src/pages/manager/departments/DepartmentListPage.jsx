@@ -138,7 +138,7 @@ export const DepartmentListPage = () => {
           subtitle="Manage academic departments, faculty codes, and departmental programs."
           breadcrumbs={[
             { label: 'Home', to: '/manager/dashboard' },
-            { label: 'Departments', to: '/manager/departments' },
+            { label: 'Departments', to: '/manager/departments/view' },
             { label: 'View All Departments' },
           ]}
         />

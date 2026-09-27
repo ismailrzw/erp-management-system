@@ -11,6 +11,7 @@ import {
   Search,
   X,
   Edit2,
+  Target,
 } from 'lucide-react';
 import { dashboardApi } from '../../api/dashboardApi';
 import { announcementsApi } from '../../api/announcementsApi';
@@ -351,6 +352,83 @@ export const ManagerDashboard = () => {
           subtext="Click to manage"
         />
       </div>
+
+      {/* Upcoming Milestones Bar */}
+      {data?.upcoming_milestones && data.upcoming_milestones.length > 0 && (
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
+            padding: '16px 20px',
+            marginBottom: '20px',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+            borderLeft: '4px solid #ea580c',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Target size={18} color="#ea580c" />
+              <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
+                Upcoming Sprint Milestones & Project Deadlines
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/manager/iterations')}
+              className="btn btn-ghost btn-sm"
+              style={{ fontSize: '12.5px' }}
+            >
+              <span>Manage Sprints & Milestones →</span>
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+            {data.upcoming_milestones.slice(0, 4).map((m) => {
+              const dl = new Date(m.deadline);
+              const isPast = dl < new Date();
+              return (
+                <div
+                  key={m.id || m._id}
+                  style={{
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    padding: '10px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
+                      {m.sprint_name || 'Sprint'} #{m.milestone_order || 1}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        backgroundColor: isPast ? '#fee2e2' : '#fef3c7',
+                        color: isPast ? '#b91c1c' : '#b45309',
+                      }}
+                    >
+                      {isPast ? 'Passed' : 'Upcoming'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', marginBottom: '4px' }}>
+                    {m.title}
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                    Due: {formatDate(m.deadline)} • {m.course || 'All Courses'}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="dashboard-dual-grid">
         {/* Left: Announcements */}

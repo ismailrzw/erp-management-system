@@ -162,7 +162,7 @@ export const CourseListPage = () => {
           subtitle="Manage course offerings, credit hours, and department affiliations."
           breadcrumbs={[
             { label: 'Home', to: '/manager/dashboard' },
-            { label: 'Courses', to: '/manager/courses' },
+            { label: 'Courses', to: '/manager/courses/view' },
             { label: 'View All Courses' },
           ]}
         />

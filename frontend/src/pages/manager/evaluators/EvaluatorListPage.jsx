@@ -171,7 +171,7 @@ export const EvaluatorListPage = () => {
           subtitle="Manage internal faculty and external industry experts invited for Showcase Day evaluations."
           breadcrumbs={[
             { label: 'Home', to: '/manager/dashboard' },
-            { label: 'Evaluators', to: '/manager/evaluators' },
+            { label: 'Evaluators', to: '/manager/evaluators/view' },
             { label: 'View All Evaluators' },
           ]}
         />

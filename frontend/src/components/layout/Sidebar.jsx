@@ -57,7 +57,7 @@ export const Sidebar = ({
 
   const managerNavSections = [
     {
-      section: 'Navigation',
+      section: 'Home',
       items: [
         {
           type: 'link',
@@ -76,8 +76,8 @@ export const Sidebar = ({
           text: 'Manage Students',
           icon: Users,
           subitems: [
-            { text: 'Add New Student', to: '/manager/students/add' },
             { text: 'View All Students', to: '/manager/students/view' },
+            { text: 'Add New Student', to: '/manager/students/add' },
             { text: 'View Recycle Bin', to: '/manager/students/trash' },
           ],
         },
@@ -92,8 +92,8 @@ export const Sidebar = ({
           text: 'Manage Department',
           icon: Building2,
           subitems: [
-            { text: 'Add New Department', to: '/manager/departments/add' },
             { text: 'View All Departments', to: '/manager/departments/view' },
+            { text: 'Add New Department', to: '/manager/departments/add' },
             { text: 'View Recycle Bin', to: '/manager/departments/trash' },
           ],
         },
@@ -108,8 +108,8 @@ export const Sidebar = ({
           text: 'Manage Courses',
           icon: BookOpen,
           subitems: [
-            { text: 'Add New Course', to: '/manager/courses/add' },
             { text: 'View All Courses', to: '/manager/courses/view' },
+            { text: 'Add New Course', to: '/manager/courses/add' },
             { text: 'View Recycle Bin', to: '/manager/courses/trash' },
           ],
         },
@@ -124,8 +124,8 @@ export const Sidebar = ({
           text: 'Manage Teachers',
           icon: GraduationCap,
           subitems: [
-            { text: 'Add New Teacher', to: '/manager/teachers/add' },
             { text: 'View All Teachers', to: '/manager/teachers/view' },
+            { text: 'Add New Teacher', to: '/manager/teachers/add' },
             { text: 'View Recycle Bin', to: '/manager/teachers/trash' },
           ],
         },
@@ -140,8 +140,8 @@ export const Sidebar = ({
           text: 'Manage Evaluators',
           icon: Award,
           subitems: [
-            { text: 'Add New Evaluator', to: '/manager/evaluators/add' },
             { text: 'View All Evaluators', to: '/manager/evaluators/view' },
+            { text: 'Add New Evaluator', to: '/manager/evaluators/add' },
             { text: 'View Recycle Bin', to: '/manager/evaluators/trash' },
           ],
         },
@@ -158,7 +158,6 @@ export const Sidebar = ({
           subitems: [
             { text: 'View All Groups', to: '/manager/groups' },
             { text: 'Broadcast Mail', to: '/manager/groups/broadcast' },
-            { text: 'Ungrouped Students', to: '/manager/groups/ungrouped' },
           ],
         },
       ],

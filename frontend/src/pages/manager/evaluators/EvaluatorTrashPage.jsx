@@ -91,7 +91,7 @@ export const EvaluatorTrashPage = () => {
           subtitle="Restore or permanently delete archived exhibition-day evaluators."
           breadcrumbs={[
             { label: 'Home', to: '/manager/dashboard' },
-            { label: 'Evaluators', to: '/manager/evaluators' },
+            { label: 'Evaluators', to: '/manager/evaluators/view' },
             { label: 'Recycle Bin' },
           ]}
         />
@@ -113,13 +113,13 @@ export const EvaluatorTrashPage = () => {
         subtitle="Restore or permanently delete archived exhibition-day evaluators."
         breadcrumbs={[
           { label: 'Home', to: '/manager/dashboard' },
-          { label: 'Evaluators', to: '/manager/evaluators' },
+          { label: 'Evaluators', to: '/manager/evaluators/view' },
           { label: 'Recycle Bin' },
         ]}
       >
         <button
           type="button"
-          onClick={() => navigate('/manager/evaluators')}
+          onClick={() => navigate('/manager/evaluators/view')}
           className="btn btn-secondary"
         >
           <ArrowLeft size={16} />

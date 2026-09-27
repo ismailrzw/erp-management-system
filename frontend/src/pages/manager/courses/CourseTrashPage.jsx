@@ -5,6 +5,7 @@ import { coursesApi } from '../../../api/coursesApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 export const CourseTrashPage = () => {
   const [deletedCourses, setDeletedCourses] = useState([]);
@@ -96,51 +97,42 @@ export const CourseTrashPage = () => {
   };
 
   return loading ? (
-    <div><ContentLoader label="Loading deleted courses..." /></div>
+    <div className="page-frame-container"><ContentLoader label="Loading deleted courses..." /></div>
   ) : (
-    <div>
+    <div className="page-frame-container">
       <Toast
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '20px',
-        }}
+      <PageHeader
+        title="Courses Recycle Bin"
+        subtitle="Manage and restore soft-deleted courses or permanently purge them."
+        breadcrumbs={[
+          { label: 'Home', to: '/manager/dashboard' },
+          { label: 'Courses', to: '/manager/courses/view' },
+          { label: 'Recycle Bin' },
+        ]}
       >
-        <div>
-          <button
-            type="button"
-            onClick={() => navigate('/manager/courses/view')}
-            className="btn btn-back"
-            style={{ marginBottom: '10px' }}
-          >
-            <ArrowLeft size={16} />
-            <span>Back to Active Courses</span>
-          </button>
-          <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-            Courses Recycle Bin
-          </h1>
-          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-            Manage soft-deleted courses.
-          </div>
-        </div>
-
+        <button
+          type="button"
+          onClick={() => navigate('/manager/courses/view')}
+          className="btn btn-secondary"
+        >
+          <ArrowLeft size={15} />
+          <span>Back to Courses</span>
+        </button>
         <button
           type="button"
           onClick={() => fetchDeleted(true)}
           disabled={refreshing}
-          className="btn btn-secondary btn-sm"
+          className="btn btn-secondary"
         >
           <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
           <span>Refresh</span>
         </button>
-      </div>
+      </PageHeader>
 
       <div
         style={{
