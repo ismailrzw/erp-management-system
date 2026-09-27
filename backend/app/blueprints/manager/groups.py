@@ -91,6 +91,55 @@ class ManagerGroupDetail(Resource):
             return {"success": False, "message": str(exc)}, 500
 
 
+@manager_groups_ns.route("/<string:group_id>/workspace")
+class ManagerGroupWorkspace(Resource):
+
+    @manager_groups_ns.doc(security="Bearer Auth")
+    @role_required(Role.MANAGER)
+    def get(self, group_id):
+        """
+        Get full project workspace dossier including timeline, sprints, milestones, and submissions.
+        """
+        try:
+            from app.services.manager_group_service import get_manager_group_workspace
+            workspace_data = get_manager_group_workspace(group_id)
+            return {
+                "success": True,
+                "message": "Project workspace retrieved.",
+                "data": workspace_data,
+            }, 200
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, 404
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
+
+
+@manager_groups_ns.route("/<string:group_id>/export-performance")
+class ManagerGroupExportPerformance(Resource):
+
+    @manager_groups_ns.doc(security="Bearer Auth")
+    @role_required(Role.MANAGER)
+    def get(self, group_id):
+        """
+        Download Excel report with student-by-student project milestone performance.
+        """
+        from flask import send_file
+        from app.services.report_service import generate_group_performance_export
+        try:
+            file_stream = generate_group_performance_export(group_id)
+            return send_file(
+                file_stream,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                as_attachment=True,
+                download_name=f"project_performance_{group_id}.xlsx",
+            )
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, 404
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
+
+
+
 @manager_groups_ns.route("/<string:group_id>/approve")
 class ManagerGroupApprove(Resource):
 

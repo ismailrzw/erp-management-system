@@ -8,6 +8,8 @@ import {
   RefreshCw,
   GraduationCap,
   Users,
+  ExternalLink,
+  FolderGit2,
 } from 'lucide-react';
 import { teachersApi } from '../../../api/teachersApi';
 import { departmentsApi } from '../../../api/departmentsApi';
@@ -37,7 +39,30 @@ export const TeacherListPage = () => {
   const [teacherToDelete, setTeacherToDelete] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Supervised Projects Modal State
+  const [selectedTeacherForProjects, setSelectedTeacherForProjects] = useState(null);
+  const [teacherProjects, setTeacherProjects] = useState([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+
   const navigate = useNavigate();
+
+  const handleOpenSupervisedProjects = async (teacher) => {
+    setSelectedTeacherForProjects(teacher);
+    setProjectsLoading(true);
+    try {
+      const res = await teachersApi.getProjects(teacher.id || teacher._id);
+      if (res.success && res.data) {
+        const list = res.data.projects || res.data.items || (Array.isArray(res.data) ? res.data : []);
+        setTeacherProjects(list);
+      } else {
+        setTeacherProjects([]);
+      }
+    } catch {
+      setTeacherProjects([]);
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
 
   const fetchTeachers = useCallback(
     async (isRefresh = false) => {
@@ -168,7 +193,7 @@ export const TeacherListPage = () => {
           subtitle="Manage faculty members, domain specializations, and supervisory group capacity."
           breadcrumbs={[
             { label: 'Home', to: '/manager/dashboard' },
-            { label: 'Teachers', to: '/manager/teachers' },
+            { label: 'Teachers', to: '/manager/teachers/view' },
             { label: 'View All Faculty' },
           ]}
         />
@@ -407,6 +432,7 @@ export const TeacherListPage = () => {
                       <td style={{ padding: '12px 16px' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                           <span
+                            onClick={() => handleOpenSupervisedProjects(t)}
                             style={{
                               backgroundColor: isCapped ? '#fee2e2' : '#f0fdf4',
                               color: isCapped ? '#b91c1c' : '#15803d',
@@ -417,7 +443,11 @@ export const TeacherListPage = () => {
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '4px',
+                              cursor: 'pointer',
+                              border: '1px solid transparent',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                             }}
+                            title="Click to view supervised projects"
                           >
                             <Users size={12} />
                             {activeCap} / 4 Groups
@@ -425,7 +455,17 @@ export const TeacherListPage = () => {
                         </div>
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: '6px' }}>
+                        <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenSupervisedProjects(t)}
+                            className="btn btn-secondary btn-sm"
+                            title="View supervised project groups"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <Users size={13} />
+                            <span>Groups</span>
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleOpenEdit(t)}
@@ -542,6 +582,104 @@ export const TeacherListPage = () => {
             className="btn btn-danger"
           >
             {actionLoading ? 'Deleting...' : 'Move to Trash'}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Modal: Supervised Projects Drawer/Modal */}
+      <Modal
+        isOpen={!!selectedTeacherForProjects}
+        onClose={() => setSelectedTeacherForProjects(null)}
+        title={`Supervised Projects - ${selectedTeacherForProjects?.name || ''}`}
+        maxWidth="680px"
+      >
+        <div style={{ marginBottom: '14px', fontSize: '13px', color: '#64748b' }}>
+          Projects and student teams currently under faculty supervision ({teacherProjects.length} of 4 group capacity utilized).
+        </div>
+
+        {projectsLoading ? (
+          <ContentLoader label="Loading supervised projects..." />
+        ) : teacherProjects.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94a3b8' }}>
+            <Users size={32} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+            <div style={{ fontWeight: 600, color: '#475569', fontSize: '13.5px' }}>
+              No Groups Supervised
+            </div>
+            <div style={{ fontSize: '12px', marginTop: '4px' }}>
+              This supervisor currently has zero assigned or approved groups.
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '420px', overflowY: 'auto' }}>
+            {teacherProjects.map((p) => (
+              <div
+                key={p.id || p._id}
+                style={{
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '14px 16px',
+                  backgroundColor: '#ffffff',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ flex: '1 1 280px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontWeight: 600, fontSize: '14px', color: '#1e293b' }}>
+                      {p.name}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        padding: '1px 7px',
+                        borderRadius: '10px',
+                        backgroundColor: p.status === 'approved' ? '#ecfdf5' : '#f8fafc',
+                        color: p.status === 'approved' ? '#059669' : '#475569',
+                        border: '1px solid #cbd5e1',
+                        textTransform: 'capitalize',
+                      }}
+                    >
+                      {p.status || 'Active'}
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: '12.5px', color: '#64748b', marginBottom: '6px' }}>
+                    {p.project_title || 'Project title pending'}
+                  </div>
+
+                  <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
+                    Course: {p.course_name || p.course_id || 'N/A'} • Dept: {p.dept || 'CS'} • Members: {p.member_count || (p.members ? p.members.length : 1)}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedTeacherForProjects(null);
+                    navigate(`/manager/groups/${p.id || p._id}`);
+                  }}
+                  className="btn btn-secondary btn-sm"
+                  style={{ flexShrink: 0 }}
+                >
+                  <ExternalLink size={13} />
+                  <span>Open Workspace</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '18px' }}>
+          <button
+            type="button"
+            onClick={() => setSelectedTeacherForProjects(null)}
+            className="btn btn-secondary"
+          >
+            Close
           </button>
         </div>
       </Modal>

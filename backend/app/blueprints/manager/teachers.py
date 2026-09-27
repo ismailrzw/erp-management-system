@@ -222,3 +222,69 @@ class TeacherDomains(Resource):
             return {"success": False, "message": str(exc)}, 400
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500
+
+
+@teachers_ns.route("/<string:teacher_id>/projects")
+@teachers_ns.param("teacher_id", "MongoDB teacher ID")
+class TeacherProjects(Resource):
+    @teachers_ns.doc(security="Bearer Auth")
+    @role_required(Role.MANAGER)
+    def get(self, teacher_id):
+        """Get all projects supervised by this teacher with members and milestone progress."""
+        from bson import ObjectId
+        from app.models.group import COLLECTION as GROUPS_COLLECTION, Field as GroupField, Status as GroupStatus
+        from app.models.user import UserFields
+        from app.services.manager_group_service import _resolve_group_members
+        try:
+            t_oid = ObjectId(teacher_id)
+            teacher_doc = mongo.db[UserFields.COLLECTION].find_one({"_id": t_oid})
+            if not teacher_doc:
+                return {"success": False, "message": "Teacher not found."}, 404
+
+            groups = list(mongo.db[GROUPS_COLLECTION].find({
+                GroupField.SUPERVISOR_ID: t_oid,
+                GroupField.STATUS: {"$ne": GroupStatus.DELETED},
+            }).sort(GroupField.CREATED_AT, -1))
+
+            projects = []
+            for g in groups:
+                gid_str = str(g["_id"])
+                resolved_members = _resolve_group_members(g)
+                # Count milestone submissions
+                sub_count = mongo.db.submissions.count_documents({"group_id": g["_id"]})
+
+                projects.append({
+                    "id": gid_str,
+                    "name": g.get(GroupField.NAME, ""),
+                    "project_title": g.get(GroupField.PROJECT_TITLE, "Untitled Project"),
+                    "course": g.get(GroupField.COURSE, ""),
+                    "dept": g.get(GroupField.DEPT, ""),
+                    "section": g.get(GroupField.SECTION, ""),
+                    "status": g.get(GroupField.STATUS, "pending"),
+                    "formation_status": g.get(GroupField.FORMATION_STATUS, "on_time"),
+                    "submission_status": g.get(GroupField.SUBMISSION_STATUS, "not_submitted"),
+                    "member_count": len(resolved_members),
+                    "members": resolved_members,
+                    "submissions_count": sub_count,
+                    "created_at": g.get(GroupField.CREATED_AT).isoformat() if g.get(GroupField.CREATED_AT) else None,
+                })
+
+            return {
+                "success": True,
+                "message": "Supervised projects retrieved.",
+                "data": {
+                    "teacher": {
+                        "id": str(teacher_doc["_id"]),
+                        "name": teacher_doc.get(UserFields.NAME, ""),
+                        "email": teacher_doc.get(UserFields.EMAIL, ""),
+                        "dept": teacher_doc.get(UserFields.DEPT, ""),
+                        "domains": teacher_doc.get(UserFields.DOMAINS, []),
+                        "active_supervision_count": len(projects),
+                    },
+                    "projects": projects,
+                    "total": len(projects),
+                },
+            }, 200
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
+

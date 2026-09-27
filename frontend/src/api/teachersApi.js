@@ -35,4 +35,9 @@ export const teachersApi = {
     const response = await api.delete(`/manager/teachers/${id}/permanent`);
     return response.data;
   },
+
+  getProjects: async (id) => {
+    const response = await api.get(`/manager/teachers/${id}/projects`);
+    return response.data;
+  },
 };

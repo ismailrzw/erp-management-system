@@ -39,6 +39,7 @@ import { EvaluatorTrashPage } from './pages/manager/evaluators/EvaluatorTrashPag
 // Groups Management (Manager)
 import { ManageGroupsPage } from './pages/manager/groups/ManageGroupsPage';
 import { BroadcastMailPage } from './pages/manager/groups/BroadcastMailPage';
+import { ProjectDetailWorkspace } from './pages/manager/groups/ProjectDetailWorkspace';
 
 // Manager Profile
 import { ManagerProfilePage } from './pages/manager/profile/ManagerProfilePage';
@@ -156,6 +157,7 @@ export default function App() {
             <Route path="groups" element={<ManageGroupsPage />} />
             <Route path="groups/view" element={<ManageGroupsPage />} />
             <Route path="groups/manage" element={<ManageGroupsPage />} />
+            <Route path="groups/:groupId" element={<ProjectDetailWorkspace />} />
             <Route path="groups/broadcast" element={<BroadcastMailPage />} />
             <Route path="groups/send-mail" element={<BroadcastMailPage />} />
             <Route path="groups/ungrouped" element={<Navigate to="/manager/groups?tab=ungrouped" replace />} />

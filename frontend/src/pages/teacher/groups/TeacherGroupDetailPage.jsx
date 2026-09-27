@@ -18,6 +18,7 @@ import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Toast } from '../../../components/ui/Toast';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { formatDate } from '../../../utils/dateUtils';
+import { ProjectActivityTimeline } from '../../../components/groups/ProjectActivityTimeline';
 
 export const TeacherGroupDetailPage = () => {
   const { groupId } = useParams();
@@ -237,6 +238,9 @@ export const TeacherGroupDetailPage = () => {
           ))}
         </div>
       </div>
+
+      {/* Project Milestones & Activity Timeline */}
+      <ProjectActivityTimeline timeline={group.timeline || []} />
 
       {/* Supervision / Meeting Records */}
       {group.meetings && group.meetings.length > 0 && (

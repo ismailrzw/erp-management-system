@@ -115,27 +115,17 @@ def get_teacher_group_detail(group_id):
 
         serialized = _serialize_group(group)
 
-        # Full Member details
-        member_oids = group.get(GroupField.MEMBER_IDS, [])
-        leader_oid = group.get(GroupField.LEADER_ID)
-
-        members_cursor = mongo.db.users.find(
-            {"_id": {"$in": member_oids}},
-            {UserFields.NAME: 1, UserFields.ROLL: 1, UserFields.EMAIL: 1, UserFields.SECTION: 1, UserFields.DEPT: 1},
-        )
-        serialized["members"] = [
-            {
-                "id": str(m["_id"]),
-                "name": m.get(UserFields.NAME, ""),
-                "roll": m.get(UserFields.ROLL, ""),
-                "email": m.get(UserFields.EMAIL, ""),
-                "section": m.get(UserFields.SECTION, ""),
-                "dept": m.get(UserFields.DEPT, ""),
-                "is_leader": m["_id"] == leader_oid,
-            }
-            for m in members_cursor
-        ]
+        # Canonical Member details guaranteeing leader inclusion and ObjectId normalization
+        from app.services.manager_group_service import _resolve_group_members, get_manager_group_workspace
+        serialized["members"] = _resolve_group_members(group)
         serialized["member_count"] = len(serialized["members"])
+
+        # Timeline and milestones
+        try:
+            ws = get_manager_group_workspace(str(g_oid))
+            serialized["timeline"] = ws.get("timeline", [])
+        except Exception:  # noqa: BLE001
+            serialized["timeline"] = []
 
         # Meetings logs if any
         try:
