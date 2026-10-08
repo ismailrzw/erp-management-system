@@ -1,3 +1,4 @@
+import { AnnouncementsPage } from './pages/AnnouncementsPage';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/useAuth';
@@ -71,7 +72,6 @@ import { IterationDetailPage } from './pages/student/iterations/IterationDetailP
 import { EvaluatorDashboard } from './pages/evaluator/EvaluatorDashboard';
 import { AssignedGroupsPage } from './pages/evaluator/groups/AssignedGroupsPage';
 import { GroupEvalDetail } from './pages/evaluator/groups/GroupEvalDetail';
-import { ExhibitionPage } from './pages/evaluator/exhibition/ExhibitionPage';
 import { MeetingsPage } from './pages/evaluator/meetings/MeetingsPage';
 
 // Fallback
@@ -122,6 +122,7 @@ export default function App() {
             }
           >
             <Route path="dashboard" element={<ManagerDashboard />} />
+            <Route path="announcements" element={<AnnouncementsPage />} />
 
             {/* Students Management CRUD */}
             <Route path="students" element={<StudentListPage />} />
@@ -187,6 +188,7 @@ export default function App() {
             }
           >
             <Route path="dashboard" element={<TeacherDashboard />} />
+            <Route path="announcements" element={<AnnouncementsPage />} />
             <Route path="groups" element={<TeacherGroupListPage />} />
             <Route path="groups/:groupId" element={<TeacherGroupDetailPage />} />
             <Route path="students" element={<TeacherStudentDirectoryPage />} />
@@ -207,6 +209,7 @@ export default function App() {
             }
           >
             <Route path="dashboard" element={<StudentDashboard />} />
+            <Route path="announcements" element={<AnnouncementsPage />} />
             <Route path="group/my" element={<MyGroupPage />} />
             <Route path="group/create" element={<CreateGroupPage />} />
             <Route path="group/browse" element={<BrowseGroupsPage />} />
@@ -231,15 +234,19 @@ export default function App() {
             }
           >
             <Route path="dashboard" element={<EvaluatorDashboard />} />
+            <Route path="announcements" element={<AnnouncementsPage />} />
             <Route path="groups" element={<AssignedGroupsPage />} />
             <Route path="groups/:groupId" element={<GroupEvalDetail />} />
-            <Route path="exhibition" element={<ExhibitionPage />} />
             <Route path="meetings" element={<MeetingsPage />} />
             <Route path="settings" element={<ManagerProfilePage />} />
             <Route path="profile" element={<ManagerProfilePage />} />
 
             {/* Fallback for other subpages */}
             <Route path="*" element={<NotFoundPage />} />
+          </Route>
+
+          <Route path="/announcements" element={<ProtectedRoute allowedRoles={['pbl_manager', 'student', 'teacher', 'evaluator', 'hod', 'hodic', 'dean']}><AppShell /></ProtectedRoute>}>
+            <Route index element={<AnnouncementsPage />} />
           </Route>
 
           {/* Global Fallback 404 Route */}

@@ -78,7 +78,6 @@ export const Sidebar = ({
           subitems: [
             { text: 'View All Students', to: '/manager/students/view' },
             { text: 'Add New Student', to: '/manager/students/add' },
-            { text: 'View Recycle Bin', to: '/manager/students/trash' },
           ],
         },
       ],
@@ -94,7 +93,6 @@ export const Sidebar = ({
           subitems: [
             { text: 'View All Departments', to: '/manager/departments/view' },
             { text: 'Add New Department', to: '/manager/departments/add' },
-            { text: 'View Recycle Bin', to: '/manager/departments/trash' },
           ],
         },
       ],
@@ -110,7 +108,6 @@ export const Sidebar = ({
           subitems: [
             { text: 'View All Courses', to: '/manager/courses/view' },
             { text: 'Add New Course', to: '/manager/courses/add' },
-            { text: 'View Recycle Bin', to: '/manager/courses/trash' },
           ],
         },
       ],
@@ -126,7 +123,6 @@ export const Sidebar = ({
           subitems: [
             { text: 'View All Teachers', to: '/manager/teachers/view' },
             { text: 'Add New Teacher', to: '/manager/teachers/add' },
-            { text: 'View Recycle Bin', to: '/manager/teachers/trash' },
           ],
         },
       ],
@@ -142,7 +138,6 @@ export const Sidebar = ({
           subitems: [
             { text: 'View All Evaluators', to: '/manager/evaluators/view' },
             { text: 'Add New Evaluator', to: '/manager/evaluators/add' },
-            { text: 'View Recycle Bin', to: '/manager/evaluators/trash' },
           ],
         },
       ],
@@ -348,12 +343,6 @@ export const Sidebar = ({
           text: 'Assigned Groups',
           to: '/evaluator/groups',
           icon: Users,
-        },
-        {
-          type: 'link',
-          text: 'Exhibition Eval',
-          to: '/evaluator/exhibition',
-          icon: Award,
         },
         {
           type: 'link',
