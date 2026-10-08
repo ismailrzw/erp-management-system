@@ -1,7 +1,9 @@
 # backend/app/blueprints/manager/sprints.py
 """Sprint management namespace for manager portal."""
 
+import re
 from datetime import datetime, timezone
+
 from bson import ObjectId
 from bson.errors import InvalidId
 from flask import request
@@ -11,6 +13,7 @@ from flask_restx import Namespace, Resource, fields
 from app.extensions import mongo
 from app.models.sprint import COLLECTION_SPRINTS, SprintField
 from app.models.user import Role
+from app.services.academic_write_service import academic_write
 from app.utils.decorators import role_required
 from app.utils.responses import error_response, success_response
 
@@ -19,15 +22,11 @@ sprints_ns = Namespace('manager_sprints', description='Manager Sprint Containers
 create_sprint_model = sprints_ns.model('CreateSprint', {
     'name': fields.String(required=True, example='Sprint 1 — Requirement Analysis'),
     'description': fields.String(example='Define problem statement and system requirements.'),
-    'course': fields.String(default='All Courses', example='Final Year Project'),
-    'order': fields.Integer(default=1, example=1),
 })
 
 update_sprint_model = sprints_ns.model('UpdateSprint', {
     'name': fields.String(required=True, example='Sprint 1 — Requirement Analysis'),
     'description': fields.String(example='Updated description...'),
-    'course': fields.String(example='Final Year Project'),
-    'order': fields.Integer(example=1),
 })
 
 
@@ -58,26 +57,6 @@ class SprintListResource(Resource):
 
         sprint_docs = list(mongo.db[COLLECTION_SPRINTS].find(query).sort([('order', 1), ('name', 1)]))
 
-        # If no sprints exist in database, check iterations to seed default sprints from existing sprint_names
-        if not sprint_docs:
-            existing_sprint_names = mongo.db.iterations.distinct("sprint_name", {"deleted": {"$ne": True}})
-            if not existing_sprint_names:
-                existing_sprint_names = ["Sprint 1", "Sprint 2", "Sprint 3"]
-            
-            for idx, sname in enumerate(sorted(existing_sprint_names), 1):
-                new_sprint = {
-                    SprintField.NAME: sname,
-                    SprintField.DESCRIPTION: f"Project deliverables and milestones for {sname}.",
-                    SprintField.COURSE: "All Courses",
-                    SprintField.ORDER: idx,
-                    SprintField.DELETED: False,
-                    SprintField.CREATED_AT: datetime.now(timezone.utc),
-                    SprintField.UPDATED_AT: datetime.now(timezone.utc),
-                }
-                mongo.db[COLLECTION_SPRINTS].insert_one(new_sprint)
-            
-            sprint_docs = list(mongo.db[COLLECTION_SPRINTS].find(query).sort([('order', 1), ('name', 1)]))
-
         sprints = []
         for s in sprint_docs:
             formatted = format_sprint(s)
@@ -95,20 +74,21 @@ class SprintListResource(Resource):
     @role_required(Role.MANAGER)
     @sprints_ns.doc(security='Bearer Auth')
     @sprints_ns.expect(create_sprint_model, validate=True)
+    @academic_write
     def post(self):
         """Create a new sprint container with name and description."""
         data = request.get_json() or {}
         name = (data.get('name') or '').strip()
         description = (data.get('description') or '').strip()
-        course = (data.get('course') or 'All Courses').strip()
-        order = int(data.get('order', 1))
+        course = 'All Courses'
+        order = mongo.db.sprints.count_documents({}) + 1
 
         if not name:
             return error_response("Sprint name is required.", status=400)
 
         # Check for duplicates
         existing = mongo.db[COLLECTION_SPRINTS].find_one({
-            "name": {"$regex": f"^{name}$", "$options": "i"},
+            "name": {"$regex": f"^{re.escape(name)}$", "$options": "i"},
             "course": course,
             "deleted": {"$ne": True},
         })
@@ -160,6 +140,7 @@ class SprintDetailResource(Resource):
     @role_required(Role.MANAGER)
     @sprints_ns.doc(security='Bearer Auth')
     @sprints_ns.expect(update_sprint_model, validate=True)
+    @academic_write
     def put(self, sprint_id):
         """Update an existing sprint name or description."""
         try:
@@ -178,23 +159,24 @@ class SprintDetailResource(Resource):
         if not sprint:
             return error_response("Sprint not found.", status=404)
 
+        if set(data) - {"name", "description"}:
+            return error_response("Only Sprint Name and Description can be edited.", status=422)
+        duplicate = mongo.db.sprints.find_one({"_id": {"$ne": oid}, "name": {"$regex": f"^{re.escape(name)}$", "$options": "i"}, "deleted": {"$ne": True}})
+        if duplicate:
+            return error_response("A Sprint with this name already exists.", status=409)
         old_name = sprint.get("name")
         update_fields = {
             SprintField.NAME: name,
             SprintField.DESCRIPTION: description,
             SprintField.UPDATED_AT: datetime.now(timezone.utc),
         }
-        if "course" in data:
-            update_fields[SprintField.COURSE] = data["course"]
-        if "order" in data:
-            update_fields[SprintField.ORDER] = int(data["order"])
 
         mongo.db[COLLECTION_SPRINTS].update_one({"_id": oid}, {"$set": update_fields})
 
         # If sprint name changed, update associated iterations
         if old_name and old_name != name:
             mongo.db.iterations.update_many(
-                {"sprint_name": old_name},
+                {"$or": [{"sprint_id": {"$in": [oid, sprint_id]}}, {"sprint_name": old_name, "sprint_id": {"$exists": False}}]},
                 {"$set": {"sprint_name": name, "updatedAt": datetime.now(timezone.utc)}}
             )
 
@@ -204,6 +186,7 @@ class SprintDetailResource(Resource):
     @jwt_required()
     @role_required(Role.MANAGER)
     @sprints_ns.doc(security='Bearer Auth')
+    @academic_write
     def delete(self, sprint_id):
         """Delete a sprint."""
         try:
@@ -214,6 +197,12 @@ class SprintDetailResource(Resource):
         sprint = mongo.db[COLLECTION_SPRINTS].find_one({"_id": oid, "deleted": {"$ne": True}})
         if not sprint:
             return error_response("Sprint not found.", status=404)
+
+        children = mongo.db.iterations.count_documents({"$or": [
+            {"sprint_id": {"$in": [oid, sprint_id]}}, {"sprint_name": sprint.get("name")},
+        ]})
+        if children:
+            return error_response(f"Cannot delete sprint: {children} milestone(s) still reference it.", status=409)
 
         # Soft delete sprint
         mongo.db[COLLECTION_SPRINTS].update_one(

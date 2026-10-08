@@ -82,7 +82,7 @@ class CourseList(Resource):
         except ValidationError as exc:
             return {"success": False, "message": exc.messages}, 422
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 409
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 409)
 
 
 @courses_ns.route("/<string:course_id>")
@@ -98,7 +98,7 @@ class CourseDetail(Resource):
                 return {"success": False, "message": "Course not found."}, 404
             return {"success": True, "data": course}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
 
     @courses_ns.doc(security="Bearer Auth")
     @courses_ns.expect(update_model)
@@ -123,7 +123,7 @@ class CourseDetail(Resource):
         except ValidationError as exc:
             return {"success": False, "message": exc.messages}, 422
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 409
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 409)
 
     @courses_ns.doc(security="Bearer Auth")
     @role_required(Role.MANAGER)
@@ -137,7 +137,7 @@ class CourseDetail(Resource):
                       target_id=course_id, old_value=course)
             return {"success": True, "message": "Course deleted.", "data": {"deleted": True, "course_id": course_id}}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 409
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 409)
 
 
 @courses_ns.route("/<string:course_id>/restore")
@@ -155,7 +155,7 @@ class CourseRestore(Resource):
                       target_id=course_id, new_value=course)
             return {"success": True, "message": "Course restored.", "data": {"restored": True, "course_id": course_id}}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
 
 
 @courses_ns.route("/<string:course_id>/permanent")
@@ -173,4 +173,4 @@ class CoursePermanentDelete(Resource):
                       target_id=course_id, old_value=course)
             return {"success": True, "message": "Course permanently deleted.", "data": {"deleted": True, "course_id": course_id}}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)

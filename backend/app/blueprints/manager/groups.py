@@ -10,7 +10,8 @@ POST /api/manager/groups/<group_id>/approve — Approve a project group
 POST /api/manager/groups/<group_id>/reject  — Reject a project group with feedback
 """
 
-from flask import request
+from bson.errors import InvalidId
+from flask import current_app, request
 from flask_jwt_extended import get_jwt_identity
 from flask_restx import Namespace, Resource, fields
 
@@ -109,9 +110,10 @@ class ManagerGroupWorkspace(Resource):
                 "data": workspace_data,
             }, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 404
-        except Exception as exc:  # noqa: BLE001
-            return {"success": False, "message": str(exc)}, 500
+            return {"success": False, "message": str(exc)}, 400 if "Invalid ID" in str(exc) else getattr(exc, "status_code", 404)
+        except Exception:
+            current_app.logger.exception("Group workspace could not be loaded")
+            return {"success": False, "message": "Workspace could not be loaded. Please retry."}, 500
 
 
 @manager_groups_ns.route("/<string:group_id>/export-performance")
@@ -124,6 +126,7 @@ class ManagerGroupExportPerformance(Resource):
         Download Excel report with student-by-student project milestone performance.
         """
         from flask import send_file
+
         from app.services.report_service import generate_group_performance_export
         try:
             file_stream = generate_group_performance_export(group_id)
@@ -230,7 +233,10 @@ class ManagerGroupSendMail(Resource):
         Send communication emails to students (all groups, specific groups, or ungrouped).
         """
         from bson import ObjectId
-        from app.models.group import COLLECTION as GROUPS_COLLECTION, Field as GroupField, Status as GroupStatus
+
+        from app.models.group import COLLECTION as GROUPS_COLLECTION
+        from app.models.group import Field as GroupField
+        from app.models.group import Status as GroupStatus
         from app.models.user import UserFields
         from app.services.email_service import send_manager_bulk_mail
 
@@ -276,8 +282,8 @@ class ManagerGroupSendMail(Resource):
             for gid in group_ids:
                 try:
                     g_oids.append(ObjectId(gid))
-                except Exception:
-                    pass
+                except (InvalidId, TypeError):
+                    return {"success": False, "message": "Invalid group ID."}, 400
 
             groups = list(mongo.db[GROUPS_COLLECTION].find({
                 "_id": {"$in": g_oids},
@@ -296,8 +302,8 @@ class ManagerGroupSendMail(Resource):
 
         elif target == "ungrouped":
             # Find students without a group
-            from app.services.student_service import get_ungrouped_students
-            ungrouped = get_ungrouped_students()
+            from app.services.student_service import list_ungrouped_students
+            ungrouped = list_ungrouped_students()
             recipients = [{"email": s.get("email"), "name": s.get("name", "Student")} for s in ungrouped if s.get("email")]
 
         else:
@@ -314,8 +320,8 @@ class ManagerGroupSendMail(Resource):
                 )
                 if success:
                     sent_count += 1
-            except Exception:
-                pass
+            except Exception:  # one delivery failure must not abort the remaining recipients
+                current_app.logger.exception("Group broadcast email delivery failed")
 
         return {
             "success": True,
@@ -328,3 +334,16 @@ class ManagerGroupSendMail(Resource):
             },
         }, 200
 
+
+
+@manager_groups_ns.route("/<string:group_id>/academic-link")
+class ManagerGroupAcademicLink(Resource):
+    @role_required(Role.MANAGER)
+    def post(self, group_id):
+        from app.services.manager_group_service import repair_group_academic_link
+        try:
+            body = request.get_json() or {}
+            result = repair_group_academic_link(get_jwt_identity(), group_id, body.get("course_id"), body.get("expected_version"))
+            return {"success": True, "message": "Verified academic association restored.", "data": result}, 200
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)

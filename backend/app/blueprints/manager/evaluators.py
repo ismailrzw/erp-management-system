@@ -1,7 +1,7 @@
 # backend/app/blueprints/manager/evaluators.py
 """
 Manager Evaluators Management Blueprint & RESTX Namespace.
-Exhibition-Day evaluators (Internal / External).
+Project evaluators (Internal / External).
 """
 
 from flask import request
@@ -26,7 +26,7 @@ from app.services.evaluator_service import (
 from app.utils.audit import log_audit
 from app.utils.decorators import role_required
 
-evaluators_ns = Namespace("manager_evaluators", description="Manager Exhibition Evaluator operations")
+evaluators_ns = Namespace("manager_evaluators", description="Manager Project Evaluator operations")
 
 # ── Swagger models ──────────────────────────────────────────
 evaluator_model = evaluators_ns.model("Evaluator", {
@@ -66,7 +66,7 @@ class EvaluatorList(Resource):
     @evaluators_ns.expect(list_parser)
     @role_required(Role.MANAGER)
     def get(self):
-        """List all exhibition-day evaluators. Use ?deleted=true for recycle bin."""
+        """List all project evaluators. Use ?deleted=true for recycle bin."""
         args = list_parser.parse_args()
         items = list_evaluators(
             deleted=args["deleted"],
@@ -83,7 +83,7 @@ class EvaluatorList(Resource):
     @evaluators_ns.expect(create_evaluator_model)
     @role_required(Role.MANAGER)
     def post(self):
-        """Add a new exhibition-day evaluator. Password is auto-generated."""
+        """Add a new project evaluator. Password is auto-generated."""
         try:
             payload = CreateEvaluatorSchema().load(request.get_json() or {})
         except ValidationError as exc:
@@ -96,6 +96,7 @@ class EvaluatorList(Resource):
                 dept=payload["dept"],
                 evaluator_type=payload["evaluator_type"],
                 domains=payload.get("domains"),
+                company_name=payload.get("company_name", ""), post=payload.get("post", ""),
             )
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 409
@@ -144,6 +145,7 @@ class EvaluatorDetail(Resource):
                 dept=payload.get("dept"),
                 evaluator_type=payload.get("evaluator_type"),
                 domains=payload.get("domains"),
+            company_name=payload.get("company_name"), post=payload.get("post"),
             )
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 422
@@ -163,7 +165,10 @@ class EvaluatorDetail(Resource):
     @role_required(Role.MANAGER)
     def delete(self, evaluator_id):
         """Soft-delete an evaluator (moves to recycle bin)."""
-        evaluator = soft_delete_evaluator(evaluator_id)
+        try:
+            evaluator = soft_delete_evaluator(evaluator_id)
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
         if evaluator is None:
             return {"success": False, "message": "Evaluator not found."}, 404
         log_audit(
@@ -180,7 +185,10 @@ class EvaluatorRestore(Resource):
     @role_required(Role.MANAGER)
     def post(self, evaluator_id):
         """Restore a soft-deleted evaluator."""
-        evaluator = restore_evaluator(evaluator_id)
+        try:
+            evaluator = restore_evaluator(evaluator_id)
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 409)
         if evaluator is None:
             return {"success": False, "message": "Evaluator not found."}, 404
         log_audit(
@@ -197,7 +205,10 @@ class EvaluatorPermanentDelete(Resource):
     @role_required(Role.MANAGER)
     def delete(self, evaluator_id):
         """Permanently delete an evaluator."""
-        evaluator = permanent_delete_evaluator(evaluator_id)
+        try:
+            evaluator = permanent_delete_evaluator(evaluator_id)
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
         if evaluator is None:
             return {"success": False, "message": "Evaluator not found."}, 404
         log_audit(
@@ -223,3 +234,15 @@ class EvaluatorDomains(Resource):
             return {"success": False, "message": str(exc)}, 400
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500
+
+
+@evaluators_ns.route("/<string:evaluator_id>/resend-activation")
+class EvaluatorActivation(Resource):
+    @role_required(Role.MANAGER)
+    def post(self, evaluator_id):
+        from app.services.evaluator_service import send_activation
+        try:
+            sent = send_activation(evaluator_id)
+            return {"success": True, "message": "Activation sent." if sent else "Delivery failed. Retry sending activation.", "data": {"email_sent": sent}}, 200
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, 400

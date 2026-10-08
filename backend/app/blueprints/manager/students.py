@@ -59,7 +59,7 @@ student_model = students_ns.model("Student", {
 })
 
 student_update_model = students_ns.model("StudentUpdate", {
-    "name":           fields.String(description="Student full name"),
+    "dept":           fields.String(description="Department code (ungrouped students only)"),
     "section":        fields.String(description="Section"),
     "course":         fields.String(description="Course name"),
     "recovery_email": fields.String(description="Optional recovery email address"),
@@ -116,7 +116,7 @@ class StudentList(Resource):
         try:
             result = create_student(validated)
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 409
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 409)
         except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 500
 
@@ -148,21 +148,21 @@ class StudentDetail(Resource):
     @students_ns.expect(student_update_model)
     @role_required(Role.MANAGER)
     def put(self, student_id):
-        """Update a student's editable fields (name, section, course, teacher, recovery_email)."""
+        """Update academic placement and recovery email, preserving student identity."""
         # Check 1 — schema validation
         try:
             validated = UpdateStudentSchema().load(request.get_json() or {})
         except ValidationError as exc:
             return {"success": False, "message": "Validation failed.", "errors": exc.messages}, 422
 
-        if not any(v is not None for v in validated.values()):
+        if not validated:
             return {"success": False, "message": "No fields to update."}, 400
 
         # Check 2 — service-layer persistence
         try:
             result = update_student(student_id, validated)
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 404
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
         except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 500
 
@@ -178,7 +178,7 @@ class StudentDetail(Resource):
         try:
             result = soft_delete_student(student_id)
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 404
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 404)
         except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 500
 
@@ -197,7 +197,7 @@ class StudentRestore(Resource):
         try:
             result = restore_student(student_id)
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 404
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 404)
         except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 500
 
@@ -216,7 +216,7 @@ class StudentPermanentDelete(Resource):
         try:
             result = permanent_delete_student(student_id)
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 404
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 404)
         except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 500
 
@@ -266,7 +266,7 @@ class StudentBulkImport(Resource):
                 },
             }, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
         except Exception as exc:
             import logging
             logging.getLogger(__name__).exception("Bulk import exception")
@@ -285,7 +285,7 @@ class StudentResendPasswordEmail(Resource):
             log_audit(mongo.db, user_id, Role.MANAGER, "users", "resend_password_email", target_id=student_id)
             return {"success": True, "message": "Password setup email has been dispatched.", "data": result}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 404
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 404)
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500
 

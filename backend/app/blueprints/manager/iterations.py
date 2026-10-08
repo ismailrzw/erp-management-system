@@ -9,8 +9,15 @@ from flask_restx import Namespace, Resource, fields
 
 from app.extensions import mongo
 from app.models.user import Role
+from app.services.academic_write_service import academic_write
+from app.services.milestone_setup_service import (
+    graded,
+    update_task,
+    validate_task_payload,
+)
 from app.utils.decorators import role_required
 from app.utils.responses import error_response, success_response
+from app.utils.serialization import json_safe
 
 iterations_ns = Namespace('manager_iterations', description='Manager Iteration Management')
 
@@ -36,9 +43,7 @@ create_iteration_model = iterations_ns.model('CreateIteration', {
     'deadline': fields.String(required=True, example='2026-07-10'),
     'is_group_formation': fields.Boolean(default=False, description='Set as group formation cutoff milestone'),
     'late_penalty_percent': fields.Integer(default=0, description='Penalty deduction percent for late group formation'),
-    'sprint_name': fields.String(default='Sprint 1', example='Sprint 1'),
-    'milestone_order': fields.Integer(default=1, example=1),
-    'milestone_type': fields.String(default='deliverable', example='group_formation'),
+    'sprint_id': fields.String(description='Selected Sprint context assigned by its Add Milestone action'),
 })
 
 student_eval_model = iterations_ns.model('StudentEvaluationInput', {
@@ -69,6 +74,10 @@ def format_dates(doc: dict) -> dict:
 def validate_rubric_weights(rubrics: list) -> tuple[bool, str | None]:
     if not rubrics:
         return True, None
+    if not isinstance(rubrics, list) or any(not isinstance(r, dict) or not (r.get("question") or "").strip() or isinstance(r.get("weight"), bool) or not isinstance(r.get("weight"), int) or r["weight"] <= 0 for r in rubrics):
+        return False, "Each criterion requires a question and integer marks greater than 0."
+    if len({str(r["id"]) for r in rubrics if "id" in r}) != sum(1 for r in rubrics if "id" in r):
+        return False, "Rubric criterion IDs must be unique."
     try:
         total = sum(int(r.get("weight", 0)) for r in rubrics)
     except (TypeError, ValueError):
@@ -87,7 +96,7 @@ class IterationListResource(Resource):
     def get(self):
         """Get all iterations, optionally filtered by course. Enriched with submission stats."""
         course = request.args.get('course')
-        query = {}
+        query = {"deleted": {"$ne": True}}
         if course:
             query['course'] = course
 
@@ -156,75 +165,25 @@ class IterationListResource(Resource):
     @role_required(Role.MANAGER)
     @iterations_ns.doc(security='Bearer Auth')
     @iterations_ns.expect(create_iteration_model)
+    @academic_write
     def post(self):
         """Create a new iteration milestone."""
-        data = request.get_json() or {}
-        title = (data.get('title') or '').strip()
-        course = (data.get('course') or '').strip()
-        deadline = (data.get('deadline') or '').strip()
-        details = (data.get('details') or '').strip()
-        document_url = (data.get('document_url') or '').strip()
-        document_name = (data.get('document_name') or '').strip()
-        template_id_str = (data.get('rubric_template_id') or '').strip()
-        sprint_name = (data.get('sprint_name') or 'Sprint 1').strip()
         try:
-            milestone_order = int(data.get('milestone_order', 1))
-        except (ValueError, TypeError):
-            milestone_order = 1
-
-        if not title or not course or not deadline:
-            return error_response("Title, course, and deadline are required.", 400)
-
-        # Pre-populate rubrics from template if provided
-        rubrics = []
-        rubric_template_id = None
-        if template_id_str:
-            try:
-                tpl_oid = ObjectId(template_id_str)
-            except (InvalidId, TypeError, ValueError):
-                return error_response("Invalid rubric template ID.", 400)
-            tpl = mongo.db.rubric_templates.find_one({"_id": tpl_oid})
-            if tpl:
-                rubrics = tpl.get("criteria", [])
-                rubric_template_id = tpl_oid
-
-        now = datetime.now(timezone.utc)
-        is_group_formation = bool(data.get('is_group_formation', False))
-        milestone_type = (data.get('milestone_type') or ('group_formation' if is_group_formation else 'deliverable')).strip()
-        if milestone_type == 'group_formation':
-            is_group_formation = True
-
-        late_penalty_percent = 0
-        if data.get('late_penalty_percent') is not None:
-            try:
-                late_penalty_percent = max(0, min(100, int(data.get('late_penalty_percent'))))
-            except (ValueError, TypeError):
-                late_penalty_percent = 0
-
-        doc = {
-            "title": title,
-            "details": details,
-            "document_url": document_url,
-            "document_name": document_name,
-            "course": course,
-            "deadline": deadline,
-            "rubrics": rubrics,
-            "rubric_template_id": rubric_template_id,
-            "is_group_formation": is_group_formation,
-            "late_penalty_percent": late_penalty_percent,
-            "sprint_name": sprint_name,
-            "milestone_order": milestone_order,
-            "milestone_type": milestone_type,
-            "createdAt": now,
-            "updatedAt": now
-        }
-
-        result = mongo.db.iterations.insert_one(doc)
-        doc['_id'] = str(result.inserted_id)
-        if doc.get('rubric_template_id'):
-            doc['rubric_template_id'] = str(doc['rubric_template_id'])
-        format_dates(doc)
-        return success_response("Iteration created successfully.", data=doc, status=201)
+            data = validate_task_payload(request.get_json() or {})
+            # Automatic metadata cannot be overridden by the caller.
+            now = datetime.now(timezone.utc)
+            document = {key: data[key] for key in (
+                "title", "course", "course_id", "deadline", "details", "document_url", "document_name",
+                "document_attachment_id", "sprint_id", "sprint_name", "milestone_order", "late_penalty_percent", "rubric_template_id", "rubrics",
+            ) if key in data}
+            document.update({"createdAt": now, "updatedAt": now, "created_by": ObjectId(get_jwt_identity()),
+                             "rubrics": data.get("rubrics", []), "version": 1, "deleted": False,
+                             "is_group_formation": bool(data.get("is_group_formation", False)),
+                             "milestone_type": "group_formation" if data.get("is_group_formation") else "deliverable"})
+            document["_id"] = mongo.db.iterations.insert_one(document).inserted_id
+            return success_response("Milestone created.", data=json_safe(document), status=201)
+        except ValueError as exc:
+            return error_response(str(exc), getattr(exc, "status_code", 400))
 
 
 @iterations_ns.route('/<string:iteration_id>')
@@ -250,74 +209,29 @@ class IterationDetailResource(Resource):
         if not item.get('milestone_type'):
             item['milestone_type'] = 'group_formation' if item.get('is_group_formation') else 'deliverable'
 
-        return success_response("Iteration retrieved.", data=item)
+        return success_response("Iteration retrieved.", data=json_safe(item))
 
     @jwt_required()
     @role_required(Role.MANAGER)
     @iterations_ns.doc(security='Bearer Auth')
     @iterations_ns.expect(create_iteration_model)
+    @academic_write
     def put(self, iteration_id):
         """Update iteration title, details, document attachment, and/or deadline."""
         try:
-            oid = ObjectId(iteration_id)
+            ObjectId(iteration_id)
         except (InvalidId, TypeError, ValueError):
             return error_response("Invalid iteration ID.", 400)
 
-        data = request.get_json() or {}
-        update_fields = {}
-        if data.get('title'):
-            update_fields['title'] = data['title'].strip()
-        if 'details' in data:
-            update_fields['details'] = data['details'].strip()
-        if 'document_url' in data:
-            update_fields['document_url'] = (data['document_url'] or '').strip()
-        if 'document_name' in data:
-            update_fields['document_name'] = (data['document_name'] or '').strip()
-        if data.get('deadline'):
-            update_fields['deadline'] = data['deadline'].strip()
-        if data.get('course'):
-            update_fields['course'] = data['course'].strip()
-        if 'is_group_formation' in data:
-            update_fields['is_group_formation'] = bool(data['is_group_formation'])
-        if 'late_penalty_percent' in data:
-            try:
-                update_fields['late_penalty_percent'] = max(0, min(100, int(data['late_penalty_percent'])))
-            except (ValueError, TypeError):
-                update_fields['late_penalty_percent'] = 0
-        if 'sprint_name' in data:
-            update_fields['sprint_name'] = (data['sprint_name'] or 'Sprint 1').strip()
-        if 'milestone_order' in data:
-            try:
-                update_fields['milestone_order'] = int(data['milestone_order'])
-            except (ValueError, TypeError):
-                update_fields['milestone_order'] = 1
-        if 'milestone_type' in data:
-            update_fields['milestone_type'] = data['milestone_type'].strip()
-            if update_fields['milestone_type'] == 'group_formation':
-                update_fields['is_group_formation'] = True
-
-        update_fields['updatedAt'] = datetime.now(timezone.utc)
-
-        result = mongo.db.iterations.update_one(
-            {"_id": oid},
-            {"$set": update_fields}
-        )
-        if result.matched_count == 0:
-            return error_response("Iteration not found.", 404)
-
-        updated = mongo.db.iterations.find_one({"_id": oid})
-        format_dates(updated)
-        if not updated.get('sprint_name'):
-            updated['sprint_name'] = 'Sprint 1'
-        if not updated.get('milestone_order'):
-            updated['milestone_order'] = 1
-        if not updated.get('milestone_type'):
-            updated['milestone_type'] = 'group_formation' if updated.get('is_group_formation') else 'deliverable'
-        return success_response("Iteration updated successfully.", data=updated)
+        try:
+            return success_response("Milestone updated.", data=update_task(iteration_id, request.get_json() or {}))
+        except ValueError as exc:
+            return error_response(str(exc), getattr(exc, "status_code", 400))
 
     @jwt_required()
     @role_required(Role.MANAGER)
     @iterations_ns.doc(security='Bearer Auth')
+    @academic_write
     def delete(self, iteration_id):
         """Delete iteration (blocked if submissions exist)."""
         try:
@@ -325,12 +239,14 @@ class IterationDetailResource(Resource):
         except (InvalidId, TypeError, ValueError):
             return error_response("Invalid iteration ID.", 400)
 
-        sub_count = mongo.db.submissions.count_documents({"iteration_id": oid})
+        sub_count = sum(mongo.db[collection].count_documents({"iteration_id": {"$in": [oid, iteration_id]}})
+                        for collection in ("submissions", "evaluations", "student_evaluations", "milestone_comments"))
+        sub_count += mongo.db.submission_history.count_documents({"submission.iteration_id": {"$in": [oid, iteration_id]}})
         if sub_count > 0:
             return error_response(f"Cannot delete iteration. {sub_count} submission(s) exist for it.", 400)
 
-        result = mongo.db.iterations.delete_one({"_id": oid})
-        if result.deleted_count == 0:
+        result = mongo.db.iterations.update_one({"_id": oid, "deleted": {"$ne": True}}, {"$set": {"deleted": True}})
+        if result.matched_count == 0:
             return error_response("Iteration not found.", 404)
 
         return success_response("Iteration deleted successfully.")
@@ -342,6 +258,7 @@ class IterationRubricsResource(Resource):
     @role_required(Role.MANAGER)
     @iterations_ns.doc(security='Bearer Auth')
     @iterations_ns.expect(rubrics_payload_model)
+    @academic_write
     def post(self, iteration_id):
         """Replace the entire rubric set for an iteration. Total marks can be custom set by manager."""
         try:
@@ -350,6 +267,8 @@ class IterationRubricsResource(Resource):
             return error_response("Invalid iteration ID.", 400)
 
         data = request.get_json() or {}
+        if graded(iteration_id):
+            return error_response("Graded rubrics are locked.", 409)
         rubrics = data.get("rubrics", [])
 
         valid, err = validate_rubric_weights(rubrics)
@@ -366,7 +285,7 @@ class IterationRubricsResource(Resource):
         }
 
         for i, r in enumerate(rubrics, start=1):
-            r["id"] = i
+            r["id"] = r.get("id", i)
             if "levels" not in r or not isinstance(r["levels"], dict):
                 r["levels"] = {**default_lvl}
             else:
@@ -389,6 +308,7 @@ class SingleRubricDeleteResource(Resource):
     @jwt_required()
     @role_required(Role.MANAGER)
     @iterations_ns.doc(security='Bearer Auth')
+    @academic_write
     def delete(self, iteration_id, rubric_id):
         """Remove one rubric criterion from an iteration."""
         try:
@@ -400,6 +320,8 @@ class SingleRubricDeleteResource(Resource):
         if not iteration:
             return error_response("Iteration not found.", 404)
 
+        if graded(iteration_id):
+            return error_response("Graded rubrics are locked.", 409)
         rubrics = iteration.get("rubrics", [])
         updated_rubrics = [r for r in rubrics if r.get("id") != rubric_id]
 
@@ -503,7 +425,7 @@ class IterationSubmissionsResource(Resource):
                     "submitted_by": submitter_name,
                     "submitted_at": submitted_at.isoformat() if submitted_at else None,
                     "file_name": sub.get("file_name"),
-                    "file_url": sub.get("file_url"),
+                    "file_url": f"/api/files/submissions/{sub['_id']}",
                     "file_size": sub.get("file_size"),
                     "note": sub.get("note", ""),
                 })
@@ -607,6 +529,7 @@ class StudentEvaluationsResource(Resource):
     @role_required(Role.MANAGER)
     @iterations_ns.doc(security='Bearer Auth')
     @iterations_ns.expect(student_eval_model)
+    @academic_write
     def post(self, iteration_id):
         """Submit or update a rubric-based evaluation for an individual student (e.g. ungrouped defaulter)."""
         manager_id = get_jwt_identity()

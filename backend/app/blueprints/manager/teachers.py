@@ -161,7 +161,10 @@ class TeacherDetail(Resource):
     @role_required(Role.MANAGER)
     def delete(self, teacher_id):
         """Soft-delete a teacher/evaluator (moves to recycle bin)."""
-        teacher = soft_delete_teacher(teacher_id)
+        try:
+            teacher = soft_delete_teacher(teacher_id)
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
         if teacher is None:
             return {"success": False, "message": "Teacher not found."}, 404
         log_audit(
@@ -178,7 +181,10 @@ class TeacherRestore(Resource):
     @role_required(Role.MANAGER)
     def post(self, teacher_id):
         """Restore a soft-deleted teacher/evaluator."""
-        teacher = restore_teacher(teacher_id)
+        try:
+            teacher = restore_teacher(teacher_id)
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 409)
         if teacher is None:
             return {"success": False, "message": "Teacher not found."}, 404
         log_audit(
@@ -195,7 +201,10 @@ class TeacherPermanentDelete(Resource):
     @role_required(Role.MANAGER)
     def delete(self, teacher_id):
         """Permanently delete a teacher/evaluator.  Must already be soft-deleted."""
-        teacher = permanent_delete_teacher(teacher_id)
+        try:
+            teacher = permanent_delete_teacher(teacher_id)
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
         if teacher is None:
             return {"success": False, "message": "Teacher not found."}, 404
         log_audit(
@@ -232,7 +241,10 @@ class TeacherProjects(Resource):
     def get(self, teacher_id):
         """Get all projects supervised by this teacher with members and milestone progress."""
         from bson import ObjectId
-        from app.models.group import COLLECTION as GROUPS_COLLECTION, Field as GroupField, Status as GroupStatus
+
+        from app.models.group import COLLECTION as GROUPS_COLLECTION
+        from app.models.group import Field as GroupField
+        from app.models.group import Status as GroupStatus
         from app.models.user import UserFields
         from app.services.manager_group_service import _resolve_group_members
         try:

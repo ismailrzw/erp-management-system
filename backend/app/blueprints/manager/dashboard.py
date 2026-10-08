@@ -97,7 +97,7 @@ class Dashboard(Resource):
             try:
                 raw_milestones = list(mongo.db.iterations.find({}).sort("deadline", 1).limit(5))
                 upcoming_milestones = [_serialize_doc(m) for m in raw_milestones]
-            except Exception:
+            except Exception:  # noqa: BLE001 - optional dashboard preview must not break other dashboard data
                 upcoming_milestones = []
 
             return {
