@@ -42,6 +42,7 @@ from app.models.group import (
     Status,
 )
 from app.models.user import Role, UserFields
+from app.services.academic_write_service import academic_write
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Internal helpers
@@ -58,6 +59,50 @@ def _oid(value: str) -> ObjectId:
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def proposal_metadata(group: dict) -> dict:
+    """Use one proposal contract on student, reviewer and Manager pages."""
+    from app.services.attachment_service import get_attachment_by_id
+
+    attachment = None
+    reference = group.get("proposal_attachment_id")
+    if reference and ObjectId.is_valid(str(reference)):
+        attachment = get_attachment_by_id(str(reference))
+    return {
+        "title": group.get("project_title", ""),
+        "scope": group.get("scope", ""),
+        "problem_statement": group.get("scope", ""),
+        "version": group.get("proposal_version", 1),
+        "status": group.get("review_stage", group.get("status", "pending")),
+        "attachment": attachment,
+        "attachment_missing": bool(reference and not attachment),
+        "download_url": f"/api/manager/attachments/{reference}/download" if attachment else None,
+        "feedback": group.get("rejection_reason"),
+    }
+
+
+def _validate_new_member(group, student):
+    from app.services.academic_integrity_service import validate_enrollment
+
+    if group.get("status") in ("approved", "evaluated") or mongo.db.submissions.find_one({"group_id": group["_id"]}):
+        raise ValueError("Membership is locked after approval or academic submission.")
+    validate_enrollment(group.get("dept", ""), group.get("course", ""))
+    if (student.get("course", "").strip().casefold() != group.get("course", "").strip().casefold() or
+            student.get("dept", "").strip().upper() != group.get("dept", "").strip().upper()):
+        raise ValueError("Students must have the same Course and Department to join this group.")
+    if mongo.db.groups.find_one({"member_ids": {"$in": [student["_id"], str(student["_id"])]}, "status": {"$ne": "deleted"}}):
+        raise ValueError("This student already belongs to a group.")
+
+
+def _invalidate_membership_review(group_id):
+    """The review dossier includes membership, so changed membership needs new review."""
+    mongo.db.groups.update_one({"_id": group_id}, {"$set": {
+        "review_stage": "forming", "supervisor_accepted_version": None,
+    }, "$inc": {"proposal_version": 1}})
+    mongo.db.supervisor_requests.update_many({"group_id": group_id, "status": "pending"}, {
+        "$set": {"status": "cancelled", "responded_at": _now(), "reason": "Group membership changed"},
+    })
 
 
 def _serialize_group(doc: dict) -> dict:
@@ -87,7 +132,8 @@ def _serialize_group(doc: dict) -> dict:
                 str(v) if isinstance(v, ObjectId) else v.isoformat() if isinstance(v, datetime) else v
                 for v in value
             ]
-    return result
+    from app.utils.serialization import json_safe
+    return json_safe(result)
 
 
 def _serialize_invitation(doc: dict) -> dict:
@@ -118,6 +164,11 @@ def _serialize_join_request(doc: dict) -> dict:
         if isinstance(value, datetime):
             result[key] = value.isoformat()
     return result
+
+
+def _validate_proposal_file(file):
+    if not (file.filename or "").lower().endswith((".pdf", ".docx")):
+        raise ValueError("Project proposals must be PDF or DOCX documents.")
 
 
 def _get_active_student(student_id: str) -> dict:
@@ -199,33 +250,20 @@ def _ensure_indexes() -> None:
 
 # ══════════════════════════════════════════════════════════════════════════════
 def generate_group_name(year: int | None = None) -> str:
-    """
-    Auto-generate a sequential group name scoped to the calendar year.
-    Format is configurable via Config.GROUP_NAME_FORMAT (default 'GRP-{YEAR}-{SEQ:03d}').
-    """
+    """Issue a permanent sequential display identifier; never reuse issued numbers."""
     import re
 
-    from app.config import Config
+    from pymongo import ReturnDocument
 
-    if year is None:
-        year = datetime.now(timezone.utc).year
-
-    pattern = re.compile(rf"^GRP-{year}-(\d+)", re.IGNORECASE)
-    groups = mongo.db[COLLECTION].find({Field.NAME: pattern}, {Field.NAME: 1})
-    max_seq = 0
-    for g in groups:
-        name = g.get(Field.NAME, "")
-        match = pattern.match(name)
-        if match:
-            try:
-                seq = int(match.group(1))
-                max_seq = max(max_seq, seq)
-            except ValueError:
-                pass
-
-    next_seq = max_seq + 1
-    fmt = getattr(Config, "GROUP_NAME_FORMAT", "GRP-{YEAR}-{SEQ:03d}")
-    return fmt.format(YEAR=year, SEQ=next_seq)
+    year = year or _now().year
+    pattern = re.compile(rf"^grp-{year}-(\d+)$", re.IGNORECASE)
+    highest = max((int(pattern.match(g["name"]).group(1)) for g in
+                   mongo.db.groups.find({"name": pattern}, {"name": 1})), default=0)
+    key = f"group-{year}"
+    mongo.db.counters.update_one({"_id": key}, {"$max": {"seq": highest}}, upsert=True)
+    counter = mongo.db.counters.find_one_and_update({"_id": key}, {"$inc": {"seq": 1}},
+                                                  return_document=ReturnDocument.AFTER)
+    return f"grp-{year}-{counter['seq']:03d}"
 
 
 def compute_formation_status(course_name: str, dept: str, created_at: datetime) -> str | None:
@@ -281,14 +319,22 @@ def compute_formation_status(course_name: str, dept: str, created_at: datetime) 
 # ══════════════════════════════════════════════════════════════════════════════
 
 
-def create_group(student_id: str, project_title: str, name: str | None = None, proposal_file=None) -> dict:
+@academic_write
+def create_group(student_id: str, project_title: str, name: str | None = None, proposal_file=None,
+                 dept: str | None = None, course: str | None = None) -> dict:
     """
     Create a new pending group with auto-generated group name, proposal attachment,
     and formation_status tracking.
     """
     from app.models.group import SubmissionStatus
+    from app.services.academic_integrity_service import validate_enrollment
     from app.services.attachment_service import upload_attachment
 
+    if name is not None:
+        raise ValueError("Group identifiers are automatically assigned and cannot be supplied.")
+    if proposal_file is None:
+        raise ValueError("A Project Proposal document is required.")
+    _validate_proposal_file(proposal_file)
     _ensure_indexes()
     student = _get_active_student(student_id)
 
@@ -307,14 +353,22 @@ def create_group(student_id: str, project_title: str, name: str | None = None, p
     if not clean_title or len(clean_title) < 3:
         raise ValueError("Project title must be at least 3 characters long.")
 
-    course_name = student.get(UserFields.COURSE, "")
-    dept        = student.get(UserFields.DEPT, "")
-    section     = student.get(UserFields.SECTION, "")
+    assigned_dept = student.get(UserFields.DEPT, "")
+    assigned_course = student.get(UserFields.COURSE, "")
+    if assigned_dept and dept and dept.strip().upper() != assigned_dept.upper():
+        raise ValueError("Your Department assignment changed. Refresh enrollment before creating a group.")
+    if assigned_course and course and course.strip() != assigned_course:
+        raise ValueError("Your Course assignment changed. Refresh enrollment before creating a group.")
+    dept = assigned_dept or (dept or "").strip().upper()
+    course_name = assigned_course or (course or "").strip()
+    validate_enrollment(dept, course_name)
+    if not course_name:
+        raise ValueError("Select an active Course before creating a group.")
     constraints = _get_course_constraints(course_name, dept)
     now = _now()
 
     # Generate sequential group name if not provided
-    auto_name = (name or "").strip() if (name and name.strip()) else generate_group_name(now.year)
+    auto_name = generate_group_name(now.year)
     formation_status = compute_formation_status(course_name, dept, now)
 
     # Handle proposal file upload if present
@@ -334,8 +388,9 @@ def create_group(student_id: str, project_title: str, name: str | None = None, p
         Field.NAME:                   auto_name,
         Field.PROJECT_TITLE:          clean_title,
         Field.COURSE:                 course_name,
+        "course_id":                  mongo.db.courses.find_one({"name": course_name, "deleted": {"$ne": True}})["_id"],
+        "dept_id":                    mongo.db.departments.find_one({"code": dept, "deleted": {"$ne": True}})["_id"],
         Field.DEPT:                   dept,
-        Field.SECTION:                section,
         Field.LEADER_ID:              _oid(student_id),
         Field.MEMBER_IDS:             [_oid(student_id)],
         Field.STATUS:                 Status.PENDING,
@@ -345,13 +400,29 @@ def create_group(student_id: str, project_title: str, name: str | None = None, p
         Field.SUPERVISOR_NAME:        None,
         Field.PROPOSAL_ATTACHMENT_ID: proposal_attachment_id,
         Field.EVALUATED:              False,
+        "creator_id":                 _oid(student_id),
+        "joined_at":                  {student_id: now},
+        "proposal_version":           1,
+        "review_stage":               "forming",
         Field.VERSION:                1,
         Field.CREATED_AT:             now,
         Field.UPDATED_AT:             now,
     }
 
-    result = mongo.db[COLLECTION].insert_one(group_doc)
-    group_id = result.inserted_id
+    try:
+        result = mongo.db[COLLECTION].insert_one(group_doc)
+        group_id = result.inserted_id
+        mongo.db.users.update_one({"_id": _oid(student_id)}, {"$set": {
+            "dept": dept, "course": course_name, "dept_id": group_doc["dept_id"],
+            "course_id": group_doc["course_id"], "group_id": group_id,
+        }})
+    except PyMongoError:
+        if group_doc.get("_id"):
+            mongo.db.groups.delete_one({"_id": group_doc["_id"]})
+        if proposal_attachment_id:
+            from app.services.attachment_service import delete_attachment
+            delete_attachment(str(proposal_attachment_id))
+        raise
 
     # Write group_id back to the leader's user doc
     mongo.db[UserFields.COLLECTION].update_one(
@@ -388,6 +459,7 @@ def get_my_group(student_id: str) -> dict | None:
         try:
             group = mongo.db[COLLECTION].find_one({
                 Field.ID: _oid(str(group_oid_on_user)),
+                Field.MEMBER_IDS: {"$in": [_oid(student_id), str(student_id)]},
                 Field.STATUS: {"$ne": Status.DELETED},
             })
         except (PyMongoError, ValueError):
@@ -409,12 +481,15 @@ def get_my_group(student_id: str) -> dict | None:
     serialized = _serialize_group(group)
 
     # Enrich with member details
-    member_oids = group.get(Field.MEMBER_IDS, [])
+    member_order = [str(m) for m in group.get(Field.MEMBER_IDS, [])]
+    member_oids = [_oid(m) for m in member_order if ObjectId.is_valid(m)]
     leader_oid  = group.get(Field.LEADER_ID)
     member_docs = list(mongo.db[UserFields.COLLECTION].find(
         {UserFields.ID: {"$in": member_oids}},
         {UserFields.NAME: 1, UserFields.ROLL: 1, UserFields.EMAIL: 1, UserFields.SECTION: 1},
     ))
+    by_id = {str(m["_id"]): m for m in member_docs}
+    member_docs = [by_id[mid] for mid in member_order if mid in by_id]
     serialized["members"] = [
         {
             "id":        str(m[UserFields.ID]),
@@ -434,63 +509,56 @@ def get_my_group(student_id: str) -> dict | None:
     serialized["min_group"]    = constraints["min_group"]
     serialized["max_group"]    = constraints["max_group"]
     serialized["is_leader"]    = str(leader_oid) == str(student_id)
+    serialized["membership_locked"] = bool(group.get("status") in ("approved", "evaluated") or mongo.db.submissions.find_one({"group_id": {"$in": [group["_id"], str(group["_id"])]}}) or mongo.db.evaluations.find_one({"group_id": {"$in": [group["_id"], str(group["_id"])]}}))
+    serialized["proposal"] = proposal_metadata(group)
+    serialized["review_stage"] = group.get("review_stage") or ("approved" if group.get("status") == "approved" else "forming")
     return serialized
 
 
-def update_group(group_id: str, leader_id: str, data: dict) -> dict:
-    """
-    Update name and/or project_title.  Only the group leader may call this.
+@academic_write
+def update_group(group_id: str, leader_id: str, data: dict, proposal_file=None) -> dict:
+    """Revise the leader's pending proposal and invalidate review of an older version."""
+    from app.services.academic_integrity_service import AcademicConflict
+    from app.services.attachment_service import delete_attachment, upload_attachment
 
-    Rules
-    -----
-    - Only ``pending`` or ``rejected`` groups may be modified (approved groups are frozen).
-    - If a ``rejected`` group is updated, status is automatically reset to ``pending`` so
-      the manager can re-evaluate the updated proposal.
-    - ``version`` is incremented on every successful update (optimistic lock audit trail).
-
-    Raises
-    ------
-    ValueError
-        - Caller is not the group leader (403-level).
-        - Group is not in ``pending`` or ``rejected`` status.
-        - Group not found.
-        - No fields to update.
-    """
-    update_payload = {k: v for k, v in data.items() if v is not None}
-    if not update_payload:
-        raise ValueError("No fields provided to update.")
-
-    now = _now()
-    update_payload[Field.UPDATED_AT] = now
-    # If previously rejected, reset to pending for manager re-approval
-    update_payload[Field.STATUS] = Status.PENDING
-    update_payload[Field.REJECTION_REASON] = None
-
-    result = mongo.db[COLLECTION].find_one_and_update(
-        {
-            Field.ID:        _oid(group_id),
-            Field.LEADER_ID: _oid(leader_id),
-            Field.STATUS:    {"$in": [Status.PENDING, Status.REJECTED]},
-        },
-        {
-            "$set": update_payload,
-            "$inc": {Field.VERSION: 1},
-        },
-        return_document=True,
-    )
-
-    if result is None:
-        # Distinguish between "not leader" and "group not found / approved"
-        group = mongo.db[COLLECTION].find_one({Field.ID: _oid(group_id)})
-        if group is None:
-            raise ValueError("Group not found.")
-        if str(group.get(Field.LEADER_ID)) != leader_id:
-            raise ValueError("Only the group leader can update group details.")
-        raise ValueError(f"Group cannot be modified in '{group.get(Field.STATUS)}' status.")
-
+    allowed = {"project_title", "scope", "expected_version"}
+    if set(data) - allowed:
+        raise ValueError("Only Project Title and proposal scope may be edited; group identity is immutable.")
+    group = mongo.db.groups.find_one({"_id": _oid(group_id), "status": {"$ne": "deleted"}})
+    if not group:
+        raise ValueError("Group not found.")
+    if str(group.get("leader_id")) != str(leader_id):
+        raise ValueError("Only the group leader can edit the proposal.")
+    if group.get("status") not in ("pending", "rejected"):
+        raise ValueError("An approved proposal is locked.")
+    if data.get("expected_version") is not None and int(data["expected_version"]) != group.get("version", 1):
+        raise AcademicConflict("The proposal changed. Refresh before saving your revision.")
+    update = {key: value.strip() for key, value in data.items()
+              if key in ("project_title", "scope") and value is not None}
+    if "project_title" in update and not 3 <= len(update["project_title"]) <= 150:
+        raise ValueError("Project Title must contain 3–150 characters.")
+    if not update and proposal_file is None:
+        raise ValueError("No proposal changes supplied.")
+    new_attachment = None
+    if proposal_file is not None:
+        _validate_proposal_file(proposal_file)
+        new_attachment = upload_attachment(proposal_file, f"Project Proposal — {group['name']}", leader_id)
+        update["proposal_attachment_id"] = _oid(new_attachment["id"])
+    update.update({"status": "pending", "review_stage": "forming", "rejection_reason": None,
+                   "supervisor_accepted_version": None, "updated_at": _now()})
+    try:
+        result = mongo.db.groups.find_one_and_update({"_id": group["_id"]},
+            {"$set": update, "$inc": {"version": 1, "proposal_version": 1}}, return_document=True)
+        mongo.db.supervisor_requests.update_many({"group_id": group["_id"], "status": "pending"},
+            {"$set": {"status": "cancelled", "responded_at": _now(), "reason": "Proposal revised"}})
+    except PyMongoError:
+        if new_attachment:
+            delete_attachment(new_attachment["id"])
+        raise
     return _serialize_group(result)
 
 
+@academic_write
 def leave_group(student_id: str, group_id: str) -> dict:
     """
     Remove a student from the group.
@@ -506,6 +574,11 @@ def leave_group(student_id: str, group_id: str) -> dict:
     if group is None:
         raise ValueError("Group not found, or you are not a member of this group.")
 
+    guarded_group = mongo.db.groups.find_one({"_id": _oid(group_id)})
+    if guarded_group and (guarded_group.get("status") in ("approved", "evaluated") or
+                          mongo.db.submissions.find_one({"group_id": guarded_group["_id"]}) or
+                          mongo.db.evaluations.find_one({"group_id": guarded_group["_id"]})):
+        raise ValueError("Membership is locked after approval or academic submission.")
     now = _now()
     is_leader = group[Field.LEADER_ID] == _oid(student_id)
     member_count = len(group.get(Field.MEMBER_IDS, []))
@@ -528,6 +601,7 @@ def leave_group(student_id: str, group_id: str) -> dict:
             {InvitationField.GROUP_ID: _oid(group_id), InvitationField.STATUS: InvitationStatus.PENDING},
             {"$set": {InvitationField.STATUS: InvitationStatus.DECLINED, InvitationField.RESPONDED_AT: now}},
         )
+        _invalidate_membership_review(_oid(group_id))
         return {"left": True, "disbanded": True, "student_id": student_id, "group_id": group_id}
 
     # Non-leader member leaving
@@ -549,9 +623,11 @@ def leave_group(student_id: str, group_id: str) -> dict:
         {"$set": {InvitationField.STATUS: InvitationStatus.DECLINED,
                   InvitationField.RESPONDED_AT: now}},
     )
+    _invalidate_membership_review(_oid(group_id))
     return {"left": True, "student_id": student_id, "group_id": group_id}
 
 
+@academic_write
 def transfer_leadership(group_id: str, leader_id: str, new_leader_id: str) -> dict:
     """
     Transfer group leadership to another active group member.
@@ -562,11 +638,11 @@ def transfer_leadership(group_id: str, leader_id: str, new_leader_id: str) -> di
 
     group = mongo.db[COLLECTION].find_one({
         Field.ID:        _oid(group_id),
-        Field.STATUS:    Status.PENDING,
+        Field.STATUS:    {"$in": [Status.PENDING, Status.APPROVED]},
         Field.LEADER_ID: _oid(leader_id),
     })
     if group is None:
-        raise ValueError("Group not found, not in pending status, or you are not the leader.")
+        raise ValueError("Group not found, not in an active status, or you are not the leader.")
 
     new_leader_oid = _oid(new_leader_id)
     if new_leader_oid not in group.get(Field.MEMBER_IDS, []):
@@ -579,6 +655,11 @@ def transfer_leadership(group_id: str, leader_id: str, new_leader_id: str) -> di
     if new_leader_doc is None:
         raise ValueError("The designated student account does not exist or is inactive.")
 
+    guarded_group = mongo.db.groups.find_one({"_id": _oid(group_id)})
+    if guarded_group and (guarded_group.get("status") in ("approved", "evaluated") or
+                          mongo.db.submissions.find_one({"group_id": guarded_group["_id"]}) or
+                          mongo.db.evaluations.find_one({"group_id": guarded_group["_id"]})):
+        raise ValueError("Membership is locked after approval or academic submission.")
     now = _now()
     mongo.db[COLLECTION].update_one(
         {Field.ID: _oid(group_id)},
@@ -588,6 +669,7 @@ def transfer_leadership(group_id: str, leader_id: str, new_leader_id: str) -> di
         },
     )
 
+    _invalidate_membership_review(_oid(group_id))
     return {
         "transferred":     True,
         "group_id":        group_id,
@@ -597,6 +679,7 @@ def transfer_leadership(group_id: str, leader_id: str, new_leader_id: str) -> di
     }
 
 
+@academic_write
 def remove_member(group_id: str, leader_id: str, member_id: str) -> dict:
     """
     Remove a specific member from the group.  Only the leader may call this.
@@ -612,6 +695,11 @@ def remove_member(group_id: str, leader_id: str, member_id: str) -> dict:
     if leader_id == member_id:
         raise ValueError("Leaders cannot remove themselves. Use the leave-group endpoint.")
 
+    guarded_group = mongo.db.groups.find_one({"_id": _oid(group_id)})
+    if guarded_group and (guarded_group.get("status") in ("approved", "evaluated") or
+                          mongo.db.submissions.find_one({"group_id": guarded_group["_id"]}) or
+                          mongo.db.evaluations.find_one({"group_id": guarded_group["_id"]})):
+        raise ValueError("Membership is locked after approval or academic submission.")
     now = _now()
     result = mongo.db[COLLECTION].find_one_and_update(
         {
@@ -642,6 +730,7 @@ def remove_member(group_id: str, leader_id: str, member_id: str) -> dict:
         {UserFields.ID: _oid(member_id)},
         {"$unset": {Field.GROUP_ID: ""}, "$set": {UserFields.UPDATED_AT: now}},
     )
+    _invalidate_membership_review(_oid(group_id))
     return {"removed": True, "member_id": member_id, "group_id": group_id}
 
 
@@ -650,6 +739,7 @@ def remove_member(group_id: str, leader_id: str, member_id: str) -> dict:
 # ══════════════════════════════════════════════════════════════════════════════
 
 
+@academic_write
 def invite_member(group_id: str, leader_id: str, roll: str) -> dict:
     """
     Send a group invitation to a student identified by roll number.
@@ -706,6 +796,7 @@ def invite_member(group_id: str, leader_id: str, roll: str) -> dict:
     if target is None:
         raise ValueError(f"No active student found with roll number '{roll}'.")
 
+    _validate_new_member(group, target)
     target_id = target[UserFields.ID]
 
     # Rule 7 — leader cannot invite themselves
@@ -824,6 +915,7 @@ def get_pending_invitations(student_id: str) -> list[dict]:
     return enriched
 
 
+@academic_write
 def respond_to_invitation(invitation_id: str, student_id: str, accept: bool) -> dict:
     """
     Accept or decline a pending group invitation.
@@ -874,6 +966,8 @@ def respond_to_invitation(invitation_id: str, student_id: str, accept: bool) -> 
     group = mongo.db[COLLECTION].find_one({Field.ID: group_oid, Field.STATUS: Status.PENDING})
     if group is None:
         raise ValueError("The group for this invitation is no longer active or pending.")
+
+    _validate_new_member(group, student)
 
     constraints = _get_course_constraints(
         group.get(Field.COURSE, ""), group.get(Field.DEPT, "")
@@ -933,6 +1027,7 @@ def respond_to_invitation(invitation_id: str, student_id: str, accept: bool) -> 
                   InvitationField.RESPONDED_AT: now}},
     )
 
+    _invalidate_membership_review(group_oid)
     return {
         "accepted":      True,
         "invitation_id": invitation_id,
@@ -970,8 +1065,8 @@ def search_students(query_fragment: str, course: str, dept: str = "", current_st
             {UserFields.NAME: pattern},
         ],
     }
-    if course:
-        query[UserFields.COURSE] = {"$regex": f"^{re.escape(course.strip())}$", "$options": "i"}
+    if dept:
+        query[UserFields.DEPT] = {"$regex": f"^{re.escape(dept.strip())}$", "$options": "i"}
     if current_student_id:
         query[UserFields.ID] = {"$ne": _oid(current_student_id)}
 
@@ -1043,14 +1138,17 @@ def list_groups_for_student(student_id: str, search: str = "", status_filter: st
         for pr in pending_reqs
     }
 
+    _visible = [Status.PENDING, Status.APPROVED, Status.REJECTED, Status.EVALUATED]
     query = {
-        Field.STATUS: {"$ne": Status.DELETED},
+        Field.STATUS: {"$in": _visible},
     }
     if course_name:
         query[Field.COURSE] = {"$regex": f"^{re.escape(course_name)}$", "$options": "i"}
 
-    if status_filter and status_filter.lower() != "all":
-        query[Field.STATUS] = status_filter.lower()
+    if status_filter and status_filter.lower() not in ("", "all"):
+        sf = status_filter.lower()
+        if sf in _visible:
+            query[Field.STATUS] = sf
 
     if search.strip():
         term_pattern = re.compile(re.escape(search.strip()), re.IGNORECASE)
@@ -1131,6 +1229,7 @@ def list_groups_for_student(student_id: str, search: str = "", status_filter: st
 # ══════════════════════════════════════════════════════════════════════════════
 
 
+@academic_write
 def send_join_request(student_id: str, group_id: str, message: str = "") -> dict:
     """
     Submit a request by an unaffiliated student to join an existing group.
@@ -1325,6 +1424,7 @@ def list_incoming_join_requests(leader_id: str, group_id: str | None = None) -> 
     return results
 
 
+@academic_write
 def accept_join_request(leader_id: str, request_id: str) -> dict:
     """
     Leader accepts an incoming join request.
@@ -1391,6 +1491,8 @@ def accept_join_request(leader_id: str, request_id: str) -> dict:
             {"$set": {JoinRequestField.STATUS: JoinRequestStatus.CANCELLED, JoinRequestField.RESPONDED_AT: _now()}}
         )
         raise ValueError(f"Applicant {target_student.get(UserFields.NAME, 'Student')} has already joined another group.")
+
+    _validate_new_member(group, target_student)
 
     now = _now()
     current_version = group.get(Field.VERSION, 1)

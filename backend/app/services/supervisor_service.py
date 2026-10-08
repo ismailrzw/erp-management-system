@@ -27,6 +27,7 @@ from app.models.supervisor_request import (
     SupervisorRequestStatus,
 )
 from app.models.user import MAX_SUPERVISION_CAP, Role, UserFields
+from app.services.academic_write_service import academic_write
 
 
 def _oid(value: str) -> ObjectId:
@@ -50,13 +51,14 @@ def _serialize_request(doc: dict | None) -> dict | None:
     for k, v in list(res.items()):
         if isinstance(v, datetime):
             res[k] = v.isoformat()
-    return res
+    from app.utils.serialization import json_safe
+    return json_safe(res)
 
 
 def get_evaluator_active_count(evaluator_id: str, course_name: str | None = None) -> int:
     """Compute the number of active groups currently supervised by this evaluator (overall or per course)."""
     filter_q = {
-        "supervisor_id": _oid(evaluator_id),
+        "supervisor_id": {"$in": [_oid(evaluator_id), evaluator_id]},
         GroupField.STATUS: {"$ne": GroupStatus.DELETED},
     }
     if course_name and course_name.strip() and course_name.strip().lower() != "all":
@@ -71,8 +73,7 @@ def list_available_supervisors(
     available_only: bool = False,
 ) -> list[dict]:
     """
-    List all teachers/supervisors with their expertise domains, project count in course,
-    and availability status (active count in course < 4).
+    List teachers with expertise, total project count and availability (fewer than four groups).
     """
     query = {
         UserFields.ROLE: Role.TEACHER,
@@ -91,7 +92,7 @@ def list_available_supervisors(
     results = []
     for ev in teachers:
         ev_id = str(ev["_id"])
-        active_count = get_evaluator_active_count(ev_id, course_name=course)
+        active_count = get_evaluator_active_count(ev_id)
         is_available = active_count < MAX_SUPERVISION_CAP
 
         if available_only and not is_available:
@@ -127,6 +128,7 @@ def update_evaluator_domains(evaluator_id: str, domains: list[str]) -> dict:
     return {"updated": True, "evaluator_id": evaluator_id, "domains": clean_domains}
 
 
+@academic_write
 def create_supervisor_request(
     group_id: str,
     student_id: str,
@@ -151,8 +153,20 @@ def create_supervisor_request(
     if group.get(GroupField.LEADER_ID) != s_oid:
         raise ValueError("Only the Group Team Lead can submit a supervisor request.")
 
-    if group.get("supervisor_id"):
-        raise ValueError("Your group already has an assigned supervisor.")
+    if group.get("supervisor_id") and str(group["supervisor_id"]) != evaluator_id:
+        raise ValueError("Your assigned Supervisor must review a revised proposal.")
+    if group.get("status") in ("approved", "evaluated"):
+        raise ValueError("This project is already approved.")
+    from app.services.academic_integrity_service import validate_enrollment
+    from app.services.group_service import _get_course_constraints, proposal_metadata
+    from app.services.manager_group_service import _resolve_group_members
+    validate_enrollment(group.get("dept", ""), group.get("course", ""))
+    proposal = proposal_metadata(group)
+    if not proposal.get("attachment"):
+        raise ValueError("Attach a valid proposal before requesting supervision.")
+    constraints = _get_course_constraints(group.get("course", ""), group.get("dept", ""))
+    if not constraints["min_group"] <= len(group.get("member_ids", [])) <= constraints["max_group"]:
+        raise ValueError("Accepted group membership must meet the Course's group-size rules before review.")
 
     # 2. Check for existing pending request
     pending = mongo.db[SUP_REQ_COLLECTION].find_one({
@@ -170,10 +184,12 @@ def create_supervisor_request(
     })
     if not evaluator:
         raise ValueError("Selected supervisor not found.")
+    if evaluator.get("dept", "").upper() != group.get("dept", "").upper():
+        raise ValueError("The Supervisor must belong to the group's Department.")
 
     group_course = group.get(GroupField.COURSE)
-    active_count = get_evaluator_active_count(evaluator_id, course_name=group_course)
-    if active_count >= MAX_SUPERVISION_CAP:
+    active_count = get_evaluator_active_count(evaluator_id)
+    if active_count >= MAX_SUPERVISION_CAP and str(group.get("supervisor_id", "")) != evaluator_id:
         course_msg = f" for course '{group_course}'" if group_course else ""
         raise ValueError(f"This supervisor has reached their maximum capacity of {MAX_SUPERVISION_CAP} projects{course_msg}.")
 
@@ -187,10 +203,15 @@ def create_supervisor_request(
         SupervisorRequestFields.REJECTION_REASON: None,
         SupervisorRequestFields.CREATED_AT: now,
         SupervisorRequestFields.RESPONDED_AT: None,
+        "proposal_version": group.get("proposal_version", 1),
+        "proposal": proposal,
+        "members": _resolve_group_members(group),
+        "project_title": group.get("project_title"),
     }
 
     res = mongo.db[SUP_REQ_COLLECTION].insert_one(doc)
     doc[SupervisorRequestFields.ID] = res.inserted_id
+    mongo.db.groups.update_one({"_id": g_oid}, {"$set": {"review_stage": "supervisor_review"}})
 
     serialized = _serialize_request(doc)
     serialized["evaluator_name"] = evaluator.get(UserFields.NAME, "")
@@ -200,9 +221,11 @@ def create_supervisor_request(
 
 
 def get_my_group_supervisor_request(group_id: str) -> dict | None:
-    """Fetch the latest supervisor request for a group."""
+    """Fetch the latest pending supervisor request for a group."""
     doc = mongo.db[SUP_REQ_COLLECTION].find_one(
-        {SupervisorRequestFields.GROUP_ID: _oid(group_id)},
+        {
+            SupervisorRequestFields.GROUP_ID: _oid(group_id),
+        },
         sort=[(SupervisorRequestFields.CREATED_AT, -1)],
     )
     if not doc:
@@ -218,6 +241,7 @@ def get_my_group_supervisor_request(group_id: str) -> dict | None:
     return serialized
 
 
+@academic_write
 def cancel_supervisor_request(request_id: str, student_id: str) -> dict:
     """Cancel a pending supervisor request (Team Lead only)."""
     r_oid = _oid(request_id)
@@ -244,6 +268,7 @@ def cancel_supervisor_request(request_id: str, student_id: str) -> dict:
         }},
     )
 
+    mongo.db.groups.update_one({"_id": group["_id"]}, {"$set": {"review_stage": "forming"}})
     return {"cancelled": True, "request_id": request_id}
 
 
@@ -266,6 +291,10 @@ def list_evaluator_supervisor_requests(evaluator_id: str) -> list[dict]:
             s["section"] = group.get(GroupField.SECTION, "")
             s["course"] = group.get(GroupField.COURSE, "")
             s["member_count"] = len(group.get(GroupField.MEMBER_IDS, []))
+            from app.services.group_service import proposal_metadata
+            from app.services.manager_group_service import _resolve_group_members
+            s["proposal"] = s.get("proposal") or proposal_metadata(group)
+            s["members"] = s.get("members") or _resolve_group_members(group)
 
         lead = mongo.db.users.find_one({"_id": d[SupervisorRequestFields.REQUESTED_BY]}, {UserFields.NAME: 1, UserFields.ROLL: 1, UserFields.EMAIL: 1})
         if lead:
@@ -278,6 +307,7 @@ def list_evaluator_supervisor_requests(evaluator_id: str) -> list[dict]:
     return items
 
 
+@academic_write
 def accept_supervisor_request(evaluator_id: str, request_id: str) -> dict:
     """
     Accept a supervisor request.
@@ -296,17 +326,33 @@ def accept_supervisor_request(evaluator_id: str, request_id: str) -> dict:
     if req.get(SupervisorRequestFields.STATUS) != SupervisorRequestStatus.PENDING:
         raise ValueError(f"Request is already resolved ({req.get(SupervisorRequestFields.STATUS)}).")
 
-    # Enforce Capacity Limit per Course
+    # Enforce the total active supervision capacity
     group_oid = req[SupervisorRequestFields.GROUP_ID]
     group_doc = mongo.db[GROUPS_COLLECTION].find_one({"_id": group_oid})
     group_course = group_doc.get(GroupField.COURSE) if group_doc else None
+    if not group_doc or group_doc.get("status") in ("deleted", "approved", "evaluated"):
+        raise ValueError("This group is unavailable for proposal review.")
+    if req.get("proposal_version", 1) != group_doc.get("proposal_version", 1):
+        raise ValueError("The proposal was revised. Review the current request instead.")
 
-    active_count = get_evaluator_active_count(evaluator_id, course_name=group_course)
-    if active_count >= MAX_SUPERVISION_CAP:
+    active_count = get_evaluator_active_count(evaluator_id)
+    if active_count >= MAX_SUPERVISION_CAP and str(group_doc.get("supervisor_id", "")) != evaluator_id:
         course_msg = f" for course '{group_course}'" if group_course else ""
         raise ValueError(f"You have reached your maximum supervision limit ({MAX_SUPERVISION_CAP} groups{course_msg}). Cannot accept more.")
 
-    evaluator = mongo.db.users.find_one({"_id": e_oid})
+    evaluator = mongo.db.users.find_one({"_id": e_oid, "role": Role.TEACHER, "deleted": {"$ne": True}})
+    if not evaluator or evaluator.get("dept", "").upper() != group_doc.get("dept", "").upper():
+        raise ValueError("The active Supervisor must belong to the group's Department.")
+    from app.services.academic_integrity_service import validate_enrollment
+    from app.services.group_service import _get_course_constraints, proposal_metadata
+    validate_enrollment(group_doc.get("dept", ""), group_doc.get("course", ""))
+    constraints = _get_course_constraints(group_doc.get("course", ""), group_doc.get("dept", ""))
+    if not constraints["min_group"] <= len(group_doc.get("member_ids", [])) <= constraints["max_group"] or not proposal_metadata(group_doc).get("attachment"):
+        raise ValueError("Current accepted membership and attached proposal must meet the Course review requirements.")
+    for member_id in group_doc.get("member_ids", []):
+        member = mongo.db.users.find_one({"_id": _oid(str(member_id)), "deleted": {"$ne": True}, "role": Role.STUDENT})
+        if not member or member.get("course") != group_doc.get("course") or member.get("dept") != group_doc.get("dept"):
+            raise ValueError("A group member's academic assignment needs Manager correction before review.")
     evaluator_name = evaluator.get(UserFields.NAME, "Supervisor") if evaluator else "Supervisor"
 
     now = datetime.now(timezone.utc)
@@ -317,6 +363,8 @@ def accept_supervisor_request(evaluator_id: str, request_id: str) -> dict:
         {"$set": {
             "supervisor_id": e_oid,
             "supervisor_name": evaluator_name,
+            "supervisor_accepted_version": group_doc.get("proposal_version", 1),
+            "review_stage": "manager_review",
             GroupField.UPDATED_AT: now,
         }},
     )
@@ -356,7 +404,7 @@ def accept_supervisor_request(evaluator_id: str, request_id: str) -> dict:
     )
 
     # Update denormalised count on user
-    new_count = active_count + 1
+    new_count = get_evaluator_active_count(evaluator_id)
     mongo.db.users.update_one({"_id": e_oid}, {"$set": {UserFields.ACTIVE_SUPERVISION_COUNT: new_count}})
 
     return {
@@ -368,6 +416,7 @@ def accept_supervisor_request(evaluator_id: str, request_id: str) -> dict:
     }
 
 
+@academic_write
 def reject_supervisor_request(evaluator_id: str, request_id: str, reason: str | None = None) -> dict:
     """Reject a supervisor request with optional reason."""
     e_oid = _oid(evaluator_id)
@@ -392,6 +441,10 @@ def reject_supervisor_request(evaluator_id: str, request_id: str, reason: str | 
             SupervisorRequestFields.RESPONDED_AT: now,
         }},
     )
+
+    mongo.db.groups.update_one({"_id": req[SupervisorRequestFields.GROUP_ID]}, {"$set": {
+        "review_stage": "revision_required", "rejection_reason": (reason or "Revision requested").strip(),
+    }})
 
     return {
         "success": True,
