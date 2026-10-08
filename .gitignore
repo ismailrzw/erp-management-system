@@ -32,3 +32,4 @@ uploads/
 
 # Node (for later)
 node_modules/
+.qa/
