@@ -10,7 +10,6 @@ evaluator_bp = Blueprint("evaluator", __name__)
 
 from app.blueprints.evaluator import (
     evaluations,  # noqa: F401
-    exhibition,  # noqa: F401
     meetings,  # noqa: F401
     routes,  # noqa: F401
 )

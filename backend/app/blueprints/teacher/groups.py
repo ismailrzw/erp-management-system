@@ -4,6 +4,7 @@ Teacher Groups Management API — Supervised Groups & Sprint Oversight.
 """
 
 from datetime import datetime
+
 from bson import ObjectId
 from flask import request
 from flask_jwt_extended import get_jwt_identity
@@ -31,11 +32,12 @@ def _serialize_group(doc: dict) -> dict:
             res[k] = v.isoformat()
 
     if res.get(GroupField.PROPOSAL_ATTACHMENT_ID):
-        res["proposal_download_url"] = f"/api/attachments/{res[GroupField.PROPOSAL_ATTACHMENT_ID]}/download"
+        res["proposal_download_url"] = f"/api/manager/attachments/{res[GroupField.PROPOSAL_ATTACHMENT_ID]}/download"
     else:
         res["proposal_download_url"] = None
 
-    return res
+    from app.utils.serialization import json_safe
+    return json_safe(res)
 
 
 @teacher_bp.route("/groups", methods=["GET"], strict_slashes=False)
@@ -116,7 +118,12 @@ def get_teacher_group_detail(group_id):
         serialized = _serialize_group(group)
 
         # Canonical Member details guaranteeing leader inclusion and ObjectId normalization
-        from app.services.manager_group_service import _resolve_group_members, get_manager_group_workspace
+        from app.services.group_service import proposal_metadata
+        from app.services.manager_group_service import (
+            _resolve_group_members,
+            get_manager_group_workspace,
+        )
+        serialized["proposal"] = proposal_metadata(group)
         serialized["members"] = _resolve_group_members(group)
         serialized["member_count"] = len(serialized["members"])
 

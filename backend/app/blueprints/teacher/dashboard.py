@@ -11,11 +11,8 @@ from app.extensions import mongo
 from app.models.group import COLLECTION as GROUPS_COLLECTION
 from app.models.group import Field as GroupField
 from app.models.group import Status as GroupStatus
-from app.models.supervisor_request import COLLECTION as SUP_REQ_COLLECTION
-from app.models.supervisor_request import SupervisorRequestFields, SupervisorRequestStatus
 from app.models.user import MAX_SUPERVISION_CAP, Role, UserFields
 from app.services.supervisor_service import (
-    get_evaluator_active_count,
     list_evaluator_supervisor_requests,
 )
 from app.services.teacher_service import get_teacher_by_id
@@ -79,10 +76,7 @@ def get_teacher_dashboard():
         # 2. Incoming Pending Requests
         incoming_requests = list_evaluator_supervisor_requests(teacher_id)
 
-        supervision_by_course = [
-            {"course": c, "count": cnt, "max_cap": MAX_SUPERVISION_CAP}
-            for c, cnt in course_counts.items()
-        ]
+        supervision_by_course = course_counts  # {course_name: count}
 
         data = {
             "teacher": {

@@ -72,12 +72,11 @@ student_search_ns = Namespace(
 
 # ── Swagger request/response models ───────────────────────────────────────────
 create_group_model = student_groups_ns.model("CreateGroup", {
-    "name":          fields.String(required=True, description="Group name (3–100 chars)"),
     "project_title": fields.String(required=True, description="Project title (5–200 chars)"),
 })
 
 update_group_model = student_groups_ns.model("UpdateGroup", {
-    "name":          fields.String(description="New group name"),
+    "scope": fields.String(description="Proposal scope"),
     "project_title": fields.String(description="New project title"),
 })
 
@@ -96,6 +95,19 @@ join_request_model = student_groups_ns.model("SendJoinRequest", {
 # ══════════════════════════════════════════════════════════════════════════════
 # Group endpoints
 # ══════════════════════════════════════════════════════════════════════════════
+
+
+@student_groups_ns.route("/enrollment")
+class GroupEnrollment(Resource):
+    @role_required(Role.STUDENT)
+    def get(self):
+        from app.services.student_profile_service import get_profile
+        from app.utils.serialization import json_safe
+
+        student = get_profile(get_jwt_identity())
+        departments = list(mongo.db.departments.find({"deleted": {"$ne": True}}))
+        courses = list(mongo.db.courses.find({"deleted": {"$ne": True}}))
+        return {"success": True, "data": json_safe({"student": student, "group": get_my_group(get_jwt_identity()), "departments": departments, "courses": courses})}, 200
 
 
 @student_groups_ns.route("/my")
@@ -158,13 +170,8 @@ class GroupListCreate(Resource):
         if not project_title or not project_title.strip():
             return {"success": False, "message": "Project title is required (at least 3 characters)."}, 422
 
-        if name and name.strip():
-            clean_name = name.strip()
-            if len(clean_name) < 3 or len(clean_name) > 100:
-                return {"success": False, "message": "Group name must be between 3 and 100 characters."}, 422
-            import re
-            if not re.match(r"^[\w\s\-]+$", clean_name):
-                return {"success": False, "message": "Group name may only contain letters, numbers, spaces, hyphens, and underscores."}, 422
+        if name is not None:
+            return {"success": False, "message": "Group identifiers are automatically assigned."}, 422
 
         student_id = get_jwt_identity()
 
@@ -173,7 +180,8 @@ class GroupListCreate(Resource):
             group = create_group(
                 student_id=student_id,
                 project_title=project_title.strip(),
-                name=name.strip() if name else None,
+                dept=request.form.get("dept") if request.files else (request.get_json(silent=True) or {}).get("dept"),
+                course=request.form.get("course") if request.files else (request.get_json(silent=True) or {}).get("course"),
                 proposal_file=proposal_file,
             )
         except ValueError as exc:
@@ -196,25 +204,25 @@ class GroupDetail(Resource):
     @student_groups_ns.expect(update_group_model)
     @role_required(Role.STUDENT)
     def put(self, group_id):
-        """Update group name and/or project title.  Leader only.\n\nOnly pending groups can be modified."""
+        """Update the project title, scope and proposal document. Leader only.\n\nOnly pending groups can be modified."""
         # Check 1 — schema validation
         try:
-            validated = UpdateGroupSchema().load(request.get_json() or {})
+            validated = UpdateGroupSchema().load(request.form.to_dict() if request.mimetype == "multipart/form-data" else (request.get_json(silent=True) or {}))
         except ValidationError as exc:
             return {"success": False, "message": "Validation failed.", "errors": exc.messages}, 422
 
-        if not any(v is not None for v in validated.values()):
+        if not validated and not request.files:
             return {"success": False, "message": "No fields provided to update."}, 400
 
         student_id = get_jwt_identity()
 
         # Check 2 — service layer (enforces leader constraint internally)
         try:
-            group = update_group(group_id, student_id, validated)
+            group = update_group(group_id, student_id, validated, request.files.get("proposal"))
         except ValueError as exc:
             msg = str(exc)
             code = 403 if "leader" in msg.lower() else 404 if "not found" in msg.lower() else 400
-            return {"success": False, "message": msg}, code
+            return {"success": False, "message": msg}, getattr(exc, "status_code", code)
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500
 
@@ -237,8 +245,8 @@ class GroupLeave(Resource):
             result = leave_group(student_id, group_id)
         except ValueError as exc:
             msg = str(exc)
-            code = 400 if "leader" in msg.lower() else 404
-            return {"success": False, "message": msg}, code
+            code = 409 if "locked" in msg.lower() else 400 if "leader" in msg.lower() else 404
+            return {"success": False, "message": msg}, getattr(exc, "status_code", code)
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500
 
@@ -265,7 +273,7 @@ class GroupTransferLeadership(Resource):
         except ValueError as exc:
             msg = str(exc)
             code = 403 if "leader" in msg.lower() else 400
-            return {"success": False, "message": msg}, code
+            return {"success": False, "message": msg}, getattr(exc, "status_code", code)
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500
 
@@ -298,7 +306,7 @@ class GroupInvite(Resource):
         except ValueError as exc:
             msg = str(exc)
             code = 403 if "leader" in msg.lower() else 409 if "already" in msg.lower() else 400
-            return {"success": False, "message": msg}, code
+            return {"success": False, "message": msg}, getattr(exc, "status_code", code)
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500
 
@@ -323,7 +331,7 @@ class GroupRemoveMember(Resource):
         except ValueError as exc:
             msg = str(exc)
             code = 403 if "leader" in msg.lower() else 404 if "not found" in msg.lower() else 400
-            return {"success": False, "message": msg}, code
+            return {"success": False, "message": msg}, getattr(exc, "status_code", code)
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500
 
@@ -350,7 +358,7 @@ class SendJoinRequest(Resource):
         except ValueError as exc:
             msg = str(exc)
             code = 409 if ("already" in msg.lower() or "member" in msg.lower()) else 400
-            return {"success": False, "message": msg}, code
+            return {"success": False, "message": msg}, getattr(exc, "status_code", code)
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500
 
@@ -430,7 +438,7 @@ class AcceptJoinRequest(Resource):
         except ValueError as exc:
             msg = str(exc)
             code = 409 if ("already" in msg.lower() or "modified" in msg.lower() or "capacity" in msg.lower() or "full" in msg.lower()) else 400
-            return {"success": False, "message": msg}, code
+            return {"success": False, "message": msg}, getattr(exc, "status_code", code)
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500
 
@@ -493,7 +501,7 @@ class AcceptInvitation(Resource):
         except ValueError as exc:
             msg = str(exc)
             code = 409 if "already" in msg.lower() or "capacity" in msg.lower() else 404
-            return {"success": False, "message": msg}, code
+            return {"success": False, "message": msg}, getattr(exc, "status_code", code)
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500
 
@@ -517,7 +525,7 @@ class DeclineInvitation(Resource):
         except ValueError as exc:
             msg = str(exc)
             code = 409 if "already" in msg.lower() else 404
-            return {"success": False, "message": msg}, code
+            return {"success": False, "message": msg}, getattr(exc, "status_code", code)
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500
 
