@@ -1,10 +1,7 @@
-import React from 'react';
+import { useState } from 'react';
+import { downloadFile } from '../../api/downloadFile';
 import {
-  Users,
-  GraduationCap,
   FileText,
-  Target,
-  Award,
   Clock,
   CheckCircle2,
   AlertCircle,
@@ -100,6 +97,8 @@ export const ProjectActivityTimeline = ({
   onExport,
 }) => {
   // Support either timeline (hierarchical Sprints with milestones) or events (flat events list)
+  const [downloadError, setDownloadError] = useState('');
+  const download = async sub => { try { await downloadFile(sub.file_url || sub.submission_url, sub.file_name); setDownloadError(''); } catch { setDownloadError('Deliverable could not be downloaded. Refresh and retry.'); } };
   const dataList = timeline && timeline.length > 0 ? timeline : events;
 
   if (!dataList || dataList.length === 0) {
@@ -164,6 +163,7 @@ export const ProjectActivityTimeline = ({
           </div>
         )}
 
+        {downloadError && <p role="alert" className="workflow-error">{downloadError}</p>}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {dataList.map((sprint, sIdx) => {
             const sprintName = sprint.sprint_name || `Sprint ${sIdx + 1}`;
@@ -349,16 +349,14 @@ export const ProjectActivityTimeline = ({
                               </div>
 
                               {(sub.file_url || sub.submission_url) && (
-                                <a
-                                  href={sub.file_url || sub.submission_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <button type="button"
+                                  onClick={() => download(sub)}
                                   className="btn btn-secondary btn-sm"
                                   style={{ fontSize: '11.5px', padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                                 >
                                   <ExternalLink size={12} />
                                   <span>View Deliverable</span>
-                                </a>
+                                </button>
                               )}
                             </div>
                           )}
