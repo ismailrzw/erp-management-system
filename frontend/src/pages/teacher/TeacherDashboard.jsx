@@ -1,3 +1,5 @@
+import { ProposalSummary } from '../../components/groups/ProposalSummary';
+import { useLiveRefresh } from '../../hooks/useLiveRefresh';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -9,8 +11,6 @@ import {
   ArrowRight,
   RefreshCw,
   GraduationCap,
-  FileText,
-  AlertCircle,
   Loader2,
   Check,
 } from 'lucide-react';
@@ -57,6 +57,8 @@ export const TeacherDashboard = () => {
   useEffect(() => {
     fetchDashboard();
   }, [fetchDashboard]);
+
+  useLiveRefresh(() => fetchDashboard(true));
 
   const handleAccept = async () => {
     if (!requestToAccept) return;
@@ -281,6 +283,27 @@ export const TeacherDashboard = () => {
               <span>{activeCap >= maxCap ? 'Maximum limit reached' : `${maxCap - activeCap} slots available`}</span>
               <span style={{ fontWeight: 600 }}>{capacityPercent}%</span>
             </div>
+
+            {stats.supervision_by_course && Object.keys(stats.supervision_by_course).length > 0 && (
+              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
+                {Object.entries(stats.supervision_by_course).map(([course, count]) => (
+                  <div key={course} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11.5px' }}>
+                    <span style={{ color: '#475569', fontWeight: 500 }}>{course}</span>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color: count >= 4 ? '#dc2626' : '#0073aa',
+                        backgroundColor: count >= 4 ? '#fee2e2' : '#e0f2fe',
+                        padding: '1px 7px',
+                        borderRadius: '8px',
+                      }}
+                    >
+                      {count}/4
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -312,7 +335,7 @@ export const TeacherDashboard = () => {
                 fontWeight: 700,
               }}
             >
-              {incomingRequests.length} Pending
+              {stats.pending_requests_count ?? incomingRequests.length} Pending
             </span>
           </div>
         </div>
@@ -374,6 +397,10 @@ export const TeacherDashboard = () => {
                     Team Lead: <b>{req.leader_name}</b> ({req.leader_roll}) · {req.leader_email}
                   </div>
 
+                  <details><summary>Review Proposal and Members</summary>
+                    <ProposalSummary proposal={req.proposal} />
+                    {(req.members || []).map((m) => <p key={m.id}>{m.name} · {m.roll}</p>)}
+                  </details>
                   {req.request_message && (
                     <div
                       style={{

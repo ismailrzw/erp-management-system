@@ -1,10 +1,11 @@
+import { ProposalSummary } from '../../../components/groups/ProposalSummary';
+import { useLiveRefresh } from '../../../hooks/useLiveRefresh';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
   UserPlus,
   Edit,
-  Edit2,
   LogOut,
   Trash2,
   AlertCircle,
@@ -40,6 +41,7 @@ import { formatDate } from '../../../utils/dateUtils';
 
 export const MyGroupPage = () => {
   const { user } = useAuth();
+  const [loadError, setLoadError] = useState('');
   const [group, setGroup] = useState(null);
   const [incomingRequests, setIncomingRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +77,7 @@ export const MyGroupPage = () => {
   const fetchSupervisorData = useCallback(async () => {
     try {
       const reqRes = await supervisorsApi.getMyRequest();
-      if (reqRes.success && reqRes.data) {
+      if (reqRes.success && reqRes.data && ['pending', 'rejected'].includes(reqRes.data.status)) {
         setPendingSupervisorRequest(reqRes.data);
       } else {
         setPendingSupervisorRequest(null);
@@ -102,7 +104,7 @@ export const MyGroupPage = () => {
   const fetchGroup = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-      const res = await studentGroupApi.getMyGroup();
+      const res = await studentGroupApi.getMyGroup(); setLoadError('');
       if (res.success && res.data) {
         setGroup(res.data);
         const leaderFlag = res.data.members?.find((m) => m.id === user?.id)?.is_leader || res.data.is_leader;
@@ -125,6 +127,7 @@ export const MyGroupPage = () => {
         setPendingSupervisorRequest(null);
       }
     } catch (err) {
+      setLoadError(err.response?.data?.message || 'Group could not be loaded.');
       setToast({
         message: err.response?.data?.message || 'Failed to load group details',
         type: 'error',
@@ -260,6 +263,8 @@ export const MyGroupPage = () => {
     }
   };
 
+  useLiveRefresh(() => fetchGroup(true));
+
   if (loading && !refreshing && !group) {
     return (
       <div className="page-frame-container">
@@ -268,6 +273,8 @@ export const MyGroupPage = () => {
       </div>
     );
   }
+
+  if (loadError && !group) return <main className="page-frame-container"><h1>My Project Group</h1><p role="alert">{loadError}</p><button className="btn btn-secondary" onClick={() => fetchGroup(true)}>Retry</button></main>;
 
   // If student has no group
   if (!group) {
@@ -348,21 +355,11 @@ export const MyGroupPage = () => {
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <span>{group.name}</span>
-            {isLeader && !isApproved && (
-              <button
-                type="button"
-                onClick={() => handleOpenEditModal('name')}
-                title="Change Group Name"
-                className="btn btn-ghost btn-sm"
-              >
-                <Edit2 size={13} />
-                <span>Change Name</span>
-              </button>
-            )}
+
           </div>
         }
         badge={<StatusBadge status={group.status} />}
-        subtitle={`Course: ${group.course} • Section ${group.section} • Department: ${group.dept}`}
+        subtitle={`Course: ${group.course} • Department: ${group.dept}`}
       >
         <button
           type="button"
@@ -388,6 +385,8 @@ export const MyGroupPage = () => {
         <button
           type="button"
           onClick={() => setIsLeaveModalOpen(true)}
+          disabled={group.membership_locked}
+          title={group.membership_locked ? 'Membership is locked after approval or academic submission.' : 'Leave this pending group'}
           className="btn btn-danger-outline"
         >
           <LogOut size={14} />
@@ -441,7 +440,7 @@ export const MyGroupPage = () => {
       )}
 
       {/* Main Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: '20px' }}>
         {/* Card 1: Project Information */}
         <div className="card-responsive" style={{ borderTop: '3px solid var(--primary)' }}>
           <div
@@ -493,14 +492,15 @@ export const MyGroupPage = () => {
 
               <div>
                 <div style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>
-                  Section
+                  Department
                 </div>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', marginTop: '2px' }}>
-                  Sec {group.section}
+                  {group.dept}
                 </div>
               </div>
             </div>
 
+            <ProposalSummary proposal={group.proposal} />
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>
               <span>Created on: {formatDate(group.created_at)}</span>
             </div>
@@ -528,7 +528,7 @@ export const MyGroupPage = () => {
               </h2>
             </div>
 
-            {isLeader && !isFull && !isApproved && (
+            {isLeader && !isFull && (
               <button
                 type="button"
                 onClick={() => setIsInviteModalOpen(true)}
@@ -611,8 +611,9 @@ export const MyGroupPage = () => {
         </div>
 
         {/* 1. Group already has an assigned supervisor */}
-        {group.supervisor_name ? (
-          <div
+        {/* pendingSupervisorRequest here can be status=pending or status=rejected (filtered in fetchSupervisorData) */}
+        {group.supervisor_name && (group.supervisor_accepted_version === (group.proposal_version || 1) || group.status === 'approved') ? (
+          <div className="supervisor-standard-card"
             style={{
               padding: '16px',
               backgroundColor: '#fbfbfe',
@@ -657,8 +658,51 @@ export const MyGroupPage = () => {
               Group supervision is confirmed for {group.course}.
             </div>
           </div>
+        ) : pendingSupervisorRequest?.status === 'rejected' ? (
+          /* 2a. Supervisor rejected the request */
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <XCircle size={16} color="#dc2626" />
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#991b1b' }}>
+                  Supervisor Request Declined
+                </span>
+              </div>
+            </div>
+            <div style={{ fontSize: '13.5px', color: '#b91c1c' }}>
+              <b>{pendingSupervisorRequest.evaluator_name}</b> declined your supervision request.
+              {pendingSupervisorRequest.rejection_reason && (
+                <span> Reason: <i>{pendingSupervisorRequest.rejection_reason}</i></span>
+              )}
+            </div>
+            {isLeader && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingSupervisorRequest(null);
+                    fetchAvailableSupervisors();
+                  }}
+                  className="btn btn-primary btn-sm"
+                >
+                  <Send size={13} />
+                  <span>Send New Request</span>
+                </button>
+              </div>
+            )}
+          </div>
         ) : pendingSupervisorRequest ? (
-          /* 2. Group has a pending supervisor request */
+          /* 2b. Group has a pending supervisor request */
           <div
             style={{
               padding: '16px',
@@ -729,7 +773,7 @@ export const MyGroupPage = () => {
           /* 3. No supervisor & user is leader -> supervisor browse & request UI */
           <div>
             <div style={{ marginBottom: '14px', fontSize: '13px', color: '#64748b' }}>
-              Browse faculty members and request project supervision. Each evaluator may supervise up to 4 project groups per specific course.
+              Browse faculty members and request project supervision. Each evaluator may supervise up to 4 active project groups in total.
             </div>
 
             {/* Filters Bar */}
@@ -832,7 +876,7 @@ export const MyGroupPage = () => {
                   })
                   .map((sup) => {
                     const count = sup.active_supervision_count || 0;
-                    const isAtCap = count >= 4;
+                    const isAtCap = !sup.is_available;
 
                     return (
                       <div
@@ -877,7 +921,7 @@ export const MyGroupPage = () => {
                                 whiteSpace: 'nowrap',
                               }}
                             >
-                              {count}/4 Groups {group?.course ? `(${group.course})` : ''}
+                              {count}/4 Groups in total{sup.reviewing_existing_group ? ' · Re-review available' : ''}
                             </span>
                           </div>
 
@@ -1073,7 +1117,7 @@ export const MyGroupPage = () => {
         mode={editModalMode}
         onSuccess={() => {
           setToast({
-            message: editModalMode === 'name' ? 'Group name updated successfully!' : 'Group proposal updated successfully!',
+            message: 'Group proposal updated successfully!',
             type: 'success',
           });
           fetchGroup(true);

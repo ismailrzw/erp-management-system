@@ -1,3 +1,4 @@
+import { BackButton } from '../../../components/ui/BackButton';
 import { useState, useEffect } from 'react';
 import {
   GraduationCap,
@@ -92,19 +93,12 @@ export const StudentProfilePage = () => {
 
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
-    const name = profileForm.name.trim();
     const recovery_email = profileForm.recovery_email.trim();
-
-    if (!name) {
-      setProfileError('Full Name is required.');
-      return;
-    }
 
     try {
       setSavingProfile(true);
       setProfileError('');
       const res = await studentProfileApi.updateProfile({
-        name,
         recovery_email: recovery_email || null,
       });
 
@@ -124,6 +118,7 @@ export const StudentProfilePage = () => {
   if (loading) {
     return (
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+      <BackButton to="/student/dashboard" label="Back to Dashboard" />
         <ContentLoader label="Loading student settings..." />
       </div>
     );
@@ -133,6 +128,7 @@ export const StudentProfilePage = () => {
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+      <BackButton to="/student/dashboard" label="Back to Dashboard" />
       {/* Toast Feedback */}
       {toast.message && (
         <Toast
@@ -312,12 +308,12 @@ export const StudentProfilePage = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                  Full Name <span style={{ color: '#dc2626' }}>*</span>
+                  Full Name (read-only)
                 </label>
                 <input
                   type="text"
                   value={profileForm.name}
-                  onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                  readOnly
                   style={{
                     width: '100%',
                     padding: '8px 12px',

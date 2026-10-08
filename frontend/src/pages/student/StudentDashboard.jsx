@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../../hooks/useLiveRefresh';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -14,12 +15,14 @@ import {
   RefreshCw,
   AlertCircle,
   Edit,
-  Edit2,
   Target,
+  Check,
+  X,
 } from 'lucide-react';
 import { studentDashboardApi } from '../../api/studentDashboardApi';
 import { studentAttachmentsApi } from '../../api/studentAttachmentsApi';
 import { studentAnnouncementsApi } from '../../api/studentAnnouncementsApi';
+import { studentGroupApi } from '../../api/studentGroupApi';
 import { StatCard } from '../../components/ui/StatCard';
 import { AccordionItem } from '../../components/ui/Accordion';
 import { StatusBadge } from '../../components/ui/StatusBadge';
@@ -35,9 +38,11 @@ export const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
-  const [activeTab, setActiveTab] = useState('announcements'); // 'announcements' | 'attachments'
+  const [activeTab, setActiveTab] = useState('attachments'); // 'announcements' | 'attachments'
   const [isEditGroupModalOpen, setIsEditGroupModalOpen] = useState(false);
   const [editGroupModalMode, setEditGroupModalMode] = useState('all'); // 'name' | 'all'
+  const [pendingInvitations, setPendingInvitations] = useState([]);
+  const [processingInvitationId, setProcessingInvitationId] = useState(null);
   const navigate = useNavigate();
 
   const fetchDashboard = useCallback(async (isRefresh = false) => {
@@ -61,6 +66,43 @@ export const StudentDashboard = () => {
   useEffect(() => {
     fetchDashboard();
   }, [fetchDashboard]);
+
+  // Fetch pending invitations only when data confirms the student has no group
+  useEffect(() => {
+    if (data && !data.group) {
+      studentGroupApi.getPendingInvitations()
+        .then(res => { if (res.success && res.data) setPendingInvitations(res.data.items || res.data || []); })
+        .catch(() => {});
+    } else {
+      setPendingInvitations([]);
+    }
+  }, [data]);
+
+  const handleAcceptInvitation = async (invitationId) => {
+    setProcessingInvitationId(invitationId);
+    try {
+      await studentGroupApi.acceptInvitation(invitationId);
+      setToast({ message: 'Invitation accepted! Joining the group...', type: 'success' });
+      fetchDashboard();
+    } catch (err) {
+      setToast({ message: err.response?.data?.message || 'Failed to accept invitation', type: 'error' });
+    } finally {
+      setProcessingInvitationId(null);
+    }
+  };
+
+  const handleDeclineInvitation = async (invitationId) => {
+    setProcessingInvitationId(invitationId);
+    try {
+      await studentGroupApi.declineInvitation(invitationId);
+      setPendingInvitations(prev => prev.filter(inv => (inv.id || inv._id) !== invitationId));
+      setToast({ message: 'Invitation declined.', type: 'info' });
+    } catch (err) {
+      setToast({ message: err.response?.data?.message || 'Failed to decline invitation', type: 'error' });
+    } finally {
+      setProcessingInvitationId(null);
+    }
+  };
 
   const handleDownloadAttachment = async (att) => {
     try {
@@ -131,6 +173,8 @@ export const StudentDashboard = () => {
   const recentAnnouncementsCount = data?.recent_announcements_count ?? announcements.filter((a) => a.is_recent).length;
   const attachments = data?.attachments || [];
 
+  useLiveRefresh(() => fetchDashboard());
+
   if (loading && !refreshing && !data) {
     return (
       <div className="page-frame-container">
@@ -197,7 +241,7 @@ export const StudentDashboard = () => {
               </div>
               <div style={{ fontSize: '12px', color: '#7f1d1d', marginTop: '4px' }}>
                 {isLeader
-                  ? 'Click "Update Proposal & Resubmit" to revise group name and project title.'
+                  ? 'Click "Update Proposal & Resubmit" to revise the project title and proposal.'
                   : 'Your group leader can revise project details to automatically resubmit for manager approval.'}
               </div>
             </div>
@@ -264,6 +308,90 @@ export const StudentDashboard = () => {
           subtext={recentAnnouncementsCount > 0 ? `${recentAnnouncementsCount} recent unread` : 'Posted by PBL Manager'}
         />
       </div>
+
+      {/* Next Action Card */}
+      {(() => {
+        let actionTitle = '';
+        let actionDesc = '';
+        let actionBtn = null;
+        if (!group) {
+          actionTitle = 'Get started — form or join a group';
+          actionDesc = 'You are not in a project group yet. Create one with your course peers, or browse existing groups.';
+          actionBtn = (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button type="button" onClick={() => navigate('/student/group/create')} className="btn btn-primary btn-sm"><PlusCircle size={13} /><span>Create Group</span></button>
+              <button type="button" onClick={() => navigate('/student/group/browse')} className="btn btn-secondary btn-sm"><Compass size={13} /><span>Browse Groups</span></button>
+            </div>
+          );
+        } else if (isRejected) {
+          actionTitle = 'Action required — update your proposal';
+          actionDesc = 'Your group proposal was rejected. The leader should revise project details and resubmit.';
+          actionBtn = isLeader ? (
+            <button type="button" onClick={() => { setEditGroupModalMode('all'); setIsEditGroupModalOpen(true); }} className="btn btn-danger btn-sm"><Edit size={13} /><span>Update & Resubmit</span></button>
+          ) : null;
+        } else if (pendingInvitesCount > 0) {
+          actionTitle = 'You have pending group invitations';
+          actionDesc = `${pendingInvitesCount} group invitation${pendingInvitesCount > 1 ? 's are' : ' is'} waiting for your response.`;
+          actionBtn = <button type="button" onClick={() => navigate('/student/group/browse')} className="btn btn-primary btn-sm"><ArrowRight size={13} /><span>Review Invitations</span></button>;
+        } else if (group?.status === 'pending') {
+          actionTitle = 'Your group is awaiting manager approval';
+          actionDesc = 'The PBL manager will review your project proposal soon. No action needed at this time.';
+          actionBtn = <button type="button" onClick={() => navigate('/student/group/my')} className="btn btn-ghost btn-sm"><ArrowRight size={13} /><span>View Group</span></button>;
+        } else if (data?.upcoming_milestones?.length > 0) {
+          const next = data.upcoming_milestones[0];
+          actionTitle = `Next: Submit for ${next.sprint_name || 'Sprint'} — ${next.title}`;
+          actionDesc = `Deadline: ${new Date(next.deadline).toLocaleDateString()}. Prepare your deliverable on time.`;
+          actionBtn = <button type="button" onClick={() => navigate('/student/iterations')} className="btn btn-primary btn-sm"><ArrowRight size={13} /><span>View Milestones</span></button>;
+        } else if (isApproved) {
+          actionTitle = 'Your project group is approved!';
+          actionDesc = 'Keep collaborating with your team and watch for upcoming milestone deadlines.';
+          actionBtn = <button type="button" onClick={() => navigate('/student/group/my')} className="btn btn-ghost btn-sm"><ArrowRight size={13} /><span>Manage Group</span></button>;
+        }
+        if (!actionTitle) return null;
+        return (
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '14px 20px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderLeft: '4px solid var(--primary)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ flex: '1 1 250px' }}>
+              <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>{actionTitle}</div>
+              <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>{actionDesc}</div>
+            </div>
+            {actionBtn}
+          </div>
+        );
+      })()}
+
+      {/* Pending Invitations Inline */}
+      {!group && pendingInvitations.length > 0 && (
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '12px 20px', borderBottom: '1px solid #e2e8f0', borderTop: '3px solid var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Mail size={16} color="var(--primary)" />
+            <span style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b' }}>Pending Group Invitations ({pendingInvitations.length})</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {pendingInvitations.map((inv) => {
+              const invId = inv.id || inv._id;
+              const isProcessing = processingInvitationId === invId;
+              return (
+                <div key={invId} style={{ padding: '12px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ flex: '1 1 200px' }}>
+                    <div style={{ fontWeight: 600, fontSize: '13.5px', color: '#0f172a' }}>{inv.group_name || 'Group Invitation'}</div>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                      {inv.course || 'N/A'} • Invited by <b>{inv.invited_by_name || 'leader'}</b>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" disabled={isProcessing} onClick={() => handleDeclineInvitation(invId)} className="btn btn-danger-outline btn-sm">
+                      <X size={12} /><span>Decline</span>
+                    </button>
+                    <button type="button" disabled={isProcessing} onClick={() => handleAcceptInvitation(invId)} className="btn btn-success btn-sm">
+                      <Check size={12} /><span>{isProcessing ? 'Processing...' : 'Accept'}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Upcoming Milestones Bar */}
       {data?.upcoming_milestones && data.upcoming_milestones.length > 0 && (
@@ -403,20 +531,7 @@ export const StudentDashboard = () => {
                   <div>
                     Group Name: <b>{group.name}</b>
                   </div>
-                  {isLeader && !isApproved && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditGroupModalMode('name');
-                        setIsEditGroupModalOpen(true);
-                      }}
-                      title="Change Group Name"
-                      className="btn btn-ghost btn-sm"
-                    >
-                      <Edit2 size={12} />
-                      <span>Change Name</span>
-                    </button>
-                  )}
+
                 </div>
 
                 <div
@@ -585,6 +700,7 @@ export const StudentDashboard = () => {
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                 <button
                   type="button"
+                  className="dashboard-announcement-inline"
                   onClick={() => setActiveTab('announcements')}
                   style={{
                     display: 'flex',
@@ -645,7 +761,7 @@ export const StudentDashboard = () => {
                 <button
                   type="button"
                   onClick={handleMarkAllViewed}
-                  className="btn btn-ghost btn-sm"
+                  className="btn btn-ghost btn-sm dashboard-announcement-inline"
                 >
                   Mark all as read
                 </button>
@@ -655,7 +771,7 @@ export const StudentDashboard = () => {
 
           {/* Tab 1: Announcements Accordion */}
           {activeTab === 'announcements' && (
-            <div>
+            <div className="dashboard-announcement-inline">
               {announcements.length === 0 ? (
                 <EmptyState
                   icon={Megaphone}
@@ -766,7 +882,7 @@ export const StudentDashboard = () => {
           mode={editGroupModalMode}
           onSuccess={() => {
             setToast({
-              message: editGroupModalMode === 'name' ? 'Group name updated successfully!' : 'Group proposal updated successfully!',
+              message: 'Group proposal updated successfully!',
               type: 'success',
             });
             fetchDashboard();

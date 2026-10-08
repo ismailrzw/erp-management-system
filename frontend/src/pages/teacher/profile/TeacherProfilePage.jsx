@@ -1,3 +1,4 @@
+import { BackButton } from '../../../components/ui/BackButton';
 import { useState, useEffect, useCallback } from 'react';
 import { User, Mail, Building, Plus, X, Save, CheckCircle2, ShieldCheck, Tag, Info } from 'lucide-react';
 import { teacherPortalApi } from '../../../api/teacherPortalApi';
@@ -88,6 +89,7 @@ export const TeacherProfilePage = () => {
   if (loading) {
     return (
       <div className="page-frame-container">
+      <BackButton to="/teacher/dashboard" label="Back to Dashboard" />
         <PageHeader
           title="Supervisor Profile & Expertise"
           subtitle="Manage your academic profile and supervision research domains."
@@ -106,6 +108,7 @@ export const TeacherProfilePage = () => {
 
   return (
     <div className="page-frame-container">
+      <BackButton to="/teacher/dashboard" label="Back to Dashboard" />
       <Toast
         message={toast.message}
         type={toast.type}
@@ -204,7 +207,7 @@ export const TeacherProfilePage = () => {
               <Info size={14} color="#0073aa" />
               <span>FYP Supervision Policy</span>
             </div>
-            As a university supervisor, you guide student project teams year-round. Group requests can be accepted until your capacity limit of 4 groups is reached. Showcase day evaluators are assigned separately by the manager.
+            As a university supervisor, you guide student project teams year-round. Group requests can be accepted until your capacity limit of 4 groups is reached. Independent evaluators are assigned separately by the manager.
           </div>
         </div>
 

@@ -1,16 +1,12 @@
+import { TaskReview } from '../../../components/groups/TaskReview';
+import { ProposalSummary } from '../../../components/groups/ProposalSummary';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   FolderGit2,
   Users,
-  FileText,
-  Download,
   Calendar,
-  Clock,
-  CheckCircle2,
-  Shield,
-  Layers,
 } from 'lucide-react';
 import { teacherPortalApi } from '../../../api/teacherPortalApi';
 import { PageHeader } from '../../../components/ui/PageHeader';
@@ -22,6 +18,7 @@ import { ProjectActivityTimeline } from '../../../components/groups/ProjectActiv
 
 export const TeacherGroupDetailPage = () => {
   const { groupId } = useParams();
+  const [error, setError] = useState('');
   const [group, setGroup] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ message: '', type: 'success' });
@@ -30,11 +27,12 @@ export const TeacherGroupDetailPage = () => {
 
   const fetchDetail = useCallback(async () => {
     try {
-      const res = await teacherPortalApi.getGroupDetail(groupId);
+      const res = await teacherPortalApi.getGroupDetail(groupId); setError('');
       if (res.success && res.data) {
         setGroup(res.data);
       }
     } catch (err) {
+      setError(err.response?.data?.message || 'Group could not be loaded.');
       setToast({
         message: err.response?.data?.message || 'Failed to load group details',
         type: 'error',
@@ -70,9 +68,9 @@ export const TeacherGroupDetailPage = () => {
       <div className="page-frame-container">
         <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', padding: '30px', textAlign: 'center' }}>
           <FolderGit2 size={40} style={{ margin: '0 auto 10px', color: '#94a3b8' }} />
-          <h3>Group not found</h3>
-          <button type="button" onClick={() => navigate('/teacher/groups')} className="btn btn-primary" style={{ marginTop: '12px' }}>
-            Back to My Groups
+          <h3>Group workspace unavailable</h3><p role="alert">{error || 'Group not found or access denied.'}</p><button className="btn btn-secondary" onClick={fetchDetail}>Retry</button>
+          <button type="button" onClick={() => navigate('/teacher/groups')} className="btn btn-back" style={{ marginTop: '12px' }}>
+            <ArrowLeft size={18} />Back to My Groups
           </button>
         </div>
       </div>
@@ -99,7 +97,7 @@ export const TeacherGroupDetailPage = () => {
         <button
           type="button"
           onClick={() => navigate('/teacher/groups')}
-          className="btn btn-secondary"
+          className="btn btn-back"
         >
           <ArrowLeft size={16} />
           <span>Back to Groups</span>
@@ -132,11 +130,11 @@ export const TeacherGroupDetailPage = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '6px' }}>
           <div>
             <div style={{ fontSize: '11.5px', color: '#64748b', textTransform: 'uppercase' }}>Course</div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b', marginTop: '2px' }}>{group.course || 'FYP'}</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b', marginTop: '2px' }}>{group.course || 'Needs correction'}</div>
           </div>
           <div>
-            <div style={{ fontSize: '11.5px', color: '#64748b', textTransform: 'uppercase' }}>Department & Sec</div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b', marginTop: '2px' }}>{group.dept} · Sec {group.section}</div>
+            <div style={{ fontSize: '11.5px', color: '#64748b', textTransform: 'uppercase' }}>Department</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b', marginTop: '2px' }}>{group.dept || 'Needs correction'}</div>
           </div>
           <div>
             <div style={{ fontSize: '11.5px', color: '#64748b', textTransform: 'uppercase' }}>Formation Status</div>
@@ -149,35 +147,7 @@ export const TeacherGroupDetailPage = () => {
         </div>
 
         {/* Proposal Document Link if attached */}
-        {group.proposal_download_url && (
-          <div
-            style={{
-              marginTop: '16px',
-              padding: '12px 16px',
-              backgroundColor: '#f0f9ff',
-              border: '1px solid #bae6fd',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#0369a1' }}>
-              <FileText size={18} />
-              <span><strong>Project Proposal Document</strong> is attached to this group</span>
-            </div>
-            <a
-              href={group.proposal_download_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-primary btn-sm"
-              style={{ textDecoration: 'none' }}
-            >
-              <Download size={13} />
-              <span>Download Proposal</span>
-            </a>
-          </div>
-        )}
+
       </div>
 
       {/* Team Members List Card */}
@@ -239,6 +209,8 @@ export const TeacherGroupDetailPage = () => {
         </div>
       </div>
 
+      <ProposalSummary proposal={group.proposal} />
+      <section className="workflow-card"><h3>Milestone Submissions and Grading</h3>{(group.timeline || []).flatMap((s) => s.milestones).map((m) => <details key={m.milestone_id}><summary>{m.title}</summary><TaskReview groupId={group.id} taskId={m.milestone_id} /></details>)}</section>
       {/* Project Milestones & Activity Timeline */}
       <ProjectActivityTimeline timeline={group.timeline || []} />
 

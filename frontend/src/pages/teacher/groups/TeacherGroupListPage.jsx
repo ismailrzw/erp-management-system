@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FolderGit2, Search, ArrowRight, RefreshCw, Users, FileText, Download } from 'lucide-react';
+import { FolderGit2, Search, ArrowRight, RefreshCw, Users, Download } from 'lucide-react';
 import { teacherPortalApi } from '../../../api/teacherPortalApi';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
