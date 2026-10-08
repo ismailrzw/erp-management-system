@@ -9,6 +9,11 @@ def student_payload(roll="f2024-001"):
 
 
 def create_student(client, manager_headers, roll="f2024-001"):
+    from app.extensions import mongo
+
+    with client.application.app_context():
+        mongo.db.departments.update_one({"code": "CS"}, {"$set": {"name": "Computer Science", "deleted": False}}, upsert=True)
+        mongo.db.courses.update_one({"name": "PBL"}, {"$set": {"dept": "CS", "min_group": 2, "max_group": 4, "deleted": False}}, upsert=True)
     response = client.post(STUDENTS_URL, json=student_payload(roll), headers=manager_headers)
     assert response.status_code == 201, response.get_json()
     return response.get_json()["data"]
@@ -56,11 +61,11 @@ def test_get_missing_student_returns_404(client, manager_headers):
 
 def test_update_student(client, manager_headers):
     student = create_student(client, manager_headers)
-    response = client.put(f"{STUDENTS_URL}{student['student_id']}", json={"name": "Grace Hopper", "section": "B", "teacher": "Dr. Ignored"}, headers=manager_headers)
+    response = client.put(f"{STUDENTS_URL}{student['student_id']}", json={"section": "B", "teacher": "Dr. Ignored"}, headers=manager_headers)
     assert response.status_code == 200, response.get_json()
     assert response.get_json()["data"]["updated"] is True
     fetched = client.get(f"{STUDENTS_URL}{student['student_id']}", headers=manager_headers).get_json()["data"]
-    assert fetched["name"] == "Grace Hopper"
+    assert fetched["name"] == "Ada Lovelace"
     assert fetched["section"] == "B"
     assert "teacher" not in fetched
 

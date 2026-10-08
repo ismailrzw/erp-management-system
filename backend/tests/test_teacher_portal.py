@@ -1,13 +1,15 @@
 """Teacher Portal API contract tests."""
 
 import pytest
+
 from app.models.user import Role
 
 
 @pytest.fixture
 def teacher_user(client, app):
-    from app.extensions import mongo
     import bcrypt
+
+    from app.extensions import mongo
 
     email = "teacher.portal.test@bnu.edu.pk"
     mongo.db.users.delete_one({"email": email})
@@ -28,7 +30,7 @@ def teacher_user(client, app):
 def teacher_headers(client, teacher_user):
     res = client.post("/api/auth/login", json={"email": teacher_user["email"], "password": "11223344"})
     assert res.status_code == 200, res.get_json()
-    token = res.get_json()["access_token"]
+    token = res.get_json()["data"]["token"]
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -36,11 +38,11 @@ def test_get_teacher_dashboard(client, teacher_headers):
     res = client.get("/api/teacher/dashboard", headers=teacher_headers)
     assert res.status_code == 200, res.get_json()
     data = res.get_json()["data"]
-    assert "metrics" in data
-    assert "max_allowed" in data["metrics"]
-    assert data["metrics"]["max_allowed"] == 4
-    assert "supervised_groups" in data
-    assert "pending_requests" in data
+    assert data["stats"]["max_supervision_cap"] == 4
+    assert data["stats"]["active_groups_count"] == 0
+    assert data["stats"]["pending_requests_count"] == 0
+    assert data["groups"] == []
+    assert data["incoming_requests"] == []
 
 
 def test_get_teacher_groups(client, teacher_headers):

@@ -11,6 +11,8 @@ def create_teacher(
     dept="SE",
     domains=None,
 ):
+    from app.extensions import mongo
+    mongo.db.departments.update_one({"code": dept}, {"$set": {"name": dept, "deleted": False}}, upsert=True)
     payload = {"name": name, "email": email, "dept": dept}
     if domains:
         payload["domains"] = domains
@@ -42,7 +44,7 @@ def test_create_teacher_rejects_duplicate_email(client, manager_headers):
         json={
             "name": "Duplicate Teacher",
             "email": "dup.teacher@bnu.edu.pk",
-            "dept": "CS",
+            "dept": "SE",
         },
         headers=manager_headers,
     )

@@ -33,6 +33,12 @@ def client():
             for collection in mongo.db.list_collection_names():
                 mongo.db[collection].drop()
 
+            mongo.db.departments.insert_one({"code": "SE", "name": "Software Engineering", "deleted": False})
+            for course in ["Final Year Project - Fall 2025", "FYP 2025", "FYP 2026"]:
+                mongo.db.courses.insert_one({"name": course, "dept": "SE", "min_group": 2, "max_group": 4, "deleted": False})
+            for sprint in ["Sprint 1", "Sprint 2"]:
+                mongo.db.sprints.insert_one({"name": sprint, "description": "Configured test sprint", "deleted": False})
+
             password = "11223344"
             hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
             mongo.db.users.insert_one({
@@ -48,8 +54,11 @@ def client():
                 "password_hash": hashed,
                 "role": "student",
                 "course": "FYP 2026",
+                "dept": "SE",
                 "deleted": False
             })
+            student = mongo.db.users.find_one({"email": "alice@bnu.edu.pk"})
+            mongo.db.groups.insert_one({"name": "Legacy approved group", "course": "FYP 2026", "dept": "SE", "member_ids": [student["_id"]], "leader_id": student["_id"], "status": "approved"})
         yield client
 
 
@@ -146,7 +155,7 @@ def test_delete_template_guarded_when_in_use(client):
     # Create iteration referencing template
     iter_resp = client.post("/api/manager/iterations",
         json={
-            "title": "Iteration with Template",
+            "title": "Iteration with Template", "sprint_name": "Sprint 1",
             "course": "All Courses",
             "deadline": "2026-09-30T23:59",
             "rubric_template_id": tid
@@ -170,7 +179,7 @@ def test_student_sees_all_courses_iteration(client):
     # Manager creates an All Courses iteration
     client.post("/api/manager/iterations",
         json={
-            "title": "Global Proposal",
+            "title": "Global Proposal", "sprint_name": "Sprint 1",
             "course": "All Courses",
             "deadline": "2026-10-01"
         },

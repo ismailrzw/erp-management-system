@@ -32,6 +32,12 @@ def client():
             for collection in mongo.db.list_collection_names():
                 mongo.db[collection].drop()
 
+            mongo.db.departments.insert_one({"code": "SE", "name": "Software Engineering", "deleted": False})
+            for course in ["Final Year Project - Fall 2025", "FYP 2025", "FYP 2026"]:
+                mongo.db.courses.insert_one({"name": course, "dept": "SE", "min_group": 2, "max_group": 4, "deleted": False})
+            for sprint in ["Sprint 1", "Sprint 2"]:
+                mongo.db.sprints.insert_one({"name": sprint, "description": "Configured test sprint", "deleted": False})
+
             password = "11223344"
             hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
             mongo.db.users.insert_one({
@@ -54,7 +60,7 @@ def test_create_iteration(client):
     token = get_manager_token(client)
     resp = client.post("/api/manager/iterations",
         json={
-            "title": "Project Proposal",
+            "title": "Project Proposal", "sprint_name": "Sprint 1",
             "details": "Submit a proposal.",
             "course": "Final Year Project - Fall 2025",
             "deadline": "2026-07-10"
@@ -70,7 +76,7 @@ def test_set_rubrics_weight_sum_100_success(client):
     # Create iteration first
     create_resp = client.post("/api/manager/iterations",
         json={
-            "title": "Iteration 1",
+            "title": "Iteration 1", "sprint_name": "Sprint 1",
             "course": "FYP 2025",
             "deadline": "2026-08-01"
         },
@@ -91,7 +97,7 @@ def test_set_rubrics_weight_sum_100_success(client):
 def test_set_rubrics_invalid_weight_fails(client):
     token = get_manager_token(client)
     create_resp = client.post("/api/manager/iterations",
-        json={"title": "Iteration 2", "course": "FYP 2025", "deadline": "2026-08-01"},
+        json={"title": "Iteration 2", "sprint_name": "Sprint 1", "course": "FYP 2025", "deadline": "2026-08-01"},
         headers={"Authorization": f"Bearer {token}"})
     iteration_id = create_resp.get_json()["data"]["_id"]
 
@@ -171,7 +177,6 @@ def test_create_iteration_with_sprint_and_milestones(client):
 
 
 def test_grade_student_defaulter_with_rubrics(client):
-    from bson import ObjectId
     token = get_manager_token(client)
 
     # 1. Create a student user

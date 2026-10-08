@@ -12,12 +12,18 @@ def create_evaluator(
     evaluator_type="external",
     domains=None,
 ):
+    from app.extensions import mongo
+    mongo.db.departments.update_one({"code": dept}, {"$set": {"name": dept, "deleted": False}}, upsert=True)
     payload = {
         "name": name,
         "email": email,
         "dept": dept,
         "evaluator_type": evaluator_type,
     }
+    if evaluator_type == "external":
+        payload.update({"company_name": "TechVista", "post": "Engineer"})
+    else:
+        payload["domains"] = domains or ["Software Engineering"]
     if domains:
         payload["domains"] = domains
     response = client.post(
@@ -33,7 +39,9 @@ def test_create_evaluator_returns_created_record(client, manager_headers):
     evaluator = create_evaluator(client, manager_headers, evaluator_type="external")
     assert evaluator["name"] == "Test Evaluator"
     assert evaluator["email"] == "test.evaluator@techvista.com"
-    assert evaluator["dept"] == "CS"
+    assert evaluator["dept"] == ""
+    assert evaluator["company_name"] == "TechVista"
+    assert evaluator["post"] == "Engineer"
     assert evaluator["evaluator_type"] == "external"
     assert evaluator["role"] == "evaluator"
     assert "id" in evaluator

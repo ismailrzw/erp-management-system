@@ -196,10 +196,10 @@ def test_cannot_delete_course_with_active_groups(client, manager_headers, app):
 
     response = client.delete(f"{COURSES_URL}{course['id']}", headers=manager_headers)
     assert response.status_code == 409, response.get_json()
-    assert "active groups" in response.get_json()["message"]
+    assert "groups" in response.get_json()["message"]
 
 
-def test_can_delete_course_once_groups_are_removed(client, manager_headers, app):
+def test_archived_groups_still_block_course_until_references_are_removed(client, manager_headers, app):
     create_department(client, manager_headers)
     course = create_course(client, manager_headers, name="Course Without Groups")
 
@@ -210,6 +210,10 @@ def test_can_delete_course_once_groups_are_removed(client, manager_headers, app)
             group_model.Field.STATUS: group_model.Status.DELETED,
         })
 
+    response = client.delete(f"{COURSES_URL}{course['id']}", headers=manager_headers)
+    assert response.status_code == 409, response.get_json()
+    with app.app_context():
+        mongo.db[group_model.COLLECTION].delete_many({group_model.Field.COURSE: "Course Without Groups"})
     response = client.delete(f"{COURSES_URL}{course['id']}", headers=manager_headers)
     assert response.status_code == 200, response.get_json()
 

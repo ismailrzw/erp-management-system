@@ -9,7 +9,7 @@ def upload_csv(client, manager_headers, contents):
     return client.post(f"{STUDENTS_URL}bulk", data={"file": (BytesIO(contents.encode()), "students.csv")}, headers=manager_headers, content_type="multipart/form-data")
 
 
-def test_bulk_import_valid_csv(client, manager_headers):
+def test_bulk_import_valid_csv(client, manager_headers, academic_setup):
     csv = CSV_HEADERS + "Ada Lovelace,f2024-101,CS,A,2024,PBL,ada@example.com\nGrace Hopper,f2024-102,CS,B,2024,PBL,grace@example.com\n"
     response = upload_csv(client, manager_headers, csv)
     assert response.status_code == 200, response.get_json()

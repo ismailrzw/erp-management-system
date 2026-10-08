@@ -1,3 +1,5 @@
+from io import BytesIO
+
 # backend/tests/test_student_groups.py
 """
 Integration tests for student group formation and invitation workflow.
@@ -8,7 +10,7 @@ MY_GROUP_URL   = "/api/student/groups/my"
 INVITES_URL    = "/api/student/invitations/"
 SEARCH_URL     = "/api/student/students/search/"
 
-GROUP_PAYLOAD = {"name": "Team Alpha", "project_title": "Smart Attendance System"}
+GROUP_PAYLOAD = {"project_title": "Smart Attendance System"}
 
 
 
@@ -16,7 +18,9 @@ GROUP_PAYLOAD = {"name": "Team Alpha", "project_title": "Smart Attendance System
 
 def create_group(client, headers, payload=None):
     p = payload or GROUP_PAYLOAD
-    r = client.post(GROUPS_URL, json=p, headers=headers)
+    body = {key: value for key, value in p.items() if key != "name"}
+    body["proposal"] = (BytesIO(b"test proposal"), "proposal.pdf")
+    r = client.post(GROUPS_URL, data=body, content_type="multipart/form-data", headers=headers)
     assert r.status_code == 201, r.get_json()
     return r.get_json()["data"]
 
@@ -34,7 +38,7 @@ def send_invite(client, leader_headers, group_id, roll):
 def test_create_group_success(client, real_student_headers):
     """Student creates group → 201 with group data."""
     group = create_group(client, real_student_headers)
-    assert group["name"] == "Team Alpha"
+    assert group["name"].startswith("grp-")
     assert group["project_title"] == "Smart Attendance System"
     assert group["status"] == "pending"
     assert group["member_count"] == 1
@@ -45,7 +49,7 @@ def test_create_group_success(client, real_student_headers):
 def test_create_group_rejects_if_already_in_group(client, real_student_headers):
     """Student cannot create a second group while already a member."""
     create_group(client, real_student_headers)
-    r = client.post(GROUPS_URL, json=GROUP_PAYLOAD, headers=real_student_headers)
+    r = client.post(GROUPS_URL, data={**GROUP_PAYLOAD, "proposal": (BytesIO(b"proposal"), "proposal.pdf")}, content_type="multipart/form-data", headers=real_student_headers)
     assert r.status_code == 409, r.get_json()
     assert "already" in r.get_json()["message"].lower()
 
@@ -91,7 +95,7 @@ def test_get_my_group_after_creation(client, real_student_headers, student_user)
     r = client.get(MY_GROUP_URL, headers=real_student_headers)
     assert r.status_code == 200, r.get_json()
     data = r.get_json()["data"]
-    assert data["name"] == "Team Alpha"
+    assert data["name"].startswith("grp-")
     assert len(data["members"]) == 1
     assert data["members"][0]["roll"] == student_user["roll"]
     assert data["members"][0]["is_leader"] is True
@@ -106,11 +110,12 @@ def test_update_group_by_leader(client, real_student_headers):
     group = create_group(client, real_student_headers)
     r = client.put(
         f"{GROUPS_URL}{group['id']}",
-        json={"name": "Team Beta", "project_title": "New Project Title Here"},
+        json={"project_title": "New Project Title Here"},
         headers=real_student_headers,
     )
     assert r.status_code == 200, r.get_json()
-    assert r.get_json()["data"]["name"] == "Team Beta"
+    assert r.get_json()["data"]["name"] == group["name"]
+    assert r.get_json()["data"]["project_title"] == "New Project Title Here"
 
 
 def test_update_group_rejected_for_non_leader(client, real_student_headers, second_student_headers, second_student_user):
@@ -124,7 +129,7 @@ def test_update_group_rejected_for_non_leader(client, real_student_headers, seco
     # Try to update as non-leader
     r = client.put(
         f"{GROUPS_URL}{group['id']}",
-        json={"name": "Hijacked"},
+        json={"project_title": "Hijacked title"},
         headers=second_student_headers,
     )
     assert r.status_code == 403, r.get_json()
@@ -150,7 +155,7 @@ def test_invite_member_by_roll(client, real_student_headers, second_student_user
     assert r.status_code == 200, r.get_json()
     items = r.get_json()["data"]["items"]
     assert len(items) == 1
-    assert items[0]["group_name"] == "Team Alpha"
+    assert items[0]["group_name"] == group["name"]
 
 
 def test_invite_nonexistent_roll_returns_error(client, real_student_headers):
@@ -228,7 +233,7 @@ def test_accept_auto_declines_other_pending_invites(client, real_student_headers
     assert third_login.status_code == 200, third_login.get_json()
     third_headers = {"Authorization": f"Bearer {third_login.get_json()['data']['token']}"}
 
-    group2 = client.post(GROUPS_URL, json={"name": "Team Two", "project_title": "Another Project Title"}, headers=third_headers).get_json()["data"]
+    group2 = create_group(client, third_headers)
     send_invite(client, third_headers, group2["id"], second_student_user["roll"])
 
     # second_student now has 2 pending invites
@@ -352,7 +357,7 @@ def test_search_students_by_roll(client, real_student_headers, second_student_us
 def test_search_returns_has_group_flag(client, real_student_headers, second_student_headers, second_student_user):
     """has_group flag is True for students already in a group."""
     # second student creates a group
-    client.post(GROUPS_URL, json=GROUP_PAYLOAD, headers=second_student_headers)
+    create_group(client, second_student_headers)
 
     r = client.get(f"{SEARCH_URL}?roll=f2023", headers=real_student_headers)
     items = {s["roll"]: s for s in r.get_json()["data"]["items"]}
@@ -432,7 +437,7 @@ def test_list_my_sent_join_requests(client, real_student_headers, second_student
     assert r.status_code == 200, r.get_json()
     items = r.get_json()["data"]["items"]
     assert len(items) >= 1
-    assert items[0]["group_name"] == "Team Alpha"
+    assert items[0]["group_name"] == group["name"]
     assert items[0]["status"] == "pending"
 
 
@@ -476,7 +481,7 @@ def test_leader_reject_join_request(client, real_student_headers, second_student
     assert items[0]["status"] == "rejected"
 
 
-def test_member_can_leave_approved_group(client, real_student_headers, second_student_headers, second_student_user):
+def test_approved_group_membership_is_locked(client, real_student_headers, second_student_headers, second_student_user):
     """A member must be able to leave an approved group as well as a pending one."""
     group = create_group(client, real_student_headers)
 
@@ -489,24 +494,21 @@ def test_member_can_leave_approved_group(client, real_student_headers, second_st
     client.post(f"{GROUPS_URL}join-requests/{req_id}/accept", headers=real_student_headers)
 
     # Set group status to approved in DB
-    from app.extensions import mongo
     from bson import ObjectId
+
+    from app.extensions import mongo
     mongo.db.groups.update_one({"_id": ObjectId(group["id"])}, {"$set": {"status": "approved"}})
 
-    # Member leaves approved group
-    leave_res = client.post(f"{GROUPS_URL}leave", headers=second_student_headers)
-    assert leave_res.status_code == 200, leave_res.get_json()
-    assert "left group" in leave_res.get_json()["message"].lower()
-
-    # Member no longer in group
-    my_group_res = client.get(MY_GROUP_URL, headers=second_student_headers)
-    assert my_group_res.status_code == 200
-    assert my_group_res.get_json()["data"] is None
+    # Approval freezes the academic dossier instead of permitting an open membership change.
+    leave_res = client.post(f"{GROUPS_URL}{group['id']}/leave", headers=second_student_headers)
+    assert leave_res.status_code in (400, 409), leave_res.get_json()
+    assert "locked" in leave_res.get_json()["message"].lower()
+    assert client.get(MY_GROUP_URL, headers=second_student_headers).get_json()["data"]["id"] == group["id"]
 
 
 def test_manager_send_broadcast_mail_to_groups(client, manager_headers, real_student_headers):
     """Manager can broadcast emails to groups."""
-    group = create_group(client, real_student_headers)
+    create_group(client, real_student_headers)
 
     res = client.post(
         "/api/manager/groups/send-mail",
