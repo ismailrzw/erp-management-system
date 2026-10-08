@@ -1,4 +1,6 @@
 import json
+import logging
+import sys
 from datetime import datetime
 
 from bson import ObjectId
@@ -11,6 +13,13 @@ from app.config import Config
 from app.extensions import mongo
 from app.middleware import fix_authorization_header
 from app.utils import register_jwt_handlers
+
+# Configure root logger to output INFO level logs directly to stdout
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
 
 jwt = JWTManager()
 
@@ -157,9 +166,16 @@ def create_app(config_class=Config):
     from app.blueprints.teacher import teacher_bp
     app.register_blueprint(teacher_bp, url_prefix='/api/teacher')
 
-    # ── Evaluator Blueprint (Exhibition Day) ─────────────────────────────────
+    # ── Evaluator Blueprint (Project) ─────────────────────────────────
     from app.blueprints.evaluator import evaluator_bp
     app.register_blueprint(evaluator_bp, url_prefix='/api/evaluator')
+
+    from app.blueprints.workflow import workflow_bp
+    app.register_blueprint(workflow_bp, url_prefix='/api/workflow')
+    from app.blueprints.files import files_bp
+    app.register_blueprint(files_bp, url_prefix='/api/files')
+    from app.blueprints.notifications import notifications_bp
+    app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
 
     # Ensure database indexes for fast point-lookup
     try:
