@@ -98,6 +98,9 @@ class AuthService:
             if not stored_hash or not verify_password(password, stored_hash):
                 return None
 
+            if user.get("role") == Role.EVALUATOR and user.get("evaluator_type") == "internal" and user.get("email_verified") is False:
+                raise ValueError("Activate your institutional email using the setup link before signing in.")
+
             token = create_access_token(
                 identity=str(user["_id"]),
                 additional_claims={
@@ -164,7 +167,9 @@ class AuthService:
                     "name":  user.get(UserFields.NAME),
                     "email": user.get(UserFields.EMAIL),
                     "role":  user.get(UserFields.ROLE),
-                    "dept":  user.get(UserFields.DEPT),
+                "dept": user.get("dept"), "course": user.get("course"),
+                "roll": user.get("roll"), "session": user.get("session"),
+                "group_id": str(user["group_id"]) if user.get("group_id") else None,
                 },
             }
 
@@ -249,6 +254,7 @@ class AuthService:
             {"$set": {
                 UserFields.PASSWORD_HASH: new_hash,
                 "password_set": True,
+                "email_verified": True,
                 "password_set_at": now,
                 UserFields.UPDATED_AT: now,
             }},
@@ -269,7 +275,7 @@ class AuthService:
     def get_user_by_id(user_id: str) -> dict | None:
         """Return a safe user dict (no password_hash) by MongoDB ObjectId, or None."""
         try:
-            user = mongo.db.users.find_one({"_id": ObjectId(user_id)})
+            user = mongo.db.users.find_one({"_id": ObjectId(user_id), "deleted": {"$ne": True}})
             if not user:
                 return None
             return {
@@ -277,6 +283,9 @@ class AuthService:
                 "name":  user.get(UserFields.NAME),
                 "email": user.get(UserFields.EMAIL),
                 "role":  user.get(UserFields.ROLE),
+                "dept": user.get("dept"), "course": user.get("course"),
+                "roll": user.get("roll"), "session": user.get("session"),
+                "group_id": str(user["group_id"]) if user.get("group_id") else None,
             }
         except (ValueError, TypeError) as exc:
             current_app.logger.error("Invalid user ID format: %s", exc)
@@ -300,6 +309,9 @@ class AuthService:
                 "name":  user.get(UserFields.NAME),
                 "email": user.get(UserFields.EMAIL),
                 "role":  user.get(UserFields.ROLE),
+                "dept": user.get("dept"), "course": user.get("course"),
+                "roll": user.get("roll"), "session": user.get("session"),
+                "group_id": str(user["group_id"]) if user.get("group_id") else None,
             }
         except (ValueError, TypeError) as exc:
             current_app.logger.error("Invalid email format: %s", exc)
@@ -314,7 +326,7 @@ class AuthService:
         Change a user's password after verifying the current one.
         """
         try:
-            user = mongo.db.users.find_one({"_id": ObjectId(user_id)})
+            user = mongo.db.users.find_one({"_id": ObjectId(user_id), "deleted": {"$ne": True}})
             if not user:
                 return False, "User not found."
 

@@ -6,6 +6,7 @@ Supports generating group-wise reports as Excel (.xlsx) files via openpyxl.
 
 import io
 import re
+from datetime import datetime
 
 import openpyxl
 from bson import ObjectId
@@ -219,11 +220,14 @@ def generate_group_performance_export(group_id: str) -> io.BytesIO:
         submissions_by_iter[str(s.get("iteration_id"))] = s
 
     # Evaluations lookup
-    member_oids = [ObjectId(m["id"]) for m in resolved_members if ObjectId.is_valid(m["id"])]
     evals_by_iter_and_student = {}
     for ev in mongo.db.student_evaluations.find({"iteration_id": {"$in": [it["_id"] for it in iterations]}}):
         key = (str(ev.get("iteration_id")), str(ev.get("student_id")))
         evals_by_iter_and_student[key] = ev
+
+    for evaluation in mongo.db.evaluations.find({"group_id": g_oid, "mode": "supervisor_group"}):
+        for member in resolved_members:
+            evals_by_iter_and_student[(str(evaluation["iteration_id"]), member["id"])] = evaluation
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -244,6 +248,7 @@ def generate_group_performance_export(group_id: str) -> io.BytesIO:
         "Max Marks",
         "Score (%)",
         "Feedback / Remarks",
+        "Raw Marks", "Late Penalty (%)", "Deduction",
     ]
 
     header_fill = PatternFill(start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
@@ -309,6 +314,9 @@ def generate_group_performance_export(group_id: str) -> io.BytesIO:
                 max_marks,
                 score_pct,
                 feedback_str,
+                ev.get("raw_score", marks_awarded) if ev else None,
+                ev.get("late_penalty_percent", 0) if ev else None,
+                ev.get("deduction", 0) if ev else None,
             ])
             serial += 1
 

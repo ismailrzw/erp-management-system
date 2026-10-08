@@ -10,8 +10,7 @@ from app.models.announcement import (
     AnnouncementScope,
     AnnouncementViewFields,
 )
-from app.models.group import Field as GroupField
-from app.models.user import Role, UserFields
+from app.models.user import UserFields
 
 
 def _object_id(announcement_id: str) -> ObjectId:
@@ -79,123 +78,21 @@ def list_announcements() -> list[dict]:
 
 
 def list_announcements_for_user(user_id: str | None = None, role: str | None = None, limit: int | None = None) -> list[dict]:
-    """
-    List announcements enriched with user-specific `is_recent` boolean flags
-    and filtered by targeting scope for students.
-    """
-    find_filter = {}
-
-    user_doc = None
-    user_oid = None
-    if user_id:
-        try:
-            user_oid = _object_id(user_id)
-            user_doc = mongo.db.users.find_one({"_id": user_oid})
-        except Exception:  # noqa: BLE001
-            user_doc = None
-            user_oid = None
-
-    # Filter for student role based on targeting scope
-    if role == Role.STUDENT and user_doc:
-        student_dept = user_doc.get(UserFields.DEPT, "")
-        student_group_id = user_doc.get(GroupField.GROUP_ID)
-        dept_patterns = [student_dept.upper(), student_dept.lower(), student_dept] if student_dept else []
-
-        or_conditions = [
-            {AnnouncementFields.SCOPE: AnnouncementScope.BROADCAST},
-            {AnnouncementFields.SCOPE: {"$exists": False}},
-            {AnnouncementFields.SCOPE: None},
-        ]
-
-        if dept_patterns:
-            or_conditions.append({
-                AnnouncementFields.SCOPE: AnnouncementScope.DEPARTMENT,
-                AnnouncementFields.TARGET_IDS: {"$in": dept_patterns},
-            })
-
-        if student_group_id:
-            or_conditions.append({
-                AnnouncementFields.SCOPE: AnnouncementScope.GROUP,
-                AnnouncementFields.TARGET_IDS: {"$in": [str(student_group_id)]},
-            })
-
-        find_filter = {"$or": or_conditions}
-
-    query = mongo.db[AnnouncementFields.COLLECTION].find(find_filter).sort(AnnouncementFields.CREATED_AT, -1)
-    if limit and limit > 0:
-        query = query.limit(limit)
-    documents = list(query)
-    serialized = [_serialize(doc) for doc in documents]
-
-    # Non-student roles (e.g. manager) should never see 'Recent' tags
-    if not user_id or role != Role.STUDENT or not user_doc:
-        for item in serialized:
-            item["is_recent"] = False
-        return serialized
-
-    # 1. Load viewed announcements for this student
-    viewed_docs = list(mongo.db[AnnouncementViewFields.COLLECTION].find(
-        {AnnouncementViewFields.USER_ID: user_oid},
-        {AnnouncementViewFields.ANNOUNCEMENT_ID: 1}
-    ))
-    viewed_id_strs = {str(v[AnnouncementViewFields.ANNOUNCEMENT_ID]) for v in viewed_docs}
-
-    # 2. Extract recent announcement IDs stored on user doc
-    raw_recent = user_doc.get(UserFields.RECENT_ANNOUNCEMENTS, [])
-    recent_id_strs = {str(item) for item in raw_recent}
-
-    # 3. Consider creation threshold (last_login_at)
-    last_login = user_doc.get(UserFields.LAST_LOGIN_AT)
-    last_login_dt = None
-    if isinstance(last_login, datetime):
-        last_login_dt = last_login if last_login.tzinfo else last_login.replace(tzinfo=timezone.utc)
-    elif isinstance(last_login, str):
-        try:
-            last_login_dt = datetime.fromisoformat(last_login)
-        except Exception:  # noqa: BLE001
-            last_login_dt = None
-
-    for item in serialized:
-        ann_id_str = item["id"]
-        # If student has viewed this announcement, it is never recent
-        if ann_id_str in viewed_id_strs:
-            item["is_recent"] = False
-            continue
-
-        # If it's already in the user's recent_announcements array
-        if ann_id_str in recent_id_strs:
-            item["is_recent"] = True
-            continue
-
-        # If created since last login session
-        is_after_login = False
-        created_val = item.get("created_at") or item.get("date")
-        if last_login_dt and created_val:
-            try:
-                if isinstance(created_val, str):
-                    ann_dt = datetime.fromisoformat(created_val)
-                elif isinstance(created_val, datetime):
-                    ann_dt = created_val
-                else:
-                    ann_dt = None
-
-                if ann_dt:
-                    if not ann_dt.tzinfo:
-                        ann_dt = ann_dt.replace(tzinfo=timezone.utc)
-                    if ann_dt >= last_login_dt:
-                        is_after_login = True
-            except Exception:  # noqa: BLE001
-                is_after_login = False
-
-        item["is_recent"] = is_after_login
-
-    return serialized
+    """Reuse persistent audience and read state across dashboards and history."""
+    if not user_id:
+        return []
+    from app.blueprints.notifications import history
+    return history(user_id, limit=limit or 50)["items"]
 
 
 def mark_announcement_viewed(announcement_id: str, user_id: str) -> bool:
     """Record that a user has viewed an announcement, untagging it as recent."""
     ann_oid = _object_id(announcement_id)
     user_oid = _object_id(user_id)
+    from app.blueprints.notifications import audience_query
+    from app.services.milestone_service import current_user
+    if not mongo.db.announcements.find_one({"$and": [{"_id": ann_oid}, audience_query(current_user(user_id))]}):
+        raise ValueError("Announcement not found for your account.")
     now = datetime.now(timezone.utc)
 
     # 1. Upsert into announcement_views collection
@@ -221,7 +118,9 @@ def mark_all_announcements_viewed(user_id: str) -> int:
     user_oid = _object_id(user_id)
     now = datetime.now(timezone.utc)
 
-    all_announcements = list(mongo.db[AnnouncementFields.COLLECTION].find({}, {AnnouncementFields.ID: 1}))
+    from app.blueprints.notifications import audience_query
+    from app.services.milestone_service import current_user
+    all_announcements = list(mongo.db[AnnouncementFields.COLLECTION].find(audience_query(current_user(user_id)), {AnnouncementFields.ID: 1}))
     count = 0
     for ann in all_announcements:
         ann_oid = ann[AnnouncementFields.ID]

@@ -1,17 +1,22 @@
 """Validation and atomic-style bulk creation of student accounts."""
 
 import csv
+import logging
 from datetime import datetime, timezone
 from io import TextIOWrapper
 from uuid import uuid4
 
 import bcrypt
+from marshmallow import ValidationError
 from openpyxl import load_workbook
 from werkzeug.datastructures import FileStorage
 
 from app.extensions import mongo
 from app.models.user import Role, UserFields
 from app.schemas.student_schema import CreateStudentSchema
+from app.services.academic_integrity_service import validate_enrollment
+from app.services.academic_write_service import academic_write
+from app.services.email_service import send_student_credentials_email
 from app.services.student_service import (
     generate_initial_password,
     generate_student_email,
@@ -104,6 +109,7 @@ def parse_excel(file: FileStorage) -> tuple[list[dict], list[dict]]:
         data = _normalise_row(canonical)
         try:
             data = schema.load(data)
+            validate_enrollment(data["dept"], data.get("course", ""))
         except Exception as exc:  # noqa: BLE001 - must not let one bad row abort the whole import
             errors.append({"row": index, "error": str(exc)})
             continue
@@ -116,6 +122,7 @@ def parse_excel(file: FileStorage) -> tuple[list[dict], list[dict]]:
     return valid_rows, errors
 
 
+@academic_write
 def bulk_create_students(rows: list[dict]) -> dict:
     """Create valid students in one batch; clean up the batch if insertion fails."""
     if not rows:
@@ -130,18 +137,28 @@ def bulk_create_students(rows: list[dict]) -> dict:
     batch_id = uuid4().hex
     documents, errors = [], []
     now = datetime.now(timezone.utc)
+    created_credentials = []
+
     for row in rows:
-        data = row["data"]
+        try:
+            data = CreateStudentSchema().load(row["data"])
+            validate_enrollment(data["dept"], data.get("course", ""))
+        except (ValueError, ValidationError) as exc:
+            errors.append({"row": row["row"], "error": str(exc)})
+            continue
         if data["roll"].casefold() in existing_rolls:
             errors.append({"row": row["row"], "roll": data["roll"], "error": "Roll already exists."})
             continue
         password = generate_initial_password(data["roll"])
+        student_email = generate_student_email(data["roll"])
         documents.append({
             UserFields.NAME: data["name"],
-            UserFields.EMAIL: generate_student_email(data["roll"]),
+            UserFields.EMAIL: student_email,
             UserFields.PASSWORD_HASH: bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8"),
             UserFields.ROLE: Role.STUDENT,
             UserFields.DEPT: data["dept"].upper(),
+            "dept_id": mongo.db.departments.find_one({"code": data["dept"].upper(), "deleted": {"$ne": True}})["_id"],
+            "course_id": (mongo.db.courses.find_one({"name": data.get("course"), "deleted": {"$ne": True}}) or {}).get("_id"),
             UserFields.SECTION: data["section"].upper(),
             UserFields.COURSE: data["course"],
             UserFields.ROLL: data["roll"].strip().lower(),
@@ -153,6 +170,13 @@ def bulk_create_students(rows: list[dict]) -> dict:
             UserFields.UPDATED_AT: now,
             "import_batch_id": batch_id,
         })
+        created_credentials.append({
+            "email": student_email,
+            "name": data["name"],
+            "roll": data["roll"],
+            "password": password,
+        })
+
     if not documents:
         return {"imported_count": 0, "skipped_count": len(errors), "errors": errors}
     try:
@@ -161,4 +185,17 @@ def bulk_create_students(rows: list[dict]) -> dict:
         mongo.db.users.delete_many({"import_batch_id": batch_id})
         raise ValueError(f"Import failed and was rolled back: {exc}") from exc
     mongo.db.users.update_many({"import_batch_id": batch_id}, {"$unset": {"import_batch_id": ""}})
+
+    # Dispatch credentials emails for all newly created accounts
+    for cred in created_credentials:
+        try:
+            send_student_credentials_email(
+                to_email=cred["email"],
+                student_name=cred["name"],
+                roll=cred["roll"],
+                temporary_password=cred["password"],
+            )
+        except Exception:
+            logging.getLogger(__name__).exception("Student import email delivery failed")
+
     return {"imported_count": len(documents), "skipped_count": len(errors), "errors": errors}
