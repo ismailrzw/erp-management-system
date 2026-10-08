@@ -6,16 +6,6 @@ export const coursesApi = {
     return response.data;
   },
 
-  getCourses: async (params = {}) => {
-    const response = await api.get('/manager/courses/', { params });
-    return response.data;
-  },
-
-  getById: async (id) => {
-    const response = await api.get(`/manager/courses/${id}`);
-    return response.data;
-  },
-
   create: async (data) => {
     const response = await api.post('/manager/courses/', data);
     return response.data;

@@ -13,8 +13,6 @@ export const evaluatorApi = {
     const query = params.toString();
     return api.get(`/evaluator/evaluations${query ? `?${query}` : ''}`);
   },
-  getExhibitionGroups: () => api.get('/evaluator/exhibition'),
-  submitExhibitionEval: (data) => api.post('/evaluator/exhibition', data),
   getMeetings: (groupId) => {
     const query = groupId ? `?group_id=${groupId}` : '';
     return api.get(`/evaluator/meetings${query}`);
@@ -22,4 +20,7 @@ export const evaluatorApi = {
   logMeeting: (data) => api.post('/evaluator/meetings', data),
   getGroupRubrics: (groupId) => api.get(`/evaluator/groups/${groupId}/rubrics`),
   saveGroupRubrics: (groupId, rubrics) => api.post(`/evaluator/groups/${groupId}/rubrics`, { rubrics }),
+  listSupervisorRequests: async () => { const r = await api.get('/evaluator/supervisor-requests'); return r.data; },
+  acceptSupervisorRequest: async (id) => { const r = await api.post(`/evaluator/supervisor-requests/${id}/accept`); return r.data; },
+  rejectSupervisorRequest: async (id, reason) => { const r = await api.post(`/evaluator/supervisor-requests/${id}/reject`, { reason }); return r.data; },
 };

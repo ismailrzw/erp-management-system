@@ -19,51 +19,15 @@ const api = axios.create({
 // Cache wrapper for GET requests: provides 0ms responses for seamless navigation
 const originalGet = api.get.bind(api);
 api.get = async function (url, config = {}) {
-  const shouldSkipCache =
-    config.skipCache === true ||
-    config.params?._refresh === true ||
-    config.headers?.['Cache-Control'] === 'no-cache';
-
-  // If cache is enabled, check for cached entry
-  if (!shouldSkipCache) {
-    const cached = apiCache.get(url, config.params);
-    if (cached && !cached.isStale) {
-      // 0ms instant cache hit
-      return Promise.resolve({
-        data: cached.data,
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config,
-        fromCache: true,
-      });
-    }
-
-    // Stale-While-Revalidate: Return stale data instantly and revalidate in the background
-    if (cached && cached.isStale) {
-      originalGet(url, config)
-        .then((freshRes) => {
-          if (freshRes?.data) {
-            apiCache.set(url, config.params, freshRes.data);
-          }
-        })
-        .catch(() => {});
-
-      return Promise.resolve({
-        data: cached.data,
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config,
-        fromCache: true,
-        isStale: true,
-      });
-    }
-  }
-
-  // Network fetch
+  const session = localStorage.getItem('pbl_token') || sessionStorage.getItem('pbl_token');
+  const epoch = apiCache.epoch;
+  const sensitive = /auth|student|group|iteration|supervisor|notification|announcement|teacher/.test(url);
+  const skip = sensitive || config.skipCache || config.params?._refresh || config.responseType === 'blob';
+  const cached = !skip && apiCache.get(url, config.params);
+  if (cached && !cached.isStale) return { data: cached.data, status: 200, config, fromCache: true };
   const response = await originalGet(url, config);
-  if (response?.data && !shouldSkipCache) {
+  // A stale response must never re-populate a new session or mutation's cache.
+  if (!skip && epoch === apiCache.epoch && session === (localStorage.getItem('pbl_token') || sessionStorage.getItem('pbl_token'))) {
     apiCache.set(url, config.params, response.data);
   }
   return response;
@@ -97,7 +61,9 @@ api.interceptors.response.use(
   },
   (error) => {
     const isAuthRequest = error.config?.url?.includes('/auth/login');
-    if (error.response?.status === 401 && !isAuthRequest) {
+    const currentToken = localStorage.getItem('pbl_token') || sessionStorage.getItem('pbl_token');
+    const requestToken = error.config?.headers?.Authorization;
+    if (error.response?.status === 401 && !isAuthRequest && (!requestToken || requestToken === `Bearer ${currentToken}`)) {
       apiCache.clear();
       localStorage.removeItem('pbl_token');
       localStorage.removeItem('pbl_user');

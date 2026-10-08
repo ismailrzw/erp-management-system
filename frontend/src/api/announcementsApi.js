@@ -1,16 +1,6 @@
 import api from './client';
 
 export const announcementsApi = {
-  getAll: async () => {
-    const response = await api.get('/manager/announcements/');
-    return response.data;
-  },
-
-  getById: async (id) => {
-    const response = await api.get(`/manager/announcements/${id}`);
-    return response.data;
-  },
-
   create: async (data) => {
     const response = await api.post('/manager/announcements/', data);
     return response.data;

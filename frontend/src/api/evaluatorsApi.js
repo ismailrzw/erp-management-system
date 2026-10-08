@@ -1,6 +1,7 @@
 import api from './client';
 
 export const evaluatorsApi = {
+  resendActivation: async (id) => (await api.post(`/manager/evaluators/${id}/resend-activation`)).data,
   list: async (params = {}) => {
     const response = await api.get('/manager/evaluators/', { params });
     return response.data;

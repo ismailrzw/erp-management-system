@@ -1,16 +1,6 @@
 import api from './client';
 
 export const attachmentsApi = {
-  getAll: async () => {
-    const response = await api.get('/manager/attachments/');
-    return response.data;
-  },
-
-  getById: async (id) => {
-    const response = await api.get(`/manager/attachments/${id}`);
-    return response.data;
-  },
-
   upload: async (formData) => {
     const response = await api.post('/manager/attachments/', formData, {
       headers: {

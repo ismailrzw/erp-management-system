@@ -1,6 +1,7 @@
 import api from './client';
 
 export const studentGroupApi = {
+  getEnrollment: async () => (await api.get('/student/groups/enrollment', { skipCache: true })).data,
   getMyGroup: async () => {
     const response = await api.get('/student/groups/my');
     return response.data;

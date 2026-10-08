@@ -9,6 +9,7 @@ const DEFAULT_TTL = 60 * 1000; // 60 seconds
 class ApiCache {
   constructor() {
     this.cache = new Map();
+    this.epoch = 0;
   }
 
   /**
@@ -60,6 +61,7 @@ class ApiCache {
    * Invalidate entries matching a key substring, regex, or specific resource prefix.
    */
   invalidate(pattern) {
+    this.epoch += 1;
     if (!pattern) {
       this.cache.clear();
       return;
@@ -129,6 +131,7 @@ class ApiCache {
    * Clear all cached data (e.g. on logout).
    */
   clear() {
+    this.epoch += 1;
     this.cache.clear();
   }
 }
