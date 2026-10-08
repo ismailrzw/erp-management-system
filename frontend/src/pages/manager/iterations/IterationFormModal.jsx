@@ -1,470 +1,64 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal } from '../../../components/ui/Modal';
-import { Select } from '../../../components/ui/Select';
-import { DateTimePicker } from '../../../components/ui/DateTimePicker';
 import { iterationsApi } from '../../../api/iterationsApi';
-import { sprintsApi } from '../../../api/sprintsApi';
 import { rubricTemplatesApi } from '../../../api/rubricTemplatesApi';
 import { attachmentsApi } from '../../../api/attachmentsApi';
-import { FileText, GraduationCap, Paperclip, Upload, X } from 'lucide-react';
 
-export const IterationFormModal = ({
-  isOpen,
-  onClose,
-  iteration = null,
-  initialData = null,
-  courses = [],
-  onSave,
-  onSuccess,
-}) => {
-  const currentIteration = iteration || initialData;
-
-  const [formData, setFormData] = useState({
-    title: '',
-    course: '',
-    deadline: '',
-    details: '',
-    document_url: '',
-    document_name: '',
-    rubric_template_id: '',
-    is_group_formation: false,
-    late_penalty_percent: 10,
-    sprint_name: 'Sprint 1',
-    milestone_order: 1,
-    milestone_type: 'deliverable',
-  });
-  const [templates, setTemplates] = useState([]);
-  const [sprintOptions, setSprintOptions] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [uploadingDoc, setUploadingDoc] = useState(false);
-  const [error, setError] = useState('');
-
+function localInput(value) {
+  if (!value) return '';
+  if (value.length === 10) return value + 'T23:59';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+export const IterationFormModal = ({ isOpen, onClose, iteration = null, initialData = null, courses = [], onSave, onSuccess }) => {
+  const current = iteration || initialData;
+  const editing = Boolean(current?._id || current?.id);
+  const [form, setForm] = useState({}); const [templates, setTemplates] = useState([]);
+  const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   useEffect(() => {
     if (!isOpen) return;
-    // Fetch rubric templates for the dropdown
-    rubricTemplatesApi.getAll().then((res) => {
-      setTemplates(res.data || []);
-    }).catch(() => setTemplates([]));
-
-    // Fetch active sprints
-    sprintsApi.getAll().then((res) => {
-      setSprintOptions(res.data || []);
-    }).catch(() => setSprintOptions([]));
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (currentIteration) {
-      setFormData({
-        title: currentIteration.title || '',
-        course: currentIteration.course || '',
-        deadline: currentIteration.deadline || '',
-        details: currentIteration.details || '',
-        document_url: currentIteration.document_url || '',
-        document_name: currentIteration.document_name || '',
-        rubric_template_id: currentIteration.rubric_template_id || '',
-        is_group_formation: !!currentIteration.is_group_formation,
-        late_penalty_percent: currentIteration.late_penalty_percent !== undefined ? currentIteration.late_penalty_percent : 10,
-        sprint_name: currentIteration.sprint_name || 'Sprint 1',
-        milestone_order: currentIteration.milestone_order || 1,
-        milestone_type: currentIteration.milestone_type || (currentIteration.is_group_formation ? 'group_formation' : 'deliverable'),
-      });
-    } else {
-      setFormData({
-        title: '',
-        course: '',
-        deadline: '',
-        details: '',
-        document_url: '',
-        document_name: '',
-        rubric_template_id: '',
-        is_group_formation: false,
-        late_penalty_percent: 10,
-        sprint_name: 'Sprint 1',
-        milestone_order: 1,
-        milestone_type: 'deliverable',
-      });
-    }
+    setForm({ title: current?.title || '', course: current?.course || 'All Courses', deadline: localInput(current?.deadline), details: current?.details || '', late_penalty_percent: current?.late_penalty_percent || 0, rubric_template_id: current?.rubric_template_id || '', document_url: current?.document_url || '', document_name: current?.document_name || '', document_attachment_id: current?.document_attachment_id || '', file: null });
     setError('');
-  }, [currentIteration, isOpen]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (!formData.title.trim() || !formData.course || !formData.deadline) {
-      setError('Title, course, and deadline are required fields.');
-      return;
-    }
-
-    setLoading(true);
+    rubricTemplatesApi.getAll().then((r) => setTemplates(r.data || [])).catch(() => setError('Rubric templates could not be loaded. Retry opening this editor.'));
+  }, [isOpen, current]);
+  const set = (key, value) => setForm((previous) => ({ ...previous, [key]: value }));
+  const save = async (event) => {
+    event.preventDefault(); setBusy(true); setError('');
     try {
-      const payload = {
-        ...formData,
-        is_group_formation: Boolean(formData.is_group_formation || formData.milestone_type === 'group_formation'),
-        late_penalty_percent: Number(formData.late_penalty_percent) || 0,
-        milestone_order: Number(formData.milestone_order) || 1,
-        sprint_name: (formData.sprint_name || 'Sprint 1').trim(),
-        milestone_type: formData.milestone_type || 'deliverable',
-      };
-      // Only send rubric_template_id if selected and creating new
-      if (!payload.rubric_template_id) {
-        delete payload.rubric_template_id;
-      }
-      if (currentIteration) {
-        delete payload.rubric_template_id; // Don't change template on edit
-        await iterationsApi.update(currentIteration._id, payload);
+      const body = { title: form.title.trim(), course: form.course, deadline: new Date(form.deadline).toISOString(), details: form.details.trim(), late_penalty_percent: Number(form.late_penalty_percent), document_url: form.document_url, document_name: form.document_name };
+      if (form.file) {
+        const upload = new FormData(); upload.append('file', form.file); upload.append('title', 'Milestone Instructions'); upload.append('purpose', 'milestone');
+        const result = await attachmentsApi.upload(upload);
+        body.document_attachment_id = result.data.id;
+        // Keep a successfully uploaded file available when saving the task fails.
+        set('document_attachment_id', result.data.id); set('file', null); set('document_name', result.data.original_filename);
+      } else if (form.document_attachment_id) body.document_attachment_id = form.document_attachment_id;
+      if (form.rubric_template_id && (!editing || form.rubric_template_id !== current.rubric_template_id)) body.rubric_template_id = form.rubric_template_id;
+      if (editing) {
+        body.expected_version = current.version || 1;
+        await iterationsApi.update(current._id || current.id, body);
       } else {
-        await iterationsApi.create(payload);
+        body.sprint_id = current?.sprint_id; body.sprint_name = current?.sprint_name;
+        await iterationsApi.create(body);
       }
-
-      const callback = onSave || onSuccess;
-      if (typeof callback === 'function') {
-        callback();
-      }
-      onClose();
-    } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to save iteration.';
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
+      (onSave || onSuccess)?.(); onClose();
+    } catch (err) { setError(err.response?.data?.message || err.message || 'Milestone could not be saved. Your form is preserved.'); }
+    finally { setBusy(false); }
   };
-
-  // Filter templates relevant to the selected course or "All Courses"
-  const relevantTemplates = templates.filter(
-    (t) => t.course === 'All Courses' || t.course === formData.course || !formData.course
-  );
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={currentIteration ? 'Edit Iteration Milestone' : 'Add Iteration Milestone'}>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        {error && (
-          <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '10px 12px', borderRadius: '6px', fontSize: '13px' }}>
-            {error}
-          </div>
-        )}
-
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-              Target Sprint <span style={{ color: '#dc2626' }}>*</span>
-            </label>
-            <select
-              value={
-                sprintOptions.some((s) => s.name === formData.sprint_name) ||
-                ['Sprint 1', 'Sprint 2', 'Sprint 3', 'Sprint 4', 'Sprint 5'].includes(formData.sprint_name)
-                  ? formData.sprint_name
-                  : 'custom'
-              }
-              onChange={(e) => {
-                if (e.target.value === 'custom') {
-                  setFormData({ ...formData, sprint_name: '' });
-                } else {
-                  setFormData({ ...formData, sprint_name: e.target.value });
-                }
-              }}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', backgroundColor: '#ffffff' }}
-            >
-              {sprintOptions.length > 0 ? (
-                sprintOptions.map((s) => (
-                  <option key={s.id || s.name} value={s.name}>
-                    🏃 {s.name} {s.course && s.course !== 'All Courses' ? `(${s.course})` : ''}
-                  </option>
-                ))
-              ) : (
-                <>
-                  <option value="Sprint 1">Sprint 1 (Planning & Inception)</option>
-                  <option value="Sprint 2">Sprint 2 (Core Development)</option>
-                  <option value="Sprint 3">Sprint 3 (Integration & Testing)</option>
-                  <option value="Sprint 4">Sprint 4 (Final Delivery & Showcase)</option>
-                  <option value="Sprint 5">Sprint 5 (Post-Review)</option>
-                </>
-              )}
-              <option value="custom">Custom Sprint Name...</option>
-            </select>
-            {(sprintOptions.length === 0 || !sprintOptions.some((s) => s.name === formData.sprint_name)) &&
-              !['Sprint 1', 'Sprint 2', 'Sprint 3', 'Sprint 4', 'Sprint 5'].includes(formData.sprint_name) && (
-                <input
-                  type="text"
-                  placeholder="Enter custom sprint name (e.g. Sprint Alpha)"
-                  value={formData.sprint_name}
-                  onChange={(e) => setFormData({ ...formData, sprint_name: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', marginTop: '6px' }}
-                  required
-                />
-              )}
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-              Milestone # <span style={{ color: '#dc2626' }}>*</span>
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="20"
-              value={formData.milestone_order}
-              onChange={(e) => setFormData({ ...formData, milestone_order: e.target.value })}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
-              required
-            />
-          </div>
-        </div>
-
-        <div>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-            Milestone Title <span style={{ color: '#dc2626' }}>*</span>
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. Group Formation Cutoff & Initial Proposal"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
-            required
-          />
-        </div>
-
-        <div>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-            Milestone Type
-          </label>
-          <select
-            value={formData.milestone_type}
-            onChange={(e) => {
-              const val = e.target.value;
-              setFormData({
-                ...formData,
-                milestone_type: val,
-                is_group_formation: val === 'group_formation' ? true : formData.is_group_formation,
-              });
-            }}
-            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', backgroundColor: '#ffffff' }}
-          >
-            <option value="deliverable">📄 Deliverable / Project Submission</option>
-            <option value="group_formation">👥 Group Formation & Proposal Cutoff (Milestone 1)</option>
-            <option value="presentation">🎤 Presentation / Demo / Evaluation</option>
-          </select>
-        </div>
-
-        <div>
-          <Select
-            label="Target Course"
-            required
-            icon={GraduationCap}
-            value={formData.course}
-            onChange={(e) => setFormData({ ...formData, course: e.target.value })}
-          >
-            <option value="">— Select Course —</option>
-            <option value="All Courses" style={{ fontWeight: 600, color: '#7c3aed' }}>
-              🌐 All Courses (Cross-Section)
-            </option>
-            {courses.map((c) => (
-              <option key={c._id || c.id || c.name} value={c.name}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        <div>
-          <DateTimePicker
-            label="Submission Deadline"
-            required
-            value={formData.deadline}
-            onChange={(val) => setFormData({ ...formData, deadline: val })}
-            helperText="Set exact date & time for the milestone submission deadline."
-          />
-        </div>
-
-        <div>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-            Details & Instructions
-          </label>
-          <textarea
-            rows={3}
-            placeholder="Instructions for students regarding deliverables..."
-            value={formData.details}
-            onChange={(e) => setFormData({ ...formData, details: e.target.value })}
-            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', resize: 'vertical' }}
-          />
-        </div>
-
-        {/* Attachment / Resource Document for Students */}
-        <div>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-            Attach Document / Guidelines for Students (Optional)
-          </label>
-          {formData.document_url ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e293b', fontWeight: 500 }}>
-                <Paperclip size={15} style={{ color: 'var(--primary)' }} />
-                <span>{formData.document_name || 'Attached Document'}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, document_url: '', document_name: '' })}
-                style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '12px', fontWeight: 500 }}
-              >
-                <X size={14} /> Remove
-              </button>
-            </div>
-          ) : (
-            <div>
-              <input
-                type="file"
-                id="iteration-doc-upload"
-                style={{ display: 'none' }}
-                accept=".pdf,.docx,.xlsx,.zip"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setUploadingDoc(true);
-                  try {
-                    const uploadData = new FormData();
-                    uploadData.append('file', file);
-                    uploadData.append('title', file.name);
-                    const res = await attachmentsApi.upload(uploadData);
-                    const att = res.data || res;
-                    setFormData({
-                      ...formData,
-                      document_name: file.name,
-                      document_url: att.url || `/api/manager/attachments/${att.id || att._id}/download`,
-                    });
-                  } catch (err) {
-                    setError(err.response?.data?.message || 'Failed to upload document.');
-                  } finally {
-                    setUploadingDoc(false);
-                  }
-                }}
-              />
-              <label
-                htmlFor="iteration-doc-upload"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: '1px dashed #cbd5e1',
-                  backgroundColor: '#f8fafc',
-                  color: '#475569',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  cursor: uploadingDoc ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <Upload size={15} style={{ color: 'var(--primary)' }} />
-                <span>{uploadingDoc ? 'Uploading document...' : 'Click to attach PDF, DOCX, XLSX, or ZIP document for students'}</span>
-              </label>
-            </div>
-          )}
-        </div>
-
-        {/* Rubric Template Selector (only for creation) */}
-        {!initialData && (
-          <div>
-            <Select
-              label="Link Rubric Template (Optional)"
-              icon={FileText}
-              value={formData.rubric_template_id}
-              onChange={(e) => setFormData({ ...formData, rubric_template_id: e.target.value })}
-              helperText="Pre-populates rubric criteria from a saved template. You can customize them later."
-            >
-              <option value="">— No Template (Add Rubrics Later) —</option>
-              {relevantTemplates.map((t) => (
-                <option key={t._id} value={t._id}>
-                  {t.name} ({t.criteria?.length || 0} criteria) — {t.course}
-                </option>
-              ))}
-            </Select>
-          </div>
-        )}
-
-        {/* Group Formation & Late Penalty Configuration */}
-        <div
-          style={{
-            padding: '12px 14px',
-            backgroundColor: formData.is_group_formation ? '#f0fdf4' : '#f8fafc',
-            border: `1px solid ${formData.is_group_formation ? '#bbf7d0' : '#e2e8f0'}`,
-            borderRadius: '8px',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-            <input
-              type="checkbox"
-              id="is_group_formation"
-              checked={formData.is_group_formation}
-              onChange={(e) => setFormData({ ...formData, is_group_formation: e.target.checked })}
-              style={{ marginTop: '3px', cursor: 'pointer', accentColor: '#16a34a' }}
-            />
-            <div style={{ flex: 1 }}>
-              <label
-                htmlFor="is_group_formation"
-                style={{
-                  display: 'block',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
-                  color: formData.is_group_formation ? '#166534' : '#334155',
-                  cursor: 'pointer',
-                }}
-              >
-                Designate as Group Formation & Proposal Cutoff
-              </label>
-              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>
-                Establishes this milestone deadline as the official group formation cutoff for students enrolled in this course. Groups formed after this date will be tracked and penalized.
-              </p>
-            </div>
-          </div>
-
-          {formData.is_group_formation && (
-            <div style={{ marginTop: '12px', paddingLeft: '24px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#166534' }}>
-                Late Group Formation Penalty (%):
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={formData.late_penalty_percent}
-                onChange={(e) => setFormData({ ...formData, late_penalty_percent: e.target.value })}
-                style={{
-                  width: '80px',
-                  padding: '5px 8px',
-                  borderRadius: '6px',
-                  border: '1px solid #86efac',
-                  fontSize: '13px',
-                  backgroundColor: '#ffffff',
-                  color: '#166534',
-                  fontWeight: 700,
-                }}
-              />
-              <span style={{ fontSize: '11.5px', color: '#15803d' }}>
-                Deducted automatically from milestone rubric score
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn btn-primary"
-          >
-            {loading ? 'Saving...' : initialData ? 'Update Iteration' : 'Create Iteration'}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
+  return <Modal isOpen={isOpen} onClose={() => !busy && onClose()} title={editing ? 'Edit Milestone' : 'Add Milestone'} maxWidth="680px">
+    <form className="workflow-form" onSubmit={save}>
+      {error && <p role="alert" className="workflow-error">{error}</p>}
+      <label>Milestone Title<input required maxLength={200} value={form.title || ''} onChange={(e) => set('title', e.target.value)} disabled={busy} /></label>
+      <label>Target Course<select value={form.course || 'All Courses'} onChange={(e) => set('course', e.target.value)} disabled={busy}><option>All Courses</option>{courses.map((c) => <option key={c.id || c._id || c.name} value={c.name}>{c.name} ({c.dept})</option>)}</select></label>
+      <label>Submission Deadline<input type="datetime-local" required value={form.deadline || ''} onChange={(e) => set('deadline', e.target.value)} disabled={busy} /></label>
+      <label>Details and Instructions<textarea rows={5} value={form.details || ''} onChange={(e) => set('details', e.target.value)} disabled={busy} /></label>
+      <label>Attached Document<input type="file" accept=".pdf,.docx,.xlsx,.zip" onChange={(e) => set('file', e.target.files?.[0] || null)} disabled={busy} /></label>
+      {form.document_name && <p>Attached: {form.document_name}</p>}
+      <label>Rubric<select value={form.rubric_template_id || ''} onChange={(e) => set('rubric_template_id', e.target.value)} disabled={busy}><option value="">No rubric selected</option>{templates.filter((t) => !t.course || t.course === 'All Courses' || t.course === form.course).map((t) => <option key={t._id || t.id} value={t._id || t.id}>{t.name}</option>)}</select></label>
+      <p>A milestone without a rubric remains visible, but grading is unavailable until its rubric is configured.</p>
+      <label>Late Submission Penalty (% of earned marks)<input type="number" min={0} max={100} step={1} value={form.late_penalty_percent ?? 0} onChange={(e) => set('late_penalty_percent', e.target.value)} disabled={busy} /></label>
+      <div className="workflow-actions"><button type="button" className="btn btn-secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Save Milestone'}</button></div>
+    </form>
+  </Modal>;
 };

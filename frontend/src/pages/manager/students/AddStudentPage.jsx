@@ -52,7 +52,7 @@ export const AddStudentPage = () => {
           }
         }
       } catch {
-        // Dropdowns will default to user entry
+        if (isMounted) setFormError('Academic lists could not be loaded. Reload this page to retry.');
       }
     };
     loadRefs();
@@ -68,8 +68,8 @@ export const AddStudentPage = () => {
     const cleanName = formData.name.trim();
     const cleanRoll = formData.roll.trim().toLowerCase();
 
-    if (!cleanName || !cleanRoll) {
-      setFormError('Name and Roll Number are mandatory.');
+    if (!cleanName || !cleanRoll || !formData.dept || !formData.session.trim()) {
+      setFormError('Full Name, Roll Number, Department, and Academic Session are mandatory.');
       return;
     }
 
@@ -190,7 +190,7 @@ export const AddStudentPage = () => {
           <button
             type="button"
             onClick={() => navigate('/manager/students/view')}
-            className="btn btn-secondary"
+            className="btn btn-back"
           >
             <ArrowLeft size={15} />
             <span>Back to Students List</span>
@@ -486,11 +486,12 @@ export const AddStudentPage = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '6px' }}>
-                  Department Code (Optional)
+                  Department *
                 </label>
                 <select
                   value={formData.dept}
-                  onChange={(e) => setFormData({ ...formData, dept: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, dept: e.target.value, course: '' })}
+                  required
                   style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
                 >
                   <option value="">-- Select Department --</option>
@@ -500,6 +501,11 @@ export const AddStudentPage = () => {
                     </option>
                   ))}
                 </select>
+                {departments.length === 0 && (
+                  <p style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                    No departments available. <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigate('/manager/departments/add')}>Create Department</button>
+                  </p>
+                )}
               </div>
 
               <div>
@@ -517,11 +523,12 @@ export const AddStudentPage = () => {
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '6px' }}>
-                  Academic Session (Optional)
+                  Academic Session *
                 </label>
                 <input
                   type="text"
                   value={formData.session}
+                  required
                   onChange={(e) => setFormData({ ...formData, session: e.target.value })}
                   placeholder="e.g. Fall 2025"
                   style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
@@ -540,7 +547,7 @@ export const AddStudentPage = () => {
                   style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
                 >
                   <option value="">-- Select Course --</option>
-                  {courses.map((c) => (
+                  {courses.filter((c) => c.dept === formData.dept).map((c) => (
                     <option key={c.id || c._id || c.name} value={c.name}>
                       {c.name}
                     </option>

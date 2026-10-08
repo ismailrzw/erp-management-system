@@ -1,10 +1,10 @@
+import { useLiveRefresh } from '../../../hooks/useLiveRefresh';
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   FolderGit2,
   CheckCircle2,
   XCircle,
-  Eye,
   Search,
   RefreshCw,
   ChevronLeft,
@@ -390,6 +390,8 @@ export const ManageGroupsPage = () => {
       </span>
     );
   };
+
+  useLiveRefresh(() => fetchGroups());
 
   if (loading && !refreshing && groups.length === 0 && ungroupedStudents.length === 0) {
     return (
@@ -1068,7 +1070,7 @@ export const ManageGroupsPage = () => {
 
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ fontSize: '13px', color: '#334155' }}>
-                            {g.course_name}
+                            {g.course}
                           </div>
                           <div style={{ fontSize: '11.5px', color: '#64748b' }}>
                             {g.dept}

@@ -118,7 +118,7 @@ export const CourseTrashPage = () => {
         <button
           type="button"
           onClick={() => navigate('/manager/courses/view')}
-          className="btn btn-secondary"
+          className="btn btn-back"
         >
           <ArrowLeft size={15} />
           <span>Back to Courses</span>

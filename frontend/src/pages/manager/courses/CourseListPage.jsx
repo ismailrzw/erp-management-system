@@ -7,7 +7,6 @@ import {
   Edit2,
   RefreshCw,
   BookOpen,
-  Calendar,
 } from 'lucide-react';
 import { coursesApi } from '../../../api/coursesApi';
 import { departmentsApi } from '../../../api/departmentsApi';
@@ -15,7 +14,6 @@ import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
-import { formatDate } from '../../../utils/dateUtils';
 
 export const CourseListPage = () => {
   const [courses, setCourses] = useState([]);
@@ -143,6 +141,7 @@ export const CourseListPage = () => {
       await coursesApi.delete(courseToDelete.id || courseToDelete._id);
       setToast({ message: 'Course moved to Recycle Bin', type: 'success' });
       setCourseToDelete(null);
+      setIsEditModalOpen(false);
       fetchCourses(true);
     } catch (err) {
       setToast({
@@ -361,14 +360,6 @@ export const CourseListPage = () => {
                           <Edit2 size={13} />
                           <span>Edit</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setCourseToDelete(c)}
-                          className="btn btn-danger-outline btn-sm"
-                        >
-                          <Trash2 size={13} />
-                          <span>Delete</span>
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -443,6 +434,9 @@ export const CourseListPage = () => {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
+            <button type="button" disabled={actionLoading} className="btn btn-danger-outline" onClick={() => setCourseToDelete({ id: editFormData.id, name: editFormData.name })}>
+              <Trash2 size={13} /> Delete Course
+            </button>
             <button
               type="button"
               onClick={() => setIsEditModalOpen(false)}

@@ -38,6 +38,8 @@ export const StudentListPage = () => {
   const [editFormData, setEditFormData] = useState({
     id: null,
     name: '',
+    dept: '',
+    academic_locked: false,
     section: '',
     course: '',
     recovery_email: '',
@@ -140,6 +142,8 @@ export const StudentListPage = () => {
     setEditFormData({
       id: student.id || student._id,
       name: student.name || '',
+      dept: student.dept || '',
+      academic_locked: student.academic_locked || false,
       section: student.section || '',
       course: student.course || '',
       recovery_email: student.recovery_email || '',
@@ -152,10 +156,12 @@ export const StudentListPage = () => {
     try {
       setActionLoading(true);
       await studentsApi.update(editFormData.id, {
-        name: editFormData.name.trim(),
         section: editFormData.section.trim(),
-        course: editFormData.course.trim(),
-        recovery_email: editFormData.recovery_email.trim() || undefined,
+        ...(!editFormData.academic_locked && {
+          dept: editFormData.dept,
+          course: editFormData.course.trim(),
+        }),
+        recovery_email: editFormData.recovery_email.trim() || null,
       });
       setToast({ message: 'Student updated successfully', type: 'success' });
       setIsEditModalOpen(false);
@@ -194,6 +200,7 @@ export const StudentListPage = () => {
       await studentsApi.delete(studentToDelete.id || studentToDelete._id);
       setToast({ message: 'Student moved to Recycle Bin', type: 'success' });
       setStudentToDelete(null);
+      setIsEditModalOpen(false);
       fetchStudents(pagination.page, true);
     } catch (err) {
       setToast({
@@ -475,15 +482,6 @@ export const StudentListPage = () => {
                           <Edit2 size={13} />
                           <span>Edit</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setStudentToDelete(stu)}
-                          className="btn btn-danger-outline btn-sm"
-                          title="Delete Student"
-                        >
-                          <Trash2 size={13} />
-                          <span>Delete</span>
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -539,15 +537,34 @@ export const StudentListPage = () => {
         <form onSubmit={handleSaveEdit}>
           <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '5px' }}>
-              Full Name *
+              Full Name (read-only)
             </label>
             <input
               type="text"
               value={editFormData.name}
-              onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-              required
+              readOnly
               style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '8px 12px', fontSize: '13.5px', outline: 'none' }}
             />
+          </div>
+
+          {editFormData.academic_locked && (
+            <p role="status" style={{ fontSize: '13px', color: 'var(--muted)' }}>
+              Department and Course are locked because this student belongs to a group.
+            </p>
+          )}
+          <div style={{ marginBottom: '14px' }}>
+            <label htmlFor="student-edit-department">Department</label>
+            <select
+              id="student-edit-department"
+              value={editFormData.dept}
+              required
+              disabled={editFormData.academic_locked || actionLoading}
+              onChange={(e) => setEditFormData({ ...editFormData, dept: e.target.value, course: '' })}
+              style={{ width: '100%', padding: '8px 12px', marginTop: '5px' }}
+            >
+              <option value="">Select Department</option>
+              {departments.map((d) => <option key={d.id || d._id} value={d.code}>{d.code} — {d.name}</option>)}
+            </select>
           </div>
 
           <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
@@ -565,16 +582,16 @@ export const StudentListPage = () => {
             </div>
             <div style={{ flex: 2 }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
-                Course *
+                Course (optional)
               </label>
               <select
                 value={editFormData.course}
                 onChange={(e) => setEditFormData({ ...editFormData, course: e.target.value })}
-                required
+                disabled={editFormData.academic_locked || actionLoading}
                 style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 34px 8px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
               >
-                <option value="">Select Course</option>
-                {courses.map((c) => (
+                <option value="">Not assigned</option>
+                {courses.filter((c) => c.dept === editFormData.dept).map((c) => (
                   <option key={c.id || c._id || c.name} value={c.name}>
                     {c.name}
                   </option>
@@ -597,6 +614,14 @@ export const StudentListPage = () => {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <button
+              type="button"
+              disabled={actionLoading}
+              className="btn btn-danger-outline"
+              onClick={() => setStudentToDelete({ id: editFormData.id, name: editFormData.name })}
+            >
+              <Trash2 size={13} /> Delete Student
+            </button>
             <button
               type="button"
               onClick={() => setIsEditModalOpen(false)}

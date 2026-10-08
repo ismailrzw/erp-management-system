@@ -103,7 +103,7 @@ export const AddTeacherPage = () => {
         <button
           type="button"
           onClick={() => navigate('/manager/teachers/view')}
-          className="btn btn-secondary"
+          className="btn btn-back"
         >
           <ArrowLeft size={15} />
           <span>Back to Teachers List</span>

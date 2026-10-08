@@ -119,7 +119,7 @@ export const StudentTrashPage = () => {
           <button
             type="button"
             onClick={() => navigate('/manager/students/view')}
-            className="btn btn-secondary"
+            className="btn btn-back"
           >
             <ArrowLeft size={15} />
             <span>Back to Active Students</span>

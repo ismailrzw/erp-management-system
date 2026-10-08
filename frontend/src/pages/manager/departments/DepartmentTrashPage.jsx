@@ -119,7 +119,7 @@ export const DepartmentTrashPage = () => {
           <button
             type="button"
             onClick={() => navigate('/manager/departments/view')}
-            className="btn btn-secondary"
+            className="btn btn-back"
           >
             <ArrowLeft size={15} />
             <span>Back to Active Departments</span>

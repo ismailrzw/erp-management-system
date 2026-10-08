@@ -9,7 +9,6 @@ import {
   GraduationCap,
   Users,
   ExternalLink,
-  FolderGit2,
 } from 'lucide-react';
 import { teachersApi } from '../../../api/teachersApi';
 import { departmentsApi } from '../../../api/departmentsApi';
@@ -174,6 +173,7 @@ export const TeacherListPage = () => {
       await teachersApi.delete(teacherToDelete.id || teacherToDelete._id);
       setToast({ message: 'Teacher moved to Recycle Bin', type: 'success' });
       setTeacherToDelete(null);
+      setIsEditModalOpen(false);
       fetchTeachers(true);
     } catch (err) {
       setToast({
@@ -474,14 +474,6 @@ export const TeacherListPage = () => {
                             <Edit2 size={13} />
                             <span>Edit</span>
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => setTeacherToDelete(t)}
-                            className="btn btn-danger-outline btn-sm"
-                          >
-                            <Trash2 size={13} />
-                            <span>Delete</span>
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -544,6 +536,9 @@ export const TeacherListPage = () => {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <button type="button" disabled={actionLoading} className="btn btn-danger-outline" onClick={() => setTeacherToDelete({ id: editFormData.id, name: editFormData.name })}>
+              <Trash2 size={13} /> Delete Teacher
+            </button>
             <button
               type="button"
               onClick={() => setIsEditModalOpen(false)}

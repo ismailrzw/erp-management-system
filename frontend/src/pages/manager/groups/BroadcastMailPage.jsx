@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Mail,
   Send,
   Loader2,
   Users,
@@ -9,7 +8,6 @@ import {
   CheckSquare,
   ArrowLeft,
   CheckCircle2,
-  AlertCircle,
   Search,
   Sparkles,
 } from 'lucide-react';
@@ -34,11 +32,6 @@ const QUICK_TEMPLATES = [
     subject: 'Action Required: Finalize FYP Group Formation',
     body: 'Dear Student,\n\nOur records indicate that you have not joined or formed a project group yet. Please complete your team formation or request to join an existing group before the deadline to ensure your course enrollment remains active.\n\nBest regards,\nPBL Management',
   },
-  {
-    label: 'Showcase Day Schedule',
-    subject: 'Final Project Exhibition & Showcase Day Schedule',
-    body: 'Dear Project Teams,\n\nThe final showcase and evaluation day has been scheduled. Please prepare your project booth, presentation slides, and running live demonstration for the evaluation panel.\n\nBest regards,\nPBL Management',
-  },
 ];
 
 export const BroadcastMailPage = () => {
@@ -50,7 +43,7 @@ export const BroadcastMailPage = () => {
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [loadingData, setLoadingData] = useState(true);
+  const [, setLoadingData] = useState(true);
   const [toast, setToast] = useState({ message: '', type: 'success' });
   const [successReport, setSuccessReport] = useState(null);
 

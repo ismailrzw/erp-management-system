@@ -1,3 +1,6 @@
+import { EditMenu } from '../../../components/ui/EditMenu';
+import { DeadlineInfo } from '../../../components/ui/DeadlineInfo';
+import { useLiveRefresh } from '../../../hooks/useLiveRefresh';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EmptyState } from '../../../components/ui/EmptyState';
@@ -16,34 +19,13 @@ import {
   Edit2,
   Sliders,
   Trash2,
-  Calendar,
   Eye,
   Search,
   CheckCircle2,
   Layers,
   FileText,
+  Award,
 } from 'lucide-react';
-
-const formatHumanDate = (dateStr) => {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString('en-PK', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-};
-
-const formatHumanTime = (dateStr) => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('en-PK', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
 
 export const IterationsManagePage = () => {
   const navigate = useNavigate();
@@ -58,6 +40,7 @@ export const IterationsManagePage = () => {
 
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [loadErrors, setLoadErrors] = useState({});
 
   // Modals
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -68,6 +51,7 @@ export const IterationsManagePage = () => {
   // Sprint Creation Modal State
   const [isCreateSprintOpen, setIsCreateSprintOpen] = useState(false);
   const [sprintFormData, setSprintFormData] = useState({ name: '', description: '' });
+  const [editingSprint, setEditingSprint] = useState(null);
   const [sprintActionLoading, setSprintActionLoading] = useState(false);
 
   // Delete Confirmation Modals
@@ -75,22 +59,27 @@ export const IterationsManagePage = () => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [sprintToDelete, setSprintToDelete] = useState(null);
 
+  // Student Grades Modal
+  const [gradesIteration, setGradesIteration] = useState(null);
+  const [grades, setGrades] = useState([]);
+  const [gradesLoading, setGradesLoading] = useState(false);
+
   const fetchCourses = useCallback(async () => {
     try {
       const res = await coursesApi.list();
       const courseList = res.data?.items || res.data || [];
-      setCourses(courseList);
+      setCourses(courseList); setLoadErrors(previous => ({ ...previous, courses: '' }));
     } catch (err) {
-      console.error('Failed to load courses:', err);
+      setLoadErrors(previous => ({ ...previous, courses: err.response?.data?.message || 'Courses could not be loaded.' }));
     }
   }, []);
 
   const fetchSprints = useCallback(async () => {
     try {
       const res = await sprintsApi.getAll(selectedCourse ? { course: selectedCourse } : {});
-      setSprints(res.data || []);
+      setSprints(res.data || []); setLoadErrors(previous => ({ ...previous, sprints: '' }));
     } catch (err) {
-      console.error('Failed to load sprints:', err);
+      setLoadErrors(previous => ({ ...previous, sprints: err.response?.data?.message || 'Sprints could not be loaded.' }));
     }
   }, [selectedCourse]);
 
@@ -98,9 +87,9 @@ export const IterationsManagePage = () => {
     setLoading(true);
     try {
       const res = await iterationsApi.getAll(selectedCourse ? { course: selectedCourse } : {});
-      setIterations(res.data || []);
+      setIterations(res.data || []); setLoadErrors(previous => ({ ...previous, iterations: '' }));
     } catch (err) {
-      setToast({ type: 'error', message: err.message || 'Failed to fetch iterations.' });
+      setLoadErrors(previous => ({ ...previous, iterations: err.response?.data?.message || 'Milestones could not be loaded.' }));
     } finally {
       setLoading(false);
     }
@@ -116,7 +105,7 @@ export const IterationsManagePage = () => {
   }, [fetchSprints, fetchIterations]);
 
   const handleCreateNew = (defaultSprint = '') => {
-    setEditingIteration(defaultSprint ? { sprint_name: defaultSprint } : null);
+    setEditingIteration(defaultSprint ? { sprint_name: defaultSprint, sprint_id: sprints.find((s) => s.name === defaultSprint)?.id } : null);
     setIsFormOpen(true);
   };
 
@@ -125,7 +114,10 @@ export const IterationsManagePage = () => {
     setIsFormOpen(true);
   };
 
+  useLiveRefresh(async () => { await Promise.all([fetchSprints(), fetchIterations()]); });
+
   const handleOpenRubrics = (item) => {
+    if (!item.rubrics?.length) { navigate(`/manager/rubric-templates?iteration_id=${item._id}&return_to=/manager/iterations`); return; }
     setRubricIteration(item);
     setIsRubricOpen(true);
   };
@@ -151,13 +143,13 @@ export const IterationsManagePage = () => {
     if (!sprintFormData.name.trim()) return;
     setSprintActionLoading(true);
     try {
-      await sprintsApi.create({
+      await (editingSprint ? sprintsApi.update(editingSprint.id, { name: sprintFormData.name.trim(), description: sprintFormData.description.trim() }) : sprintsApi.create({
         name: sprintFormData.name.trim(),
         description: sprintFormData.description.trim(),
-        course: selectedCourse || 'All Courses',
-      });
-      setToast({ type: 'success', message: `Sprint '${sprintFormData.name}' created successfully.` });
+      }));
+      setToast({ type: 'success', message: `Sprint '${sprintFormData.name}' ${editingSprint ? 'updated' : 'created'} successfully.` });
       setIsCreateSprintOpen(false);
+      setEditingSprint(null);
       setSprintFormData({ name: '', description: '' });
       fetchSprints();
       fetchIterations();
@@ -183,6 +175,20 @@ export const IterationsManagePage = () => {
       setToast({ type: 'error', message: err.response?.data?.message || err.message || 'Failed to delete sprint.' });
     } finally {
       setSprintActionLoading(false);
+    }
+  };
+
+  const handleOpenGrades = async (item) => {
+    setGradesIteration(item);
+    setGrades([]);
+    setGradesLoading(true);
+    try {
+      const res = await iterationsApi.getStudentEvaluations(item._id);
+      setGrades(res.data || res || []);
+    } catch {
+      setGrades([]);
+    } finally {
+      setGradesLoading(false);
     }
   };
 
@@ -231,7 +237,7 @@ export const IterationsManagePage = () => {
 
     // 2. Put filtered iterations into their matching sprint container
     filteredIterations.forEach((item) => {
-      const sName = item.sprint_name || 'Sprint 1';
+      const sName = item.sprint_name || 'Legacy milestone — needs Sprint association';
       if (!sprintMap[sName]) {
         sprintMap[sName] = {
           id: null,
@@ -267,7 +273,7 @@ export const IterationsManagePage = () => {
   }, [iterations]);
 
   return (
-    <div className="page-frame-container">
+    <div className="page-frame-container iterations-page">
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
       <PageHeader
@@ -308,21 +314,12 @@ export const IterationsManagePage = () => {
             <span>Create Sprint</span>
           </button>
 
-          {/* Button 2: Add Iteration (Primary University Blue) */}
-          <button
-            type="button"
-            onClick={() => handleCreateNew()}
-            className="btn btn-primary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Plus size={15} />
-            <span>Add Iteration</span>
-          </button>
         </div>
       </PageHeader>
 
       {/* Top Sub-Navigation Bar (Restructured: Sprints, Rubrics, Submissions) */}
       <IterationsTabBar />
+      {Object.values(loadErrors).some(Boolean) && <div className="workflow-error" role="alert">{Object.values(loadErrors).filter(Boolean).join(' ')} <button className="btn btn-secondary btn-sm" onClick={() => { fetchCourses(); fetchSprints(); fetchIterations(); }}>Retry</button></div>}
 
       {/* Main Filter & Action Toolbar */}
       <div
@@ -451,8 +448,6 @@ export const IterationsManagePage = () => {
               ? 'No milestones match the selected filters.'
               : 'No sprints or iteration milestones have been created yet.'
           }
-          actionLabel="Create Sprint"
-          onAction={() => setIsCreateSprintOpen(true)}
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -515,6 +510,7 @@ export const IterationsManagePage = () => {
                     {/* Add Milestone to Sprint button */}
                     <button
                       type="button"
+                      disabled={!sprint.id}
                       onClick={() => handleCreateNew(sprint.name)}
                       className="btn btn-ghost btn-sm"
                       style={{ fontSize: '12px', fontWeight: 600, color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
@@ -522,17 +518,7 @@ export const IterationsManagePage = () => {
                       <Plus size={14} /> Add Milestone
                     </button>
 
-                    {/* Delete Sprint button */}
-                    <button
-                      type="button"
-                      onClick={() => setSprintToDelete(sprint)}
-                      className="btn btn-danger-outline btn-sm"
-                      style={{ fontSize: '11.5px', padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                      title="Delete this sprint container"
-                    >
-                      <Trash2 size={13} />
-                      <span>Delete Sprint</span>
-                    </button>
+                    {sprint.id ? <EditMenu label="Edit Sprint"><button className="btn btn-ghost btn-sm" onClick={() => { setEditingSprint(sprint); setSprintFormData({ name: sprint.name, description: sprint.description }); setIsCreateSprintOpen(true); }}>Name and Description</button><button className="btn btn-danger-outline btn-sm" onClick={() => setSprintToDelete(sprint)}>Delete</button></EditMenu> : <span>Legacy milestones need explicit Sprint association.</span>}
                   </div>
                 </div>
 
@@ -545,6 +531,7 @@ export const IterationsManagePage = () => {
                     </div>
                     <button
                       type="button"
+                      disabled={!sprint.id}
                       onClick={() => handleCreateNew(sprint.name)}
                       className="btn btn-secondary btn-sm"
                       style={{ marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
@@ -686,12 +673,7 @@ export const IterationsManagePage = () => {
                                     </span>
                                   </div>
 
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: '#475569' }}>
-                                    <Calendar size={13} style={{ color: '#94a3b8' }} />
-                                    <span>{formatHumanDate(item.deadline)}</span>
-                                    <span style={{ color: '#94a3b8' }}>•</span>
-                                    <span style={{ color: '#64748b' }}>{formatHumanTime(item.deadline)}</span>
-                                  </div>
+                                  <DeadlineInfo value={item.deadline} />
                                 </div>
                               </td>
 
@@ -726,27 +708,7 @@ export const IterationsManagePage = () => {
                                   </div>
 
                                   <div>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenRubrics(item)}
-                                      style={{
-                                        border: 'none',
-                                        background: 'none',
-                                        padding: 0,
-                                        cursor: 'pointer',
-                                        fontSize: '11.5px',
-                                        fontWeight: 600,
-                                        color: rubricCount > 0 ? '#4f46e5' : '#64748b',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '4px',
-                                      }}
-                                    >
-                                      <Sliders size={12} />
-                                      <span>
-                                        {rubricCount > 0 ? `${rubricCount} Rubric Criteria Linked` : '+ Attach Rubric Criteria'}
-                                      </span>
-                                    </button>
+                                    <span style={{ fontSize: '12px' }}>{rubricCount ? `${rubricCount} criteria linked` : 'Rubric not configured'}</span>
                                   </div>
                                 </div>
                               </td>
@@ -775,25 +737,22 @@ export const IterationsManagePage = () => {
                                     <Sliders size={17} />
                                   </button>
 
-                                  {/* Edit Icon Button */}
+                                  {/* Student Grades Icon Button */}
                                   <button
                                     type="button"
-                                    onClick={() => handleEdit(item)}
-                                    title="Edit Milestone"
+                                    onClick={() => handleOpenGrades(item)}
+                                    title="View Student Evaluations & Grades"
                                     className="btn btn-ghost btn-sm"
+                                    style={{ color: '#7c3aed' }}
                                   >
-                                    <Edit2 size={16} />
+                                    <Award size={16} />
                                   </button>
 
-                                  {/* Delete Icon Button */}
-                                  <button
-                                    type="button"
-                                    onClick={() => setIterationToDelete(item)}
-                                    title="Delete Milestone"
-                                    className="btn btn-danger-outline btn-sm"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
+                                  <EditMenu>
+                                    <button className="btn btn-ghost btn-sm" onClick={() => handleEdit(item)}><Edit2 size={16} /> Milestone Details</button>
+                                    <button className="btn btn-ghost btn-sm" onClick={() => handleOpenRubrics(item)}><Sliders size={16} /> Rubrics</button>
+                                    <button className="btn btn-danger-outline btn-sm" onClick={() => setIterationToDelete(item)}><Trash2 size={16} /> Delete</button>
+                                  </EditMenu>
                                 </div>
                               </td>
                             </tr>
@@ -989,6 +948,57 @@ export const IterationsManagePage = () => {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* Student Grades Modal */}
+      <Modal
+        isOpen={!!gradesIteration}
+        onClose={() => setGradesIteration(null)}
+        title={`Student Evaluations — ${gradesIteration?.title || ''}`}
+        maxWidth="640px"
+      >
+        {gradesLoading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
+            {[1, 2, 3].map(i => (
+              <div key={i} className="skeleton-shimmer" style={{ height: '40px', borderRadius: '6px' }} />
+            ))}
+          </div>
+        ) : grades.length === 0 ? (
+          <div style={{ padding: '32px', textAlign: 'center', color: '#94a3b8', fontSize: '13.5px' }}>
+            No student evaluations recorded for this milestone yet.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '0', backgroundColor: '#f8fafc', borderRadius: '8px 8px 0 0', borderBottom: '1px solid #e2e8f0', padding: '8px 14px', fontSize: '11.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
+              <span>Student</span>
+              <span>Group</span>
+              <span style={{ textAlign: 'right' }}>Score</span>
+            </div>
+            {grades.map((g, idx) => (
+              <div
+                key={g.id || g._id || idx}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr auto',
+                  padding: '10px 14px',
+                  borderBottom: idx < grades.length - 1 ? '1px solid #f1f5f9' : 'none',
+                  fontSize: '13px',
+                  alignItems: 'center',
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 600, color: '#0f172a' }}>{g.student_name || g.name || '—'}</div>
+                  <div style={{ fontSize: '11.5px', color: '#64748b' }}>{g.roll || g.student_roll || ''}</div>
+                </div>
+                <div style={{ color: '#475569' }}>{g.group_name || '—'}</div>
+                <div style={{ textAlign: 'right', fontWeight: 700, color: g.score != null ? '#059669' : '#94a3b8' }}>
+                  {g.score != null ? `${g.score}` : '—'}
+                  {g.max_score != null && <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 400 }}> / {g.max_score}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </Modal>
     </div>
   );

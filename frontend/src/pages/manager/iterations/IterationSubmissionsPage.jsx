@@ -1,3 +1,7 @@
+import { BackButton } from '../../../components/ui/BackButton';
+import { TaskReview } from '../../../components/groups/TaskReview';
+import { downloadFile } from '../../../api/downloadFile';
+import { DeadlineInfo } from '../../../components/ui/DeadlineInfo';
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../components/ui/PageHeader';
@@ -213,12 +217,9 @@ export const IterationSubmissionsPage = () => {
     URL.revokeObjectURL(url);
   };
 
-  const progressPct = summary && summary.total_groups > 0
-    ? Math.round((summary.submitted_count / summary.total_groups) * 100)
-    : 0;
-
   return (
-    <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="page-frame-container iterations-page">
+      {id && <BackButton to="/manager/iterations" label="Back to Milestones" />}
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
       {/* Top Sub-Navigation Bar */}
@@ -226,7 +227,7 @@ export const IterationSubmissionsPage = () => {
 
       <PageHeader
         title={summary ? summary.iteration_title : 'Group Submissions'}
-        subtitle={summary ? `${summary.course} · Deadline: ${summary.iteration_deadline}` : 'Group-wise submission status and progress'}
+        subtitle={summary ? summary.course : 'Group-wise submission status and progress'}
       >
         {submissions.length > 0 && (
           <button
@@ -239,6 +240,7 @@ export const IterationSubmissionsPage = () => {
           </button>
         )}
       </PageHeader>
+      {summary && <DeadlineInfo value={summary.iteration_deadline} />}
 
       {/* Group Formation Cutoff Milestone Banner */}
       {isGroupFormation && (
@@ -261,7 +263,7 @@ export const IterationSubmissionsPage = () => {
             <Users size={18} style={{ color: '#16a34a', flexShrink: 0 }} />
             <span>
               <strong>Group Formation & Proposal Cutoff Milestone:</strong> Student groups formed after{' '}
-              <strong>{fmt(summary?.iteration_deadline)}</strong> incur a <strong>{latePenaltyPercent}%</strong> rubric penalty deduction.
+              <DeadlineInfo value={summary?.iteration_deadline} /> incur a <strong>{latePenaltyPercent}%</strong> rubric penalty deduction.
             </span>
           </div>
           {ungroupedStudents.length > 0 && (
@@ -342,46 +344,9 @@ export const IterationSubmissionsPage = () => {
         <>
           {summary && (
             <>
-              {/* Progress bar */}
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
-                    Submission Progress
-                  </span>
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: progressPct === 100 ? '#16a34a' : '#1e293b' }}>
-                    {progressPct}%
-                  </span>
-                </div>
-                <div style={{ width: '100%', height: '8px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      width: `${progressPct}%`,
-                      height: '100%',
-                      backgroundColor: progressPct === 100 ? '#16a34a' : progressPct > 50 ? 'var(--primary)' : '#d97706',
-                      borderRadius: '4px',
-                      transition: 'width 0.4s ease',
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Stat Cards */}
-              <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '24px' }}>
-                {[
-                  ['Total Groups', summary.total_groups, '#1e293b'],
-                  ['Submitted', summary.submitted_count, '#16a34a'],
-                  ['Not Submitted', summary.total_groups - summary.submitted_count, '#dc2626'],
-                  ['Late Submissions', summary.late_count, '#d97706'],
-                  ...(isGroupFormation ? [
-                    ['Late Formations', summary.late_formation_count || 0, '#ea580c'],
-                    ['Ungrouped Defaulters', ungroupedStudents.length, '#b91c1c'],
-                  ] : []),
-                ].map(([label, value, color]) => (
-                  <div key={label} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px 20px', minWidth: '130px', flex: '1 1 130px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                    <div style={{ fontSize: '26px', fontWeight: 700, color }}>{value}</div>
-                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>{label}</div>
-                  </div>
-                ))}
+              <div className="workflow-actions" style={{ marginBottom: '16px' }}>
+                <span>{summary.submitted_count}/{summary.total_groups} groups submitted</span>
+                <span>{summary.late_count} late</span>
               </div>
             </>
           )}
@@ -455,6 +420,7 @@ export const IterationSubmissionsPage = () => {
                         {row.project_title && (
                           <div style={{ fontSize: '12px', color: '#64748b', marginTop: '1px' }}>{row.project_title}</div>
                         )}
+                        <details><summary>Milestone and Private Comments</summary><TaskReview groupId={row.group_id} taskId={selectedIterationId} /></details>
                         {row.is_formation_late && (
                           <div style={{ marginTop: '4px' }}>
                             <span style={bdg('#fef2f2', '#b91c1c', '#fecaca')}>
@@ -479,15 +445,12 @@ export const IterationSubmissionsPage = () => {
                       <td style={tdS}>
                         {row.file_url
                           ? (
-                            <a href={row.file_url} target="_blank" rel="noreferrer" download={row.file_name} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--primary)', fontSize: '13px', textDecoration: 'none', fontWeight: 500 }}>
-                              <Download size={13} />{row.file_name}
-                              {row.file_size ? <span style={{ color: '#94a3b8', fontWeight: 400, fontSize: '11px' }}>({fmtBytes(row.file_size)})</span> : null}
-                            </a>
+                            <button className="btn btn-ghost btn-sm" onClick={async () => { try { await downloadFile(row.file_url, row.file_name); } catch { setToast({ type: 'error', message: 'File download failed. Please refresh.' }); } }}><Download size={13} />{row.file_name}{row.file_size ? ` (${fmtBytes(row.file_size)})` : ''}</button>
                           )
                           : <span style={{ color: '#94a3b8', fontSize: '13px' }}>-</span>}
                       </td>
                       <td style={tdS}><span style={{ fontSize: '13px', color: '#334155' }}>{row.submitted_by || '-'}</span></td>
-                      <td style={tdS}><span style={{ fontSize: '13px', color: '#334155' }}>{fmt(row.submitted_at)}</span></td>
+                      <td style={tdS}><span style={{ fontSize: '13px', color: '#334155' }}><DeadlineInfo value={row.submitted_at} /></span></td>
                       <td style={tdS}><span style={{ fontSize: '12.5px', color: '#475569', fontStyle: row.note ? 'normal' : 'italic' }}>{row.note || 'No note'}</span></td>
                     </tr>
                   ))}

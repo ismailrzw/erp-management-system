@@ -88,7 +88,7 @@ export const EvaluatorTrashPage = () => {
       <div className="page-frame-container">
         <PageHeader
           title="Evaluators Recycle Bin"
-          subtitle="Restore or permanently delete archived exhibition-day evaluators."
+          subtitle="Restore or permanently delete archived project evaluators."
           breadcrumbs={[
             { label: 'Home', to: '/manager/dashboard' },
             { label: 'Evaluators', to: '/manager/evaluators/view' },
@@ -110,7 +110,7 @@ export const EvaluatorTrashPage = () => {
 
       <PageHeader
         title="Evaluators Recycle Bin"
-        subtitle="Restore or permanently delete archived exhibition-day evaluators."
+        subtitle="Restore or permanently delete archived project evaluators."
         breadcrumbs={[
           { label: 'Home', to: '/manager/dashboard' },
           { label: 'Evaluators', to: '/manager/evaluators/view' },
@@ -120,7 +120,7 @@ export const EvaluatorTrashPage = () => {
         <button
           type="button"
           onClick={() => navigate('/manager/evaluators/view')}
-          className="btn btn-secondary"
+          className="btn btn-back"
         >
           <ArrowLeft size={16} />
           <span>Back to Evaluators</span>

@@ -34,7 +34,7 @@ export const EvaluatorListPage = () => {
     name: '',
     dept: '',
     evaluator_type: 'internal',
-    domainsInput: '',
+    domainsInput: '', company_name: '', post: '',
   });
   const [evaluatorToDelete, setEvaluatorToDelete] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -109,6 +109,7 @@ export const EvaluatorListPage = () => {
     setEditFormData({
       id: ev.id || ev._id,
       name: ev.name,
+      company_name: ev.company_name || '', post: ev.post || '',
       dept: ev.dept || 'CS',
       evaluator_type: ev.evaluator_type || 'internal',
       domainsInput: Array.isArray(rawDomains) ? rawDomains.join(', ') : '',
@@ -129,6 +130,7 @@ export const EvaluatorListPage = () => {
         name: editFormData.name.trim(),
         dept: editFormData.dept,
         evaluator_type: editFormData.evaluator_type,
+        company_name: editFormData.company_name, post: editFormData.post,
         domains: parsedDomains,
       });
 
@@ -152,6 +154,7 @@ export const EvaluatorListPage = () => {
       await evaluatorsApi.delete(evaluatorToDelete.id || evaluatorToDelete._id);
       setToast({ message: 'Evaluator moved to Recycle Bin', type: 'success' });
       setEvaluatorToDelete(null);
+      setIsEditModalOpen(false);
       fetchEvaluators(true);
     } catch (err) {
       setToast({
@@ -167,8 +170,8 @@ export const EvaluatorListPage = () => {
     return (
       <div className="page-frame-container">
         <PageHeader
-          title="Project Exhibition Evaluators"
-          subtitle="Manage internal faculty and external industry experts invited for Showcase Day evaluations."
+          title="Project Evaluators"
+          subtitle="Manage internal faculty and external industry experts invited for milestone evaluations."
           breadcrumbs={[
             { label: 'Home', to: '/manager/dashboard' },
             { label: 'Evaluators', to: '/manager/evaluators/view' },
@@ -190,8 +193,8 @@ export const EvaluatorListPage = () => {
 
       {/* Unified Page Header */}
       <PageHeader
-        title="Project Exhibition Evaluators"
-        subtitle="Manage internal faculty and external industry experts invited for Showcase Day evaluations."
+        title="Project Evaluators"
+        subtitle="Manage internal faculty and external industry experts invited for milestone evaluations."
         breadcrumbs={[
           { label: 'Home', to: '/manager/dashboard' },
           { label: 'Evaluators', to: '/manager/evaluators' },
@@ -359,7 +362,7 @@ export const EvaluatorListPage = () => {
                 <tr>
                   <td colSpan={7} style={{ padding: '36px 20px', textAlign: 'center', color: '#94a3b8' }}>
                     <Award size={36} style={{ margin: '0 auto 10px', opacity: 0.5 }} />
-                    <div style={{ fontWeight: 600, color: '#475569', fontSize: '14px' }}>No exhibition evaluators found</div>
+                    <div style={{ fontWeight: 600, color: '#475569', fontSize: '14px' }}>No evaluators found</div>
                   </td>
                 </tr>
               ) : (
@@ -389,7 +392,8 @@ export const EvaluatorListPage = () => {
                           >
                             {isExternal ? <Briefcase size={15} /> : <Building size={15} />}
                           </div>
-                          <span>{ev.name}</span>
+                          <span>{ev.name}</span><small>{ev.company_name ? `${ev.company_name} · ${ev.post}` : ev.email_verified === false ? 'Activation pending' : ''}</small>
+                          {ev.email_verified === false && <button className="btn btn-ghost btn-sm" onClick={async () => { try { const result = await evaluatorsApi.resendActivation(ev.id); setToast({ message: result.message, type: result.data.email_sent ? 'success' : 'error' }); } catch { setToast({ message: 'Activation could not be sent.', type: 'error' }); } }}>Resend Activation</button>}
                         </div>
                       </td>
                       <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12.5px' }}>{ev.email}</td>
@@ -472,14 +476,6 @@ export const EvaluatorListPage = () => {
                             <Edit2 size={13} />
                             <span>Edit</span>
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => setEvaluatorToDelete(ev)}
-                            className="btn btn-danger-outline btn-sm"
-                          >
-                            <Trash2 size={13} />
-                            <span>Delete</span>
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -492,7 +488,7 @@ export const EvaluatorListPage = () => {
       </div>
 
       {/* Modal: Edit Evaluator */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Exhibition Evaluator">
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Evaluator">
         <form onSubmit={handleSaveEdit}>
           <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '5px' }}>
@@ -513,8 +509,9 @@ export const EvaluatorListPage = () => {
             </label>
             <select
               value={editFormData.dept}
+              disabled={editFormData.evaluator_type === 'external'}
               onChange={(e) => setEditFormData({ ...editFormData, dept: e.target.value })}
-              required
+              required={editFormData.evaluator_type === 'internal'}
               style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 34px 8px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
             >
               {departments.map((d) => (
@@ -553,7 +550,11 @@ export const EvaluatorListPage = () => {
             />
           </div>
 
+          {editFormData.evaluator_type === 'external' && <div className="workflow-form" style={{ marginBottom: '16px' }}><label>Company Name<input required value={editFormData.company_name} onChange={(e) => setEditFormData({ ...editFormData, company_name: e.target.value })} /></label><label>Relevant Post<input required value={editFormData.post} onChange={(e) => setEditFormData({ ...editFormData, post: e.target.value })} /></label></div>}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <button type="button" disabled={actionLoading} className="btn btn-danger-outline" onClick={() => setEvaluatorToDelete({ id: editFormData.id, name: editFormData.name })}>
+              <Trash2 size={13} /> Delete Evaluator
+            </button>
             <button
               type="button"
               onClick={() => setIsEditModalOpen(false)}
