@@ -10,6 +10,8 @@ from bson.errors import InvalidId
 
 from app.extensions import mongo
 from app.models.user import Role, UserFields
+from app.services.academic_integrity_service import assert_deletable
+from app.services.academic_write_service import academic_write
 
 
 def generate_initial_password(length: int = 10) -> str:
@@ -48,10 +50,10 @@ def _serialize(doc: dict | None) -> dict | None:
             {"$group": {"_id": "$course", "count": {"$sum": 1}}},
         ]
         course_groups = list(mongo.db[GROUPS_COLLECTION].aggregate(pipeline))
-        supervision_by_course = [
-            {"course": cg["_id"] or "General", "count": cg["count"], "max_cap": 4}
+        supervision_by_course = {
+            cg["_id"] or "General": cg["count"]
             for cg in course_groups
-        ]
+        }
     except Exception:  # noqa: BLE001
         active_cnt = result.get(UserFields.ACTIVE_SUPERVISION_COUNT, 0)
     result["active_supervision_count"] = active_cnt
@@ -64,7 +66,12 @@ def _serialize(doc: dict | None) -> dict | None:
     return result
 
 
+@academic_write
 def create_teacher(name: str, email: str, dept: str, domains: list[str] | None = None) -> dict:
+    from app.services.academic_integrity_service import validate_enrollment
+    validate_enrollment(dept)
+    email = email.strip().lower()
+    dept = dept.strip().upper()
     if mongo.db[UserFields.COLLECTION].find_one({UserFields.EMAIL: email}):
         raise ValueError(f"A user with email '{email}' already exists.")
 
@@ -114,6 +121,7 @@ def get_teacher_by_id(teacher_id: str) -> dict | None:
     return _serialize(doc) if doc else None
 
 
+@academic_write
 def update_teacher(teacher_id: str, name: str | None = None, dept: str | None = None, domains: list[str] | None = None) -> dict | None:
     try:
         oid = ObjectId(teacher_id)
@@ -140,11 +148,16 @@ def update_teacher(teacher_id: str, name: str | None = None, dept: str | None = 
     return _serialize(result) if result else None
 
 
+@academic_write
 def soft_delete_teacher(teacher_id: str) -> dict | None:
     try:
         oid = ObjectId(teacher_id)
     except InvalidId:
         return None
+    document = mongo.db.users.find_one({"_id": oid, "role": Role.TEACHER, "deleted": {"$ne": True}})
+    if document is None:
+        return None
+    assert_deletable("teacher", document)
     now = datetime.now(timezone.utc)
     result = mongo.db[UserFields.COLLECTION].find_one_and_update(
         {
@@ -158,11 +171,22 @@ def soft_delete_teacher(teacher_id: str) -> dict | None:
     return _serialize(result) if result else None
 
 
+@academic_write
 def restore_teacher(teacher_id: str) -> dict | None:
     try:
         oid = ObjectId(teacher_id)
     except InvalidId:
         return None
+    from app.services.academic_integrity_service import (
+        assert_restorable,
+        validate_enrollment,
+    )
+    record = mongo.db.users.find_one({"_id": ObjectId(teacher_id)})
+    if record:
+        assert_restorable("teacher", record)
+    if record:
+        validate_enrollment(record.get("dept", ""), "")
+
     now = datetime.now(timezone.utc)
     result = mongo.db[UserFields.COLLECTION].find_one_and_update(
         {
@@ -176,6 +200,7 @@ def restore_teacher(teacher_id: str) -> dict | None:
     return _serialize(result) if result else None
 
 
+@academic_write
 def permanent_delete_teacher(teacher_id: str) -> dict | None:
     try:
         oid = ObjectId(teacher_id)
@@ -190,6 +215,7 @@ def permanent_delete_teacher(teacher_id: str) -> dict | None:
     )
     if doc is None:
         return None
+    assert_deletable("teacher", doc)
     mongo.db[UserFields.COLLECTION].delete_one({UserFields.ID: oid})
     return _serialize(doc)
 
