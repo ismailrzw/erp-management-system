@@ -6,7 +6,7 @@ Design decisions
 ----------------
 * Teachers are university faculty members who supervise groups all semester.
   They do not have an internal/external type since they are always university staff.
-* Evaluators evaluate on Exhibition/Showcase Day and have an evaluator_type ("internal" | "external").
+* Evaluators evaluate on project milestones and have an evaluator_type ("internal" | "external").
 * Email is immutable after creation.
 """
 
@@ -33,19 +33,20 @@ class UpdateTeacherSchema(Schema):
 
 
 class CreateEvaluatorSchema(Schema):
-    """Validates payload for creating an exhibition-day evaluator (POST /api/manager/evaluators/)."""
-
-    name           = fields.String(required=True, validate=validate.Length(min=2, max=120))
-    email          = fields.Email(required=True)
-    dept           = fields.String(required=True, validate=validate.Length(min=1, max=50))
+    """Type-specific validation is completed against active academic data in the service."""
+    name = fields.String(required=True, validate=validate.Length(min=2, max=120))
+    email = fields.Email(required=True)
+    dept = fields.String(load_default="")
     evaluator_type = fields.String(required=True, validate=validate.OneOf(EvaluatorType.ALL))
-    domains        = fields.List(fields.String(), load_default=[])
+    domains = fields.List(fields.String(), load_default=[])
+    company_name = fields.String(load_default="", validate=validate.Length(max=200))
+    post = fields.String(load_default="", validate=validate.Length(max=200))
 
 
 class UpdateEvaluatorSchema(Schema):
-    """Validates payload for updating an evaluator (PUT /api/manager/evaluators/<id>)."""
-
-    name           = fields.String(required=False, validate=validate.Length(min=2, max=120))
-    dept           = fields.String(required=False, validate=validate.Length(min=1, max=50))
-    evaluator_type = fields.String(required=False, validate=validate.OneOf(EvaluatorType.ALL))
-    domains        = fields.List(fields.String(), required=False)
+    name = fields.String(validate=validate.Length(min=2, max=120))
+    dept = fields.String()
+    evaluator_type = fields.String(validate=validate.OneOf(EvaluatorType.ALL))
+    domains = fields.List(fields.String())
+    company_name = fields.String(validate=validate.Length(max=200))
+    post = fields.String(validate=validate.Length(max=200))

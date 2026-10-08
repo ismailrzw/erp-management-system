@@ -5,7 +5,7 @@ from typing import ClassVar
 
 
 class EvaluatorType:
-    """Type constants for Exhibition-Day evaluator users."""
+    """Type constants for Project evaluator users."""
 
     INTERNAL = "internal"
     EXTERNAL = "external"
