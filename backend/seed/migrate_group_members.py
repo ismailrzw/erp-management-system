@@ -11,9 +11,10 @@ Data migration script to enforce group membership source of truth:
 
 import os
 from datetime import datetime, timezone
+
 from bson import ObjectId
-from pymongo import MongoClient
 from dotenv import load_dotenv
+from pymongo import MongoClient
 
 # Load environment variables from .env
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))

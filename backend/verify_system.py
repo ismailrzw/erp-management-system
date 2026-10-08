@@ -26,7 +26,7 @@ def make_req(endpoint, method="GET", data=None, headers=None):
         content = err.read().decode("utf-8") if err.fp else ""
         try:
             body = json.loads(content) if content else {}
-        except Exception:
+        except (ValueError, TypeError):
             body = {"raw": content}
         return err.code, body
 
@@ -76,14 +76,14 @@ def main():
     check("Teacher Supervised Groups API", status == 200, f"Status: {status}, Error: {t_groups.get('message', t_groups)}")
 
     # Teacher Students
-    status, t_students = make_req("/teacher/students", headers=teacher_headers)
+    status, _t_students = make_req("/teacher/students", headers=teacher_headers)
     check("Teacher Supervised Students API", status == 200)
 
     # Teacher Profile & Update Domains
     status, t_profile = make_req("/teacher/profile", headers=teacher_headers)
     check("Teacher Profile API", status == 200, f"Domains: {t_profile['data'].get('domains')}")
 
-    status, t_domains_update = make_req(
+    status, _t_domains_update = make_req(
         "/teacher/profile/domains",
         method="PUT",
         data={"domains": ["Artificial Intelligence", "Web Systems", "Cloud Computing"]},
@@ -98,7 +98,7 @@ def main():
     eval_token = eval_res["data"]["token"]
     eval_headers = {"Authorization": f"Bearer {eval_token}"}
 
-    status, eval_dash = make_req("/evaluator/dashboard", headers=eval_headers)
+    status, _eval_dash = make_req("/evaluator/dashboard", headers=eval_headers)
     check("Evaluator Dashboard API", status == 200)
 
     # 6. Student Login
