@@ -242,7 +242,7 @@ export const Sidebar = ({
       items: [
         {
           type: 'link',
-          text: 'Supervisor Profile',
+          text: 'Settings',
           to: '/teacher/profile',
           icon: Settings,
         },

@@ -37,7 +37,6 @@ export const StudentListPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
     id: null,
-    name: '',
     dept: '',
     academic_locked: false,
     section: '',
@@ -138,10 +137,12 @@ export const StudentListPage = () => {
     fetchStudents(1);
   };
 
+  const [selectedStudent, setSelectedStudent] = useState(null);
+
   const handleOpenEdit = (student) => {
+    setSelectedStudent(student);
     setEditFormData({
       id: student.id || student._id,
-      name: student.name || '',
       dept: student.dept || '',
       academic_locked: student.academic_locked || false,
       section: student.section || '',
@@ -533,22 +534,10 @@ export const StudentListPage = () => {
       </div>
 
       {/* Modal: Edit Student */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Student Profile">
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Student">
         <form onSubmit={handleSaveEdit}>
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '5px' }}>
-              Full Name (read-only)
-            </label>
-            <input
-              type="text"
-              value={editFormData.name}
-              readOnly
-              style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '8px 12px', fontSize: '13.5px', outline: 'none' }}
-            />
-          </div>
-
           {editFormData.academic_locked && (
-            <p role="status" style={{ fontSize: '13px', color: 'var(--muted)' }}>
+            <p role="status" style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '14px' }}>
               Department and Course are locked because this student belongs to a group.
             </p>
           )}
@@ -618,7 +607,7 @@ export const StudentListPage = () => {
               type="button"
               disabled={actionLoading}
               className="btn btn-danger-outline"
-              onClick={() => setStudentToDelete({ id: editFormData.id, name: editFormData.name })}
+              onClick={() => setStudentToDelete({ id: editFormData.id, name: selectedStudent?.name || 'Student', roll: selectedStudent?.roll || '' })}
             >
               <Trash2 size={13} /> Delete Student
             </button>

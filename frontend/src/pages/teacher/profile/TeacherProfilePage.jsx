@@ -1,10 +1,23 @@
 import { BackButton } from '../../../components/ui/BackButton';
 import { useState, useEffect, useCallback } from 'react';
-import { User, Mail, Building, Plus, X, Save, CheckCircle2, ShieldCheck, Tag, Info } from 'lucide-react';
+import {
+  User,
+  Mail,
+  Building,
+  Plus,
+  X,
+  Save,
+  CheckCircle2,
+  ShieldCheck,
+  Tag,
+  Info,
+  KeyRound,
+} from 'lucide-react';
 import { teacherPortalApi } from '../../../api/teacherPortalApi';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { Toast } from '../../../components/ui/Toast';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
+import { ChangePasswordModal } from '../../../components/profile/ChangePasswordModal';
 
 const PREDEFINED_SUGGESTIONS = [
   'Machine Learning',
@@ -30,6 +43,7 @@ export const TeacherProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -89,16 +103,16 @@ export const TeacherProfilePage = () => {
   if (loading) {
     return (
       <div className="page-frame-container">
-      <BackButton to="/teacher/dashboard" label="Back to Dashboard" />
+        <BackButton to="/teacher/dashboard" label="Back to Dashboard" />
         <PageHeader
-          title="Supervisor Profile & Expertise"
-          subtitle="Manage your academic profile and supervision research domains."
+          title="Supervisor Settings"
+          subtitle="Manage your academic profile, security credentials, and supervision research domains."
           breadcrumbs={[
             { label: 'Home', to: '/teacher/dashboard' },
-            { label: 'Profile' },
+            { label: 'Settings' },
           ]}
         />
-        <ContentLoader label="Loading profile..." />
+        <ContentLoader label="Loading settings..." />
       </div>
     );
   }
@@ -109,109 +123,157 @@ export const TeacherProfilePage = () => {
   return (
     <div className="page-frame-container">
       <BackButton to="/teacher/dashboard" label="Back to Dashboard" />
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast({ message: '', type: 'success' })}
+      
+      {toast.message && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ message: '', type: 'success' })}
+        />
+      )}
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        onSuccess={(msg) => setToast({ message: msg, type: 'success' })}
       />
 
       <PageHeader
-        title="Supervisor Profile & Expertise"
-        subtitle="Manage your academic profile and supervision research domains."
+        title="Supervisor Settings"
+        subtitle="Manage your academic profile, security credentials, and supervision research domains."
         breadcrumbs={[
           { label: 'Home', to: '/teacher/dashboard' },
-          { label: 'Profile' },
+          { label: 'Settings' },
         ]}
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-        {/* Profile Details Card */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-            padding: '24px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-            <div
-              style={{
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                backgroundColor: '#e0f2fe',
-                color: '#0284c7',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 700,
-                fontSize: '20px',
-              }}
-            >
-              {profile?.name?.charAt(0) || 'T'}
-            </div>
-            <div>
-              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
-                {profile?.name || 'Faculty Member'}
-              </h2>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', backgroundColor: '#eff6ff', color: '#1d4ed8', fontSize: '12px', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
-                <ShieldCheck size={13} />
-                <span>University Teacher & FYP Supervisor</span>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13.5px', color: '#334155' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Mail size={16} color="#64748b" />
-              <div>
-                <span style={{ color: '#64748b', fontSize: '12px', display: 'block' }}>Email Address</span>
-                <span style={{ fontWeight: 500 }}>{profile?.email || '—'}</span>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Building size={16} color="#64748b" />
-              <div>
-                <span style={{ color: '#64748b', fontSize: '12px', display: 'block' }}>Department</span>
-                <span style={{ fontWeight: 500 }}>{profile?.department || 'Computer Science'}</span>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <User size={16} color="#64748b" />
-              <div>
-                <span style={{ color: '#64748b', fontSize: '12px', display: 'block' }}>Supervision Load Capacity</span>
-                <span style={{ fontWeight: 600, color: activeGroups >= maxGroups ? '#dc2626' : '#0073aa' }}>
-                  {activeGroups} / {maxGroups} Groups Supervised
-                </span>
-              </div>
-            </div>
-          </div>
-
+        {/* Left Column: Profile Details & Password Card */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Profile Details Card */}
           <div
             style={{
-              marginTop: '24px',
-              backgroundColor: '#f8fafc',
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
               border: '1px solid #e2e8f0',
-              borderRadius: '6px',
-              padding: '14px',
-              fontSize: '12.5px',
-              color: '#475569',
-              lineHeight: 1.5,
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+              padding: '24px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: '#1e293b', marginBottom: '4px' }}>
-              <Info size={14} color="#0073aa" />
-              <span>FYP Supervision Policy</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+              <div
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  backgroundColor: '#e0f2fe',
+                  color: '#0284c7',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: '20px',
+                }}
+              >
+                {profile?.name?.charAt(0) || 'T'}
+              </div>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
+                  {profile?.name || 'Faculty Member'}
+                </h2>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', backgroundColor: '#eff6ff', color: '#1d4ed8', fontSize: '12px', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                  <ShieldCheck size={13} />
+                  <span>University Teacher & FYP Supervisor</span>
+                </div>
+              </div>
             </div>
-            As a university supervisor, you guide student project teams year-round. Group requests can be accepted until your capacity limit of 4 groups is reached. Independent evaluators are assigned separately by the manager.
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13.5px', color: '#334155' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Mail size={16} color="#64748b" />
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '12px', display: 'block' }}>Email Address</span>
+                  <span style={{ fontWeight: 500 }}>{profile?.email || '—'}</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Building size={16} color="#64748b" />
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '12px', display: 'block' }}>Department</span>
+                  <span style={{ fontWeight: 500 }}>{profile?.department || 'Computer Science'}</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <User size={16} color="#64748b" />
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '12px', display: 'block' }}>Supervision Load Capacity</span>
+                  <span style={{ fontWeight: 600, color: activeGroups >= maxGroups ? '#dc2626' : '#0073aa' }}>
+                    {activeGroups} / {maxGroups} Groups Supervised
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginTop: '24px',
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                padding: '14px',
+                fontSize: '12.5px',
+                color: '#475569',
+                lineHeight: 1.5,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: '#1e293b', marginBottom: '4px' }}>
+                <Info size={14} color="#0073aa" />
+                <span>FYP Supervision Policy</span>
+              </div>
+              As a university supervisor, you guide student project teams year-round. Group requests can be accepted until your capacity limit of 4 groups is reached.
+            </div>
+          </div>
+
+          {/* Account Security / Password Card */}
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+              padding: '20px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '14px',
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '14.5px', fontWeight: 700, color: '#1e293b' }}>
+                Account Security & Password
+              </div>
+              <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
+                Change your login password to secure your supervisor account.
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsPasswordModalOpen(true)}
+              className="btn btn-secondary btn-sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <KeyRound size={14} />
+              <span>Change Password</span>
+            </button>
           </div>
         </div>
 
-        {/* Expertise Domains Card */}
+        {/* Right Column: Expertise Domains Card */}
         <div
           style={{
             backgroundColor: '#ffffff',
