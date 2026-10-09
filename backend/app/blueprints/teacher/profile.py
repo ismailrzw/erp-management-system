@@ -8,8 +8,7 @@ from flask_jwt_extended import get_jwt_identity
 
 from app.blueprints.teacher import teacher_bp
 from app.models.user import Role
-from app.services.supervisor_service import update_evaluator_domains
-from app.services.teacher_service import get_teacher_by_id
+from app.services.teacher_service import get_teacher_by_id, update_teacher
 from app.utils.decorators import role_required
 
 
@@ -39,7 +38,9 @@ def update_profile_domains():
         if not isinstance(domains, list):
             return {"success": False, "message": "domains must be an array of strings."}, 400
 
-        result = update_evaluator_domains(teacher_id, domains)
+        result = update_teacher(teacher_id, domains=domains)
+        if not result:
+            return {"success": False, "message": "Teacher not found."}, 404
         return {"success": True, "message": "Domains updated successfully.", "data": result}, 200
     except ValueError as exc:
         return {"success": False, "message": str(exc)}, 400

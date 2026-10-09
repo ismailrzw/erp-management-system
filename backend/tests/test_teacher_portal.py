@@ -1,37 +1,29 @@
-"""Teacher Portal API contract tests."""
+import uuid
 
+import bcrypt
 import pytest
 
+from app.extensions import mongo
 from app.models.user import Role
 
 
 @pytest.fixture
-def teacher_user(client, app):
-    import bcrypt
-
-    from app.extensions import mongo
-
-    email = "teacher.portal.test@bnu.edu.pk"
-    mongo.db.users.delete_one({"email": email})
-    hashed = bcrypt.hashpw(b"11223344", bcrypt.gensalt()).decode("utf-8")
-    res = mongo.db.users.insert_one({
-        "name": "Dr. Portal Test Teacher",
-        "email": email,
-        "password_hash": hashed,
-        "role": Role.TEACHER,
-        "dept": "CS",
-        "domains": ["AI", "Robotics"],
-        "deleted": False,
-    })
-    return {"id": str(res.inserted_id), "email": email}
-
-
-@pytest.fixture
-def teacher_headers(client, teacher_user):
-    res = client.post("/api/auth/login", json={"email": teacher_user["email"], "password": "11223344"})
-    assert res.status_code == 200, res.get_json()
-    token = res.get_json()["data"]["token"]
-    return {"Authorization": f"Bearer {token}"}
+def teacher_headers(app, client) -> dict[str, str]:
+    password = "teacher-password"
+    email = f"teacher.{uuid.uuid4().hex[:8]}@bnu.edu.pk"
+    with app.app_context():
+        mongo.db.users.insert_one({
+            "name": "Dr. Portal Test Teacher",
+            "email": email,
+            "password_hash": bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode(),
+            "role": Role.TEACHER,
+            "dept": "CS",
+            "domains": ["AI", "Robotics"],
+            "deleted": False,
+        })
+    response = client.post("/api/auth/login", json={"email": email, "password": password})
+    assert response.status_code == 200, response.get_json()
+    return {"Authorization": f"Bearer {response.get_json()['data']['token']}"}
 
 
 def test_get_teacher_dashboard(client, teacher_headers):
