@@ -6,7 +6,6 @@ import {
   Users,
   UserX,
   CheckSquare,
-  ArrowLeft,
   CheckCircle2,
   Search,
   Sparkles,
@@ -15,6 +14,8 @@ import { managerGroupsApi } from '../../../api/managerGroupsApi';
 import { studentsApi } from '../../../api/studentsApi';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { Toast } from '../../../components/ui/Toast';
+import { BackButton } from '../../../components/ui/BackButton';
+import { OptionCardGroup } from '../../../components/ui/OptionCardGroup';
 
 const QUICK_TEMPLATES = [
   {
@@ -46,7 +47,6 @@ export const BroadcastMailPage = () => {
   const [, setLoadingData] = useState(true);
   const [toast, setToast] = useState({ message: '', type: 'success' });
   const [successReport, setSuccessReport] = useState(null);
-
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -166,27 +166,17 @@ export const BroadcastMailPage = () => {
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      <div style={{ marginBottom: '16px' }}>
-        <button
-          type="button"
-          onClick={() => navigate('/manager/groups')}
-          className="btn btn-back"
-          style={{ marginBottom: '10px' }}
-        >
-          <ArrowLeft size={16} />
-          <span>Back to All Groups</span>
-        </button>
+      <BackButton to="/manager/groups" label="Back to All Groups" />
 
-        <PageHeader
-          title="Broadcast Email to Project Teams"
-          subtitle="Send official notifications, milestone reminders, and announcements directly to student inboxes."
-          breadcrumbs={[
-            { label: 'Home', to: '/manager/dashboard' },
-            { label: 'Manage Groups', to: '/manager/groups' },
-            { label: 'Broadcast Mail' },
-          ]}
-        />
-      </div>
+      <PageHeader
+        title="Broadcast Email to Project Teams"
+        subtitle="Send official notifications, milestone reminders, and announcements directly to student inboxes."
+        breadcrumbs={[
+          { label: 'Home', to: '/manager/dashboard' },
+          { label: 'Manage Groups', to: '/manager/groups' },
+          { label: 'Broadcast Mail' },
+        ]}
+      />
 
       {successReport ? (
         <div
@@ -264,127 +254,30 @@ export const BroadcastMailPage = () => {
               1. Select Target Audience <span style={{ color: '#dc2626' }}>*</span>
             </label>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
-              {/* Option A: All Groups */}
-              <div
-                onClick={() => setTarget('all_groups')}
-                style={{
-                  border: target === 'all_groups' ? '2px solid #0073aa' : '1px solid #cbd5e1',
-                  backgroundColor: target === 'all_groups' ? '#f0f9ff' : '#ffffff',
-                  borderRadius: '8px',
-                  padding: '14px 16px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '12px',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '8px',
-                    backgroundColor: target === 'all_groups' ? '#0073aa' : '#f1f5f9',
-                    color: target === 'all_groups' ? '#ffffff' : '#64748b',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <Users size={18} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#0f172a' }}>
-                    All Formed Groups
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                    Broadcast to all members across all {groups.length} active project groups.
-                  </div>
-                </div>
-              </div>
-
-              {/* Option B: Specific Groups */}
-              <div
-                onClick={() => setTarget('specific_groups')}
-                style={{
-                  border: target === 'specific_groups' ? '2px solid #0073aa' : '1px solid #cbd5e1',
-                  backgroundColor: target === 'specific_groups' ? '#f0f9ff' : '#ffffff',
-                  borderRadius: '8px',
-                  padding: '14px 16px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '12px',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '8px',
-                    backgroundColor: target === 'specific_groups' ? '#0073aa' : '#f1f5f9',
-                    color: target === 'specific_groups' ? '#ffffff' : '#64748b',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <CheckSquare size={18} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#0f172a' }}>
-                    Specific Groups
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                    Select specific project groups from an interactive checklist.
-                  </div>
-                </div>
-              </div>
-
-              {/* Option C: Ungrouped Students */}
-              <div
-                onClick={() => setTarget('ungrouped')}
-                style={{
-                  border: target === 'ungrouped' ? '2px solid #d97706' : '1px solid #cbd5e1',
-                  backgroundColor: target === 'ungrouped' ? '#fffbeb' : '#ffffff',
-                  borderRadius: '8px',
-                  padding: '14px 16px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '12px',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '8px',
-                    backgroundColor: target === 'ungrouped' ? '#d97706' : '#f1f5f9',
-                    color: target === 'ungrouped' ? '#ffffff' : '#64748b',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <UserX size={18} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#0f172a' }}>
-                    Ungrouped Students ({ungroupedCount})
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                    Target reminder directly to students not yet enrolled in any team.
-                  </div>
-                </div>
-              </div>
-            </div>
+            <OptionCardGroup
+              value={target}
+              onChange={(val) => setTarget(val)}
+              options={[
+                {
+                  value: 'all_groups',
+                  label: 'All Formed Groups',
+                  description: `Broadcast to all members across all ${groups.length} active project groups.`,
+                  icon: Users,
+                },
+                {
+                  value: 'specific_groups',
+                  label: 'Specific Groups',
+                  description: 'Select specific project groups from an interactive checklist.',
+                  icon: CheckSquare,
+                },
+                {
+                  value: 'ungrouped',
+                  label: `Ungrouped Students (${ungroupedCount})`,
+                  description: 'Target reminder directly to students not yet enrolled in any team.',
+                  icon: UserX,
+                },
+              ]}
+            />
 
             {/* Specific Group Selector Multi-Select List */}
             {target === 'specific_groups' && (
