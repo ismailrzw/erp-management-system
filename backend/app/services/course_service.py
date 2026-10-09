@@ -1,4 +1,4 @@
-﻿# backend/app/services/course_service.py
+# backend/app/services/course_service.py
 """Business logic for course CRUD operations."""
 
 from datetime import date, datetime, timezone
@@ -8,6 +8,8 @@ from bson import ObjectId
 from app.extensions import mongo
 from app.models import course as course_model
 from app.models import group as group_model
+from app.services.academic_integrity_service import assert_deletable
+from app.services.academic_write_service import academic_write
 
 
 def _object_id(course_id: str) -> ObjectId:
@@ -29,11 +31,6 @@ def _serialize(document: dict | None) -> dict | None:
         return None
     result = dict(document)
     result["id"] = str(result.pop(course_model.Field.ID))
-
-    # Normalize group_formation_deadline and deadline fields
-    dl = result.get("group_formation_deadline") or result.get("deadline")
-    result["group_formation_deadline"] = dl
-    result["deadline"] = dl
 
     for key, value in list(result.items()):
         if isinstance(value, ObjectId):
@@ -59,7 +56,8 @@ def _has_active_groups(course_name: str) -> bool:
     }) is not None
 
 
-def create_course(name: str, dept: str, min_group: int, max_group: int, group_formation_deadline: str | None = None, deadline: str | None = None) -> dict:
+@academic_write
+def create_course(name: str, dept: str, min_group: int, max_group: int) -> dict:
     """Create a new course. Raises ValueError on bad group sizes, unknown dept, or duplicate name."""
     name = name.strip()
     dept = dept.strip().upper()
@@ -70,9 +68,6 @@ def create_course(name: str, dept: str, min_group: int, max_group: int, group_fo
         raise ValueError("min_group must be at least 1.")
     if not _department_exists(dept):
         raise ValueError(f"No active department with code '{dept}' exists.")
-
-    effective_deadline = group_formation_deadline or deadline
-    parsed_dl = _parse_deadline(effective_deadline) if effective_deadline else None
 
     existing = mongo.db[course_model.COLLECTION].find_one({
         course_model.Field.NAME: name,
@@ -85,10 +80,9 @@ def create_course(name: str, dept: str, min_group: int, max_group: int, group_fo
     document = {
         course_model.Field.NAME: name,
         course_model.Field.DEPT: dept,
+        "dept_id": mongo.db.departments.find_one({"code": dept, "deleted": {"$ne": True}})["_id"],
         course_model.Field.MIN_GROUP: min_group,
         course_model.Field.MAX_GROUP: max_group,
-        course_model.Field.GROUP_FORMATION_DEADLINE: parsed_dl,
-        course_model.Field.DEADLINE: parsed_dl,
         course_model.Field.DELETED: False,
         course_model.Field.DELETED_AT: None,
         course_model.Field.CREATED_AT: now,
@@ -116,19 +110,23 @@ def get_course_by_id(course_id: str) -> dict | None:
     return _serialize(document)
 
 
+@academic_write
 def update_course(
     course_id: str,
     name: str | None = None,
     dept: str | None = None,
     min_group: int | None = None,
     max_group: int | None = None,
-    group_formation_deadline: str | None = None,
-    deadline: str | None = None,
 ) -> dict | None:
     """Update a course's fields. Raises ValueError on bad group sizes, unknown dept, or duplicate name."""
     current = mongo.db[course_model.COLLECTION].find_one({course_model.Field.ID: _object_id(course_id)})
     if current is None:
         return None
+
+    if (name is not None and name.strip() != current.get("name")) or (
+        dept is not None and dept.strip().upper() != current.get("dept")
+    ):
+        assert_deletable("course", current, action="change the name/Department of")
 
     effective_min = min_group if min_group is not None else current[course_model.Field.MIN_GROUP]
     effective_max = max_group if max_group is not None else current[course_model.Field.MAX_GROUP]
@@ -161,12 +159,6 @@ def update_course(
     if max_group is not None:
         updates[course_model.Field.MAX_GROUP] = max_group
 
-    effective_deadline = group_formation_deadline if group_formation_deadline is not None else deadline
-    if effective_deadline is not None:
-        parsed_dl = _parse_deadline(effective_deadline)
-        updates[course_model.Field.GROUP_FORMATION_DEADLINE] = parsed_dl
-        updates[course_model.Field.DEADLINE] = parsed_dl
-
     result = mongo.db[course_model.COLLECTION].find_one_and_update(
         {course_model.Field.ID: _object_id(course_id)},
         {"$set": updates},
@@ -175,14 +167,14 @@ def update_course(
     return _serialize(result)
 
 
+@academic_write
 def soft_delete_course(course_id: str) -> dict | None:
     """Soft-delete a course (moves it to the recycle bin). Blocked if active groups reference it."""
     document = mongo.db[course_model.COLLECTION].find_one({course_model.Field.ID: _object_id(course_id)})
     if document is None:
         return None
 
-    if _has_active_groups(document[course_model.Field.NAME]):
-        raise ValueError("Cannot delete a course that has active groups. Resolve or remove those groups first.")
+    assert_deletable("course", document)
 
     result = mongo.db[course_model.COLLECTION].find_one_and_update(
         {course_model.Field.ID: _object_id(course_id)},
@@ -196,8 +188,19 @@ def soft_delete_course(course_id: str) -> dict | None:
     return _serialize(result)
 
 
+@academic_write
 def restore_course(course_id: str) -> dict | None:
     """Restore a soft-deleted course from the recycle bin."""
+    from app.services.academic_integrity_service import (
+        assert_restorable,
+        validate_enrollment,
+    )
+    record = mongo.db.courses.find_one({"_id": ObjectId(course_id)})
+    if record:
+        assert_restorable("course", record)
+    if record:
+        validate_enrollment(record.get("dept", ""), "")
+
     result = mongo.db[course_model.COLLECTION].find_one_and_update(
         {course_model.Field.ID: _object_id(course_id)},
         {"$set": {
@@ -210,6 +213,7 @@ def restore_course(course_id: str) -> dict | None:
     return _serialize(result)
 
 
+@academic_write
 def permanent_delete_course(course_id: str) -> dict | None:
     """Permanently remove a soft-deleted course. Only allowed if already soft-deleted."""
     document = mongo.db[course_model.COLLECTION].find_one({course_model.Field.ID: _object_id(course_id)})
@@ -217,5 +221,6 @@ def permanent_delete_course(course_id: str) -> dict | None:
         return None
     if not document.get(course_model.Field.DELETED):
         raise ValueError("Course must be soft-deleted before it can be permanently deleted.")
+    assert_deletable("course", document)
     mongo.db[course_model.COLLECTION].delete_one({course_model.Field.ID: _object_id(course_id)})
     return _serialize(document)

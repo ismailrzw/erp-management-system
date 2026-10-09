@@ -1,9 +1,8 @@
-﻿# backend/app/schemas/course_schema.py
+# backend/app/schemas/course_schema.py
 """Validation schemas for course data."""
 
-from datetime import date
-
 from marshmallow import (
+    EXCLUDE,
     Schema,
     ValidationError,
     fields,
@@ -12,15 +11,11 @@ from marshmallow import (
 )
 
 
-def _parse_deadline(value: str) -> date:
-    try:
-        return date.fromisoformat(value)
-    except (TypeError, ValueError) as exc:
-        raise ValidationError("group_formation_deadline must be an ISO-format date, e.g. '2026-08-15'.") from exc
-
-
 class CreateCourseSchema(Schema):
     """Schema for creating a new course."""
+
+    class Meta:
+        unknown = EXCLUDE
 
     name = fields.Str(
         required=True,
@@ -38,24 +33,9 @@ class CreateCourseSchema(Schema):
         required=True,
         validate=validate.Range(min=1)
     )
-    group_formation_deadline = fields.Str(
-        required=False,
-        load_default=None,
-    )
-    deadline = fields.Str(
-        required=False,
-        load_default=None,
-    )
 
     @validates_schema
-    def validate_deadline_and_groups(self, data, **kwargs):
-        deadline_val = data.get("group_formation_deadline") or data.get("deadline")
-        if deadline_val:
-            _parse_deadline(deadline_val)
-            data["group_formation_deadline"] = deadline_val
-        else:
-            data["group_formation_deadline"] = None
-
+    def validate_groups(self, data, **kwargs):
         min_group = data.get("min_group")
         max_group = data.get("max_group")
         if min_group is not None and max_group is not None and max_group < min_group:
@@ -64,6 +44,9 @@ class CreateCourseSchema(Schema):
 
 class UpdateCourseSchema(Schema):
     """Schema for updating an existing course. All fields optional."""
+
+    class Meta:
+        unknown = EXCLUDE
 
     name = fields.Str(
         validate=validate.Length(min=2, max=100),
@@ -81,16 +64,9 @@ class UpdateCourseSchema(Schema):
         validate=validate.Range(min=1),
         load_default=None
     )
-    group_formation_deadline = fields.Str(load_default=None)
-    deadline = fields.Str(load_default=None)
 
     @validates_schema
-    def validate_deadline_and_groups(self, data, **kwargs):
-        deadline_val = data.get("group_formation_deadline") or data.get("deadline")
-        if deadline_val is not None:
-            _parse_deadline(deadline_val)
-            data["group_formation_deadline"] = deadline_val
-
+    def validate_groups(self, data, **kwargs):
         min_group = data.get("min_group")
         max_group = data.get("max_group")
         if min_group is not None and max_group is not None and max_group < min_group:

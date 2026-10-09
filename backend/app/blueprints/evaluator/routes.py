@@ -59,7 +59,7 @@ def evaluator_dashboard():
         course = group.get("course")
         if not course:
             continue
-        iterations = list(mongo.db.iterations.find({"course": course}))
+        iterations = list(mongo.db.iterations.find({"$or": [{"course": course}, {"course": "All Courses"}], "deleted": {"$ne": True}}))
         for it in iterations:
             if not it.get("rubrics"):
                 continue
@@ -121,7 +121,7 @@ def list_assigned_groups():
         course = g.get("course", "")
 
         # Count iterations with rubrics for this group's course
-        iterations = list(mongo.db.iterations.find({"course": course}))
+        iterations = list(mongo.db.iterations.find({"$or": [{"course": course}, {"course": "All Courses"}], "deleted": {"$ne": True}}))
         total_it = sum(1 for it in iterations if it.get("rubrics"))
         completed_it = mongo.db.evaluations.count_documents({
             "evaluator_id": evaluator_id,
@@ -174,7 +174,7 @@ def get_group_detail(group_id):
     course = group.get("course", "")
 
     # All iterations for this course
-    iterations_raw = list(mongo.db.iterations.find({"course": course}).sort("deadline", 1))
+    iterations_raw = list(mongo.db.iterations.find({"$or": [{"course": course}, {"course": "All Courses"}], "deleted": {"$ne": True}}).sort("deadline", 1))
     iterations = []
     for it in iterations_raw:
         it_id = it["_id"]

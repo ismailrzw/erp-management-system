@@ -1,4 +1,4 @@
-﻿# backend/app/blueprints/student/dashboard.py
+# backend/app/blueprints/student/dashboard.py
 """
 Student Dashboard API endpoint.
 
@@ -22,6 +22,7 @@ Security
 """
 
 import logging
+from datetime import datetime
 
 from bson import ObjectId
 from flask_jwt_extended import get_jwt_identity
@@ -31,7 +32,7 @@ from app.extensions import mongo
 from app.models.group import INVITATIONS_COLLECTION, InvitationField, InvitationStatus
 from app.models.user import Role
 from app.services.announcement_service import list_announcements_for_user
-from app.services.attachment_service import list_attachments
+from app.services.file_access_service import visible_attachments
 from app.services.group_service import get_my_group
 from app.services.student_profile_service import get_profile
 from app.utils.decorators import role_required
@@ -92,7 +93,7 @@ class StudentDashboard(Resource):
 
             # ── Attachments (newest 10) ────────────────────────────────────
             try:
-                raw_attachments = list_attachments()[:10]
+                raw_attachments = visible_attachments(student_id)[:10]
                 attachments = []
                 for att in raw_attachments:
                     clean_att = dict(att)
@@ -104,6 +105,25 @@ class StudentDashboard(Resource):
 
             recent_ann_count = sum(1 for a in announcements if a.get("is_recent"))
 
+            # ── Upcoming Milestones ────────────────────────────
+            try:
+                student_course = profile.get("course") or (group.get("course") if group else None)
+                m_query = {}
+                if student_course:
+                    m_query["$or"] = [{"course": student_course}, {"course": "All Courses"}, {"course": {"$exists": False}}]
+                raw_milestones = list(mongo.db.iterations.find(m_query).sort("deadline", 1).limit(5))
+                upcoming_milestones = []
+                for m in raw_milestones:
+                    clean_m = dict(m)
+                    clean_m["id"] = str(clean_m.pop("_id"))
+                    for k, v in list(clean_m.items()):
+                        if isinstance(v, datetime):
+                            clean_m[k] = v.isoformat()
+                    upcoming_milestones.append(clean_m)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Error fetching upcoming milestones for student: %s", exc)
+                upcoming_milestones = []
+
             return {
                 "success": True,
                 "message": "Dashboard data retrieved.",
@@ -114,6 +134,7 @@ class StudentDashboard(Resource):
                     "announcements":             announcements,
                     "recent_announcements_count": recent_ann_count,
                     "attachments":               attachments,
+                    "upcoming_milestones":       upcoming_milestones,
                 },
             }, 200
 

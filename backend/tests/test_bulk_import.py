@@ -2,15 +2,15 @@ from io import BytesIO
 
 from test_students import STUDENTS_URL, create_student
 
-CSV_HEADERS = "Name,Roll,Department,Section,Session,Course,Teacher,Recovery Email\n"
+CSV_HEADERS = "Name,Roll,Department,Section,Session,Course,Recovery Email\n"
 
 
 def upload_csv(client, manager_headers, contents):
     return client.post(f"{STUDENTS_URL}bulk", data={"file": (BytesIO(contents.encode()), "students.csv")}, headers=manager_headers, content_type="multipart/form-data")
 
 
-def test_bulk_import_valid_csv(client, manager_headers):
-    csv = CSV_HEADERS + "Ada Lovelace,f2024-101,CS,A,2024,PBL,Dr Turing,ada@example.com\nGrace Hopper,f2024-102,CS,B,2024,PBL,Dr Turing,grace@example.com\n"
+def test_bulk_import_valid_csv(client, manager_headers, academic_setup):
+    csv = CSV_HEADERS + "Ada Lovelace,f2024-101,CS,A,2024,PBL,ada@example.com\nGrace Hopper,f2024-102,CS,B,2024,PBL,grace@example.com\n"
     response = upload_csv(client, manager_headers, csv)
     assert response.status_code == 200, response.get_json()
     data = response.get_json()["data"]
@@ -20,7 +20,7 @@ def test_bulk_import_valid_csv(client, manager_headers):
 
 
 def test_bulk_import_requires_all_columns(client, manager_headers):
-    csv = "Name,Roll,Department,Section,Session,Course,Teacher\nAda Lovelace,f2024-101,CS,A,2024,PBL,Dr Turing\n"
+    csv = "Name,Roll,Department,Section,Session,Course\nAda Lovelace,f2024-101,CS,A,2024,PBL\n"
     response = upload_csv(client, manager_headers, csv)
     assert response.status_code == 400, response.get_json()
     assert "Missing required columns" in response.get_json()["message"]
@@ -29,7 +29,7 @@ def test_bulk_import_requires_all_columns(client, manager_headers):
 
 def test_bulk_import_reports_existing_roll_and_imports_other_rows(client, manager_headers):
     create_student(client, manager_headers, "f2024-201")
-    csv = CSV_HEADERS + "Existing Student,f2024-201,CS,A,2024,PBL,Dr Turing,existing@example.com\nNew Student,f2024-202,CS,A,2024,PBL,Dr Turing,new@example.com\n"
+    csv = CSV_HEADERS + "Existing Student,f2024-201,CS,A,2024,PBL,existing@example.com\nNew Student,f2024-202,CS,A,2024,PBL,new@example.com\n"
     response = upload_csv(client, manager_headers, csv)
     assert response.status_code == 200, response.get_json()
     data = response.get_json()["data"]

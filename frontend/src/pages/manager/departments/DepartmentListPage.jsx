@@ -119,6 +119,7 @@ export const DepartmentListPage = () => {
       await departmentsApi.delete(deptToDelete.id || deptToDelete._id);
       setToast({ message: 'Department moved to Recycle Bin', type: 'success' });
       setDeptToDelete(null);
+      setIsEditModalOpen(false);
       fetchDepartments(true);
     } catch (err) {
       setToast({
@@ -138,7 +139,7 @@ export const DepartmentListPage = () => {
           subtitle="Manage academic departments, faculty codes, and departmental programs."
           breadcrumbs={[
             { label: 'Home', to: '/manager/dashboard' },
-            { label: 'Departments', to: '/manager/departments' },
+            { label: 'Departments', to: '/manager/departments/view' },
             { label: 'View All Departments' },
           ]}
         />
@@ -311,14 +312,6 @@ export const DepartmentListPage = () => {
                           <Edit2 size={13} />
                           <span>Edit</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeptToDelete(d)}
-                          className="btn btn-danger-outline btn-sm"
-                        >
-                          <Trash2 size={13} />
-                          <span>Delete</span>
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -360,6 +353,9 @@ export const DepartmentListPage = () => {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <button type="button" disabled={actionLoading} className="btn btn-danger-outline" onClick={() => setDeptToDelete({ id: editFormData.id, name: editFormData.name })}>
+              <Trash2 size={13} /> Delete Department
+            </button>
             <button
               type="button"
               onClick={() => setIsEditModalOpen(false)}

@@ -40,6 +40,7 @@ export const Sidebar = ({
     depts: false,
     courses: false,
     teachers: false,
+    evaluators: false,
     groups: false,
     iterations: false,
     survey: false,
@@ -51,11 +52,12 @@ export const Sidebar = ({
   };
 
   const isStudent = user?.role === 'student';
+  const isTeacher = user?.role === 'teacher';
   const isEvaluator = user?.role === 'evaluator';
 
   const managerNavSections = [
     {
-      section: 'Navigation',
+      section: 'Home',
       items: [
         {
           type: 'link',
@@ -74,9 +76,8 @@ export const Sidebar = ({
           text: 'Manage Students',
           icon: Users,
           subitems: [
-            { text: 'Add New Student', to: '/manager/students/add' },
             { text: 'View All Students', to: '/manager/students/view' },
-            { text: 'View Recycle Bin', to: '/manager/students/trash' },
+            { text: 'Add New Student', to: '/manager/students/add' },
           ],
         },
       ],
@@ -90,9 +91,8 @@ export const Sidebar = ({
           text: 'Manage Department',
           icon: Building2,
           subitems: [
-            { text: 'Add New Department', to: '/manager/departments/add' },
             { text: 'View All Departments', to: '/manager/departments/view' },
-            { text: 'View Recycle Bin', to: '/manager/departments/trash' },
+            { text: 'Add New Department', to: '/manager/departments/add' },
           ],
         },
       ],
@@ -106,9 +106,8 @@ export const Sidebar = ({
           text: 'Manage Courses',
           icon: BookOpen,
           subitems: [
-            { text: 'Add New Course', to: '/manager/courses/add' },
             { text: 'View All Courses', to: '/manager/courses/view' },
-            { text: 'View Recycle Bin', to: '/manager/courses/trash' },
+            { text: 'Add New Course', to: '/manager/courses/add' },
           ],
         },
       ],
@@ -122,9 +121,23 @@ export const Sidebar = ({
           text: 'Manage Teachers',
           icon: GraduationCap,
           subitems: [
-            { text: 'Add New Teacher', to: '/manager/teachers/add' },
             { text: 'View All Teachers', to: '/manager/teachers/view' },
-            { text: 'View Recycle Bin', to: '/manager/teachers/trash' },
+            { text: 'Add New Teacher', to: '/manager/teachers/add' },
+          ],
+        },
+      ],
+    },
+    {
+      section: 'Evaluators',
+      items: [
+        {
+          type: 'menu',
+          key: 'evaluators',
+          text: 'Manage Evaluators',
+          icon: Award,
+          subitems: [
+            { text: 'View All Evaluators', to: '/manager/evaluators/view' },
+            { text: 'Add New Evaluator', to: '/manager/evaluators/add' },
           ],
         },
       ],
@@ -133,10 +146,14 @@ export const Sidebar = ({
       section: 'Groups',
       items: [
         {
-          type: 'link',
+          type: 'menu',
+          key: 'groups',
           text: 'Manage Groups',
-          to: '/manager/groups',
           icon: FolderGit2,
+          subitems: [
+            { text: 'View All Groups', to: '/manager/groups' },
+            { text: 'Broadcast Mail', to: '/manager/groups/broadcast' },
+          ],
         },
       ],
     },
@@ -178,6 +195,55 @@ export const Sidebar = ({
           type: 'link',
           text: 'Settings',
           to: '/manager/settings',
+          icon: Settings,
+        },
+        {
+          type: 'action',
+          text: 'Logout',
+          onClick: handleLogout,
+          icon: LogOut,
+          danger: true,
+        },
+      ],
+    },
+  ];
+
+  const teacherNavSections = [
+    {
+      section: 'Navigation',
+      items: [
+        {
+          type: 'link',
+          text: 'Dashboard',
+          to: '/teacher/dashboard',
+          icon: LayoutDashboard,
+        },
+      ],
+    },
+    {
+      section: 'Supervision & FYP',
+      items: [
+        {
+          type: 'link',
+          text: 'My Groups',
+          to: '/teacher/groups',
+          icon: FolderGit2,
+        },
+        {
+          type: 'link',
+          text: 'Supervised Students',
+          to: '/teacher/students',
+          icon: Users,
+        },
+      ],
+    },
+    {
+      section: 'Account',
+      items: [
+        {
+          type: 'link',
+          text: 'Settings',
+          to: '/teacher/profile',
           icon: Settings,
         },
         {
@@ -280,12 +346,6 @@ export const Sidebar = ({
         },
         {
           type: 'link',
-          text: 'Exhibition Eval',
-          to: '/evaluator/exhibition',
-          icon: Award,
-        },
-        {
-          type: 'link',
           text: 'Supervision Meetings',
           to: '/evaluator/meetings',
           icon: Calendar,
@@ -312,7 +372,13 @@ export const Sidebar = ({
     },
   ];
 
-  const navSections = isStudent ? studentNavSections : isEvaluator ? evaluatorNavSections : managerNavSections;
+  const navSections = isStudent
+    ? studentNavSections
+    : isTeacher
+    ? teacherNavSections
+    : isEvaluator
+    ? evaluatorNavSections
+    : managerNavSections;
 
   const sidebarStyle = isMobileView
     ? {

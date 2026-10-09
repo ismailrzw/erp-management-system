@@ -1,4 +1,6 @@
 import json
+import logging
+import sys
 from datetime import datetime
 
 from bson import ObjectId
@@ -11,6 +13,13 @@ from app.config import Config
 from app.extensions import mongo
 from app.middleware import fix_authorization_header
 from app.utils import register_jwt_handlers
+
+# Configure root logger to output INFO level logs directly to stdout
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
 
 jwt = JWTManager()
 
@@ -102,13 +111,19 @@ def create_app(config_class=Config):
     from app.blueprints.manager.teachers import teachers_ns
     api.add_namespace(teachers_ns, path="/api/manager/teachers")
 
+    from app.blueprints.manager.evaluators import evaluators_ns
+    api.add_namespace(evaluators_ns, path="/api/manager/evaluators")
+
     from app.blueprints.manager.groups import manager_groups_ns
     api.add_namespace(manager_groups_ns, path="/api/manager/groups")
 
     from app.blueprints.manager.reports import manager_reports_ns
     api.add_namespace(manager_reports_ns, path="/api/manager/reports")
 
-    # ── Iterations Namespaces (Sprint 3) ─────────────────
+    # ── Sprints & Iterations Namespaces (Sprint 3) ─────────────────
+    from app.blueprints.manager.sprints import sprints_ns
+    api.add_namespace(sprints_ns, path='/api/manager/sprints')
+
     from app.blueprints.manager.iterations import iterations_ns
     api.add_namespace(iterations_ns, path='/api/manager/iterations')
 
@@ -147,9 +162,20 @@ def create_app(config_class=Config):
     api.add_namespace(student_supervisors_ns, path="/api/student/supervisors")
     api.add_namespace(student_supervisor_requests_ns, path="/api/student/supervisor-requests")
 
-    # ── Evaluator Blueprint (Sprint 4) ───────────────────────────────────────
+    # ── Teacher Blueprint (Supervisors) ──────────────────────────────────────
+    from app.blueprints.teacher import teacher_bp
+    app.register_blueprint(teacher_bp, url_prefix='/api/teacher')
+
+    # ── Evaluator Blueprint (Project) ─────────────────────────────────
     from app.blueprints.evaluator import evaluator_bp
     app.register_blueprint(evaluator_bp, url_prefix='/api/evaluator')
+
+    from app.blueprints.workflow import workflow_bp
+    app.register_blueprint(workflow_bp, url_prefix='/api/workflow')
+    from app.blueprints.files import files_bp
+    app.register_blueprint(files_bp, url_prefix='/api/files')
+    from app.blueprints.notifications import notifications_bp
+    app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
 
     # Ensure database indexes for fast point-lookup
     try:

@@ -1,16 +1,28 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useId } from 'react';
 import { X } from 'lucide-react';
 
 export const Modal = ({ isOpen, onClose, title, children, maxWidth = '500px' }) => {
+  const dialog = useRef(null);
+  const close = useRef(onClose);
+  const titleId = useId();
+  useEffect(() => { close.current = onClose; }, [onClose]);
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
+    if (!isOpen) return;
+    const previous = document.activeElement;
+    const focusable = () => Array.from(dialog.current?.querySelectorAll('button, input, select, textarea, a[href], [tabindex="0"]') || []).filter(element => !element.disabled && element.getClientRects().length);
+    const frame = requestAnimationFrame(() => (focusable()[0] || dialog.current)?.focus());
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') close.current();
+      if (event.key === 'Tab') {
+        const elements = focusable(); const first = elements[0]; const last = elements.at(-1);
+        if (!first) { event.preventDefault(); dialog.current?.focus(); }
+        else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('keydown', handleKeyDown); previous?.focus(); };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -29,7 +41,7 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = '500px' }) 
       }}
       onClick={onClose}
     >
-      <div
+      <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}
         style={{
           backgroundColor: '#ffffff',
           borderRadius: '8px',
@@ -53,7 +65,7 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = '500px' }) 
             flexShrink: 0,
           }}
         >
-          <h3 style={{ margin: 0, fontSize: '15.5px', fontWeight: 600, color: '#1e293b' }}>
+          <h3 id={titleId} style={{ margin: 0, fontSize: '15.5px', fontWeight: 600, color: '#1e293b' }}>
             {title}
           </h3>
           <button

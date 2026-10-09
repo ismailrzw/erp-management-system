@@ -1,4 +1,4 @@
-﻿# backend/app/models/user.py
+# backend/app/models/user.py
 """
 User Model — field constants, role constants, and password helpers.
 
@@ -38,6 +38,7 @@ class UserFields:
     ROLL          = "roll"
     RECOVERY_EMAIL = "recovery_email"
     TYPE          = "type"
+    EVALUATOR_TYPE = "evaluator_type"
     DOMAINS       = "domains"
     ACTIVE_SUPERVISION_COUNT = "active_supervision_count"
     DELETED       = "deleted"
@@ -59,13 +60,14 @@ class Role:
     """User role string constants."""
     MANAGER   = "pbl_manager"
     STUDENT   = "student"
+    TEACHER   = "teacher"
     EVALUATOR = "evaluator"
     HOD       = "hod"
     HODIC     = "hodic"
     DEAN      = "dean"
 
     # Use tuples (immutable) instead of lists
-    ALL:      ClassVar[tuple] = (MANAGER, STUDENT, EVALUATOR, HOD, HODIC, DEAN)
+    ALL:      ClassVar[tuple] = (MANAGER, STUDENT, TEACHER, EVALUATOR, HOD, HODIC, DEAN)
     OVERSIGHT: ClassVar[tuple] = (HOD, HODIC, DEAN)
 
 

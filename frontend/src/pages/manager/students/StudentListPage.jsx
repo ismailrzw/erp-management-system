@@ -14,7 +14,6 @@ import {
 import { studentsApi } from '../../../api/studentsApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { coursesApi } from '../../../api/coursesApi';
-import { teachersApi } from '../../../api/teachersApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
 import { PageHeader } from '../../../components/ui/PageHeader';
@@ -33,16 +32,15 @@ export const StudentListPage = () => {
   // Dropdown reference data
   const [departments, setDepartments] = useState([]);
   const [courses, setCourses] = useState([]);
-  const [teachers, setTeachers] = useState([]);
 
   // Modals
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
     id: null,
-    name: '',
+    dept: '',
+    academic_locked: false,
     section: '',
     course: '',
-    teacher: '',
     recovery_email: '',
   });
 
@@ -93,17 +91,15 @@ export const StudentListPage = () => {
 
     const loadInitialData = async () => {
       try {
-        const [dRes, cRes, tRes, sRes] = await Promise.all([
+        const [dRes, cRes, sRes] = await Promise.all([
           departmentsApi.list({ limit: 100 }),
           coursesApi.list({ limit: 100 }),
-          teachersApi.list({ limit: 100 }),
           studentsApi.list({ page: 1, limit: 10, deleted: false }),
         ]);
 
         if (isMounted) {
           if (dRes.success && dRes.data) setDepartments(dRes.data.items || dRes.data || []);
           if (cRes.success && cRes.data) setCourses(cRes.data.items || cRes.data || []);
-          if (tRes.success && tRes.data) setTeachers(tRes.data.items || tRes.data || []);
           if (sRes.success && sRes.data) {
             const items = sRes.data.items || sRes.data || [];
             setStudents(items);
@@ -141,13 +137,16 @@ export const StudentListPage = () => {
     fetchStudents(1);
   };
 
+  const [selectedStudent, setSelectedStudent] = useState(null);
+
   const handleOpenEdit = (student) => {
+    setSelectedStudent(student);
     setEditFormData({
       id: student.id || student._id,
-      name: student.name || '',
+      dept: student.dept || '',
+      academic_locked: student.academic_locked || false,
       section: student.section || '',
       course: student.course || '',
-      teacher: student.teacher || '',
       recovery_email: student.recovery_email || '',
     });
     setIsEditModalOpen(true);
@@ -158,11 +157,12 @@ export const StudentListPage = () => {
     try {
       setActionLoading(true);
       await studentsApi.update(editFormData.id, {
-        name: editFormData.name.trim(),
         section: editFormData.section.trim(),
-        course: editFormData.course.trim(),
-        teacher: editFormData.teacher.trim(),
-        recovery_email: editFormData.recovery_email.trim() || undefined,
+        ...(!editFormData.academic_locked && {
+          dept: editFormData.dept,
+          course: editFormData.course.trim(),
+        }),
+        recovery_email: editFormData.recovery_email.trim() || null,
       });
       setToast({ message: 'Student updated successfully', type: 'success' });
       setIsEditModalOpen(false);
@@ -201,6 +201,7 @@ export const StudentListPage = () => {
       await studentsApi.delete(studentToDelete.id || studentToDelete._id);
       setToast({ message: 'Student moved to Recycle Bin', type: 'success' });
       setStudentToDelete(null);
+      setIsEditModalOpen(false);
       fetchStudents(pagination.page, true);
     } catch (err) {
       setToast({
@@ -220,7 +221,7 @@ export const StudentListPage = () => {
           subtitle="Manage student enrollment, course associations, and departments."
           breadcrumbs={[
             { label: 'Home', to: '/manager/dashboard' },
-            { label: 'Students', to: '/manager/students' },
+            { label: 'Students', to: '/manager/students/view' },
             { label: 'View All Students' },
           ]}
         />
@@ -416,14 +417,13 @@ export const StudentListPage = () => {
                 <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '60px' }}>Dept</th>
                 <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '50px' }}>Sec</th>
                 <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '120px' }}>Course</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '100px' }}>Teacher</th>
                 <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, textAlign: 'right', minWidth: '100px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {students.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '36px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                  <td colSpan={7} style={{ padding: '36px 20px', textAlign: 'center', color: '#94a3b8' }}>
                     <Users size={36} style={{ margin: '0 auto 10px', opacity: 0.5 }} />
                     <div style={{ fontWeight: 600, color: '#475569', fontSize: '14px' }}>No students found</div>
                     <div style={{ fontSize: '12.5px', marginTop: '4px' }}>
@@ -462,7 +462,6 @@ export const StudentListPage = () => {
                     </td>
                     <td style={{ padding: '12px 16px', color: '#334155' }}>{stu.section}</td>
                     <td style={{ padding: '12px 16px', color: '#475569' }}>{stu.course || '-'}</td>
-                    <td style={{ padding: '12px 16px', color: '#475569' }}>{stu.teacher || '-'}</td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
                         <button
@@ -483,15 +482,6 @@ export const StudentListPage = () => {
                         >
                           <Edit2 size={13} />
                           <span>Edit</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setStudentToDelete(stu)}
-                          className="btn btn-danger-outline btn-sm"
-                          title="Delete Student"
-                        >
-                          <Trash2 size={13} />
-                          <span>Delete</span>
                         </button>
                       </div>
                     </td>
@@ -544,19 +534,26 @@ export const StudentListPage = () => {
       </div>
 
       {/* Modal: Edit Student */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Student Profile">
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Student">
         <form onSubmit={handleSaveEdit}>
+          {editFormData.academic_locked && (
+            <p role="status" style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '14px' }}>
+              Department and Course are locked because this student belongs to a group.
+            </p>
+          )}
           <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '5px' }}>
-              Full Name *
-            </label>
-            <input
-              type="text"
-              value={editFormData.name}
-              onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+            <label htmlFor="student-edit-department">Department</label>
+            <select
+              id="student-edit-department"
+              value={editFormData.dept}
               required
-              style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '8px 12px', fontSize: '13.5px', outline: 'none' }}
-            />
+              disabled={editFormData.academic_locked || actionLoading}
+              onChange={(e) => setEditFormData({ ...editFormData, dept: e.target.value, course: '' })}
+              style={{ width: '100%', padding: '8px 12px', marginTop: '5px' }}
+            >
+              <option value="">Select Department</option>
+              {departments.map((d) => <option key={d.id || d._id} value={d.code}>{d.code} — {d.name}</option>)}
+            </select>
           </div>
 
           <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
@@ -574,41 +571,22 @@ export const StudentListPage = () => {
             </div>
             <div style={{ flex: 2 }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
-                Course *
+                Course (optional)
               </label>
               <select
                 value={editFormData.course}
                 onChange={(e) => setEditFormData({ ...editFormData, course: e.target.value })}
-                required
+                disabled={editFormData.academic_locked || actionLoading}
                 style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 34px 8px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
               >
-                <option value="">Select Course</option>
-                {courses.map((c) => (
+                <option value="">Not assigned</option>
+                {courses.filter((c) => c.dept === editFormData.dept).map((c) => (
                   <option key={c.id || c._id || c.name} value={c.name}>
                     {c.name}
                   </option>
                 ))}
               </select>
             </div>
-          </div>
-
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
-              Assigned Teacher *
-            </label>
-            <select
-              value={editFormData.teacher}
-              onChange={(e) => setEditFormData({ ...editFormData, teacher: e.target.value })}
-              required
-              style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 34px 8px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
-            >
-              <option value="">Select Teacher</option>
-              {teachers.map((t) => (
-                <option key={t.id || t._id || t.email} value={t.name}>
-                  {t.name} ({t.dept || 'Faculty'})
-                </option>
-              ))}
-            </select>
           </div>
 
           <div style={{ marginBottom: '18px' }}>
@@ -625,6 +603,14 @@ export const StudentListPage = () => {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <button
+              type="button"
+              disabled={actionLoading}
+              className="btn btn-danger-outline"
+              onClick={() => setStudentToDelete({ id: editFormData.id, name: selectedStudent?.name || 'Student', roll: selectedStudent?.roll || '' })}
+            >
+              <Trash2 size={13} /> Delete Student
+            </button>
             <button
               type="button"
               onClick={() => setIsEditModalOpen(false)}

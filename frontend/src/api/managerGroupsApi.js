@@ -20,4 +20,22 @@ export const managerGroupsApi = {
     const response = await api.post(`/manager/groups/${groupId}/reject`, { reason });
     return response.data;
   },
+
+  sendMail: async (payload) => {
+    const response = await api.post('/manager/groups/send-mail', payload);
+    return response.data;
+  },
+
+  getWorkspace: async (groupId) => {
+    const response = await api.get(`/manager/groups/${groupId}/workspace`);
+    return response.data;
+  },
+
+  exportPerformance: async (groupId) => {
+    const response = await api.get(`/manager/groups/${groupId}/export-performance`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
 };
+

@@ -33,6 +33,12 @@ def client():
             for collection in mongo.db.list_collection_names():
                 mongo.db[collection].drop()
 
+            mongo.db.departments.insert_one({"code": "SE", "name": "Software Engineering", "deleted": False})
+            for course in ["Final Year Project - Fall 2025", "FYP 2025", "FYP 2026"]:
+                mongo.db.courses.insert_one({"name": course, "dept": "SE", "min_group": 2, "max_group": 4, "deleted": False})
+            for sprint in ["Sprint 1", "Sprint 2"]:
+                mongo.db.sprints.insert_one({"name": sprint, "description": "Configured test sprint", "deleted": False})
+
             password = "11223344"
             hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
@@ -130,18 +136,8 @@ def test_student_submit_late_detection(client):
 def test_student_without_approved_group_forbidden(client):
     token = get_token(client, "student2@bnu.edu.pk")
     iterations_resp = client.get("/api/student/iterations", headers={"Authorization": f"Bearer {token}"})
-    iterations = iterations_resp.get_json()["data"]
-    open_iteration = iterations[0]
-
-    pdf_data = (io.BytesIO(b"%PDF-1.4 test"), "test.pdf")
-    resp = client.post(
-        f"/api/student/iterations/{open_iteration['_id']}/submit",
-        data={"file": pdf_data},
-        content_type="multipart/form-data",
-        headers={"Authorization": f"Bearer {token}"}
-    )
-    assert resp.status_code == 403
-    assert "approved group" in resp.get_json()["message"]
+    assert iterations_resp.status_code == 403
+    assert "group" in iterations_resp.get_json()["message"].lower()
 
 def test_invalid_file_extension_rejected(client):
     token = get_token(client, "student1@bnu.edu.pk")
@@ -156,4 +152,4 @@ def test_invalid_file_extension_rejected(client):
         headers={"Authorization": f"Bearer {token}"}
     )
     assert resp.status_code == 400
-    assert "not allowed" in resp.get_json()["message"]
+    assert "Allowed file types" in resp.get_json()["message"]

@@ -3,10 +3,12 @@ import sys
 from datetime import datetime, timezone
 
 import bcrypt
+from dotenv import load_dotenv
 from pymongo import MongoClient
 
+load_dotenv()
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from app.models.teacher import TeacherType
+from app.models.teacher import EvaluatorType
 from app.models.user import Role
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/pbl_system")
@@ -30,9 +32,9 @@ def seed_departments():
 
 def seed_courses():
     courses = [
-        {"name": "Final Year Project", "dept": "CS", "min_group": 2, "max_group": 4, "deadline": "2026-12-31"},
-        {"name": "Software Architecture PBL", "dept": "SE", "min_group": 1, "max_group": 3, "deadline": "2026-11-30"},
-        {"name": "Embedded Systems Project", "dept": "EE", "min_group": 2, "max_group": 4, "deadline": "2026-12-15"},
+        {"name": "Final Year Project", "dept": "CS", "min_group": 2, "max_group": 4},
+        {"name": "Software Architecture PBL", "dept": "SE", "min_group": 1, "max_group": 3},
+        {"name": "Embedded Systems Project", "dept": "EE", "min_group": 2, "max_group": 4},
     ]
     for c in courses:
         db.courses.update_one(
@@ -44,24 +46,50 @@ def seed_courses():
 
 def seed_teachers():
     teachers = [
-        {"name": "Dr. Sarah Ahmed", "email": "sarah.ahmed@superior.edu.pk", "dept": "CS", "type": TeacherType.INTERNAL},
-        {"name": "Prof. Ali Raza", "email": "ali.raza@superior.edu.pk", "dept": "SE", "type": TeacherType.INTERNAL},
-        {"name": "Mr. Kashif Mehmood", "email": "kashif.mehmood@techvista.com", "dept": "CS", "type": TeacherType.EXTERNAL},
+        {"name": "Dr. Sarah Ahmed", "email": "sarah.ahmed@superior.edu.pk", "dept": "CS", "domains": ["Machine Learning", "Data Science"]},
+        {"name": "Prof. Ali Raza", "email": "ali.raza@superior.edu.pk", "dept": "SE", "domains": ["Software Architecture", "Cloud Computing"]},
+        {"name": "Dr. Saif Ali Khan", "email": "saifali@bnu.edu.pk", "dept": "CS", "domains": ["Artificial Intelligence", "Web Systems"]},
     ]
-    default_pass = "pbl123*"
+    evaluators = [
+        {"name": "Mr. Kashif Mehmood", "email": "kashif.mehmood@techvista.com", "dept": "CS", "evaluator_type": EvaluatorType.EXTERNAL, "domains": ["Industry Quality Assurance"]},
+        {"name": "Dr. Usman Farooq", "email": "usman.farooq@bnu.edu.pk", "dept": "SE", "evaluator_type": EvaluatorType.INTERNAL, "domains": ["System Design"]},
+    ]
+    default_pass = "11223344"
     hashed = bcrypt.hashpw(default_pass.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
     for t in teachers:
         db.users.update_one(
             {"email": t["email"]},
-            {"$setOnInsert": {
-                **t,
-                "role": Role.EVALUATOR,
+            {"$set": {
+                "name": t["name"],
+                "dept": t["dept"],
+                "domains": t["domains"],
+                "role": Role.TEACHER,
                 "password_hash": hashed,
                 "deleted": False,
+            },
+            "$setOnInsert": {
                 "created_at": datetime.now(timezone.utc)
             }},
             upsert=True
         )
+    for e in evaluators:
+        db.users.update_one(
+            {"email": e["email"]},
+            {"$set": {
+                "name": e["name"],
+                "dept": e["dept"],
+                "evaluator_type": e["evaluator_type"],
+                "domains": e["domains"],
+                "role": Role.EVALUATOR,
+                "password_hash": hashed,
+                "deleted": False,
+            },
+            "$setOnInsert": {
+                "created_at": datetime.now(timezone.utc)
+            }},
+            upsert=True
+        )
+    print("✅ Seeded Teachers and Evaluators")
 def seed_students():
     default_pass = "11223344"
     hashed = bcrypt.hashpw(default_pass.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")

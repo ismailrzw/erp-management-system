@@ -12,10 +12,10 @@ import {
   AlertCircle,
   Loader2,
   RefreshCw,
+  CheckCircle2,
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { evaluatorApi } from '../../api/evaluatorApi';
-import { supervisorsApi } from '../../api/supervisorsApi';
 import { Modal } from '../../components/ui/Modal';
 import { Toast } from '../../components/ui/Toast';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -46,10 +46,10 @@ export function EvaluatorDashboard() {
     try {
       const [dashRes, reqRes] = await Promise.all([
         evaluatorApi.getDashboard().catch(() => null),
-        supervisorsApi.listEvaluatorRequests().catch(() => null),
+        evaluatorApi.listSupervisorRequests().catch(() => null),
       ]);
 
-      if (dashRes?.data?.success) {
+      if (dashRes?.data?.success && dashRes.data.data) {
         setStats(dashRes.data.data);
       }
       if (reqRes?.success && reqRes.data) {
@@ -72,7 +72,7 @@ export function EvaluatorDashboard() {
   const handleAcceptRequest = async (requestId) => {
     try {
       setProcessingId(requestId);
-      const res = await supervisorsApi.acceptRequest(requestId);
+      const res = await evaluatorApi.acceptSupervisorRequest(requestId);
       if (res.success) {
         setToast({ message: res.message || 'Supervisor request accepted! Group assigned to you.', type: 'success' });
         fetchData(true);
@@ -91,7 +91,7 @@ export function EvaluatorDashboard() {
     if (!rejectingRequest) return;
     try {
       setProcessingId(rejectingRequest.id);
-      const res = await supervisorsApi.rejectRequest(rejectingRequest.id, rejectionReason.trim());
+      const res = await evaluatorApi.rejectSupervisorRequest(rejectingRequest.id, rejectionReason.trim());
       if (res.success) {
         setToast({ message: 'Supervisor request declined.', type: 'info' });
         setRejectingRequest(null);
@@ -166,7 +166,7 @@ export function EvaluatorDashboard() {
       )}
 
       {/* Unified Responsive Stat Cards */}
-      <div className="stat-grid-4">
+      <div className="stat-grid-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
         <StatCard
           title="Assigned Groups"
           count={stats.assigned_groups}
@@ -193,6 +193,14 @@ export function EvaluatorDashboard() {
           icon={Clock}
           color="warning"
           subtext="Review & score submissions"
+          onClick={() => navigate('/evaluator/groups')}
+        />
+        <StatCard
+          title="Completed Evaluations"
+          count={stats.completed_evaluations}
+          icon={CheckCircle2}
+          color="success"
+          subtext="Evaluations submitted"
           onClick={() => navigate('/evaluator/groups')}
         />
         <StatCard

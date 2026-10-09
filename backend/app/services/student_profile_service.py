@@ -1,11 +1,11 @@
-﻿# backend/app/services/student_profile_service.py
+# backend/app/services/student_profile_service.py
 """
 Business logic for a student's own profile management.
 
 Responsibilities
 ----------------
 - get_profile          : return own user document (password_hash stripped).
-- update_profile       : update only name / recovery_email.
+- update_profile       : update only recovery_email.
 - change_password      : verify current bcrypt hash, set new one.
 
 All functions accept a ``student_id`` string (the JWT identity), look up
@@ -74,28 +74,36 @@ def _get_active_student(student_id: str) -> dict:
 
 def get_profile(student_id: str) -> dict:
     """
-    Return the authenticated student's own profile.
-
-    Parameters
-    ----------
-    student_id:
-        The ``sub`` claim from the JWT (string ObjectId).
-
-    Returns
-    -------
-    dict
-        Serialized user document without ``password_hash``.
+    Return the authenticated student's own profile enriched with active group/supervisor details.
     """
-    return _serialize(_get_active_student(student_id))
+    user_doc = _get_active_student(student_id)
+    profile_data = _serialize(user_doc)
+
+    # Resolve group supervisor / evaluator dynamically
+    group = mongo.db.groups.find_one({
+        "member_ids": ObjectId(student_id),
+        "status": {"$ne": "deleted"},
+    })
+    if group:
+        profile_data["group_id"] = str(group["_id"])
+        profile_data["group_name"] = group.get("name")
+        profile_data["project_title"] = group.get("project_title")
+        profile_data["supervisor_name"] = group.get("supervisor_name") or group.get("evaluator_name")
+    else:
+        profile_data["group_id"] = None
+        profile_data["group_name"] = None
+        profile_data["project_title"] = None
+        profile_data["supervisor_name"] = None
+
+    return profile_data
 
 
 def update_profile(student_id: str, data: dict) -> dict:
     """
     Update a student's own editable profile fields.
 
-    Only ``name`` and ``recovery_email`` may be changed.
-    Immutable fields (roll, email, dept, section, role, password_hash)
-    are silently ignored even if present in *data*.
+    Only ``recovery_email`` may be changed.
+    Identity and enrollment fields are rejected even in mixed payloads.
 
     Parameters
     ----------
@@ -114,12 +122,10 @@ def update_profile(student_id: str, data: dict) -> dict:
     ValueError
         If no editable fields are supplied.
     """
-    # Silently drop any immutable fields that slipped through
-    immutable = {
-        UserFields.EMAIL, UserFields.ROLL, UserFields.DEPT,
-        UserFields.SECTION, UserFields.ROLE, UserFields.PASSWORD_HASH,
-    }
-    update_payload = {k: v for k, v in data.items() if k not in immutable and v is not None}
+    if any(key != UserFields.RECOVERY_EMAIL for key in data):
+        raise ValueError("Only Recovery Email can be changed; student identity and enrollment are read-only.")
+    _get_active_student(student_id)
+    update_payload = dict(data)
 
     if not update_payload:
         raise ValueError("No updatable fields provided.")
@@ -127,7 +133,7 @@ def update_profile(student_id: str, data: dict) -> dict:
     update_payload[UserFields.UPDATED_AT] = datetime.now(timezone.utc)
 
     doc = mongo.db[UserFields.COLLECTION].find_one_and_update(
-        {UserFields.ID: ObjectId(student_id), UserFields.ROLE: Role.STUDENT},
+        {UserFields.ID: ObjectId(student_id), UserFields.ROLE: Role.STUDENT, UserFields.DELETED: {"$ne": True}},
         {"$set": update_payload},
         return_document=True,
     )

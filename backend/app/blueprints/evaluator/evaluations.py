@@ -18,6 +18,8 @@ from flask_jwt_extended import get_jwt_identity
 from app.blueprints.evaluator import evaluator_bp as bp
 from app.extensions import mongo
 from app.models.user import Role
+from app.services.academic_write_service import academic_write
+from app.services.milestone_service import task_access
 from app.utils.audit import log_audit
 from app.utils.decorators import role_required
 from app.utils.responses import error_response, success_response
@@ -50,6 +52,7 @@ def compute_total_weighted_score(scores: dict, rubrics: list) -> float:
 
 @bp.route("/evaluations", methods=["POST"])
 @role_required(Role.EVALUATOR)
+@academic_write
 def submit_evaluation():
     """Submit rubric scores for a group's iteration. Locked on creation."""
     evaluator_id = get_jwt_identity()
@@ -100,6 +103,11 @@ def submit_evaluation():
     iteration = mongo.db.iterations.find_one({"_id": iid})
     if not iteration:
         return error_response("Iteration not found.", 404)
+
+    try:
+        task_access(get_jwt_identity(), iteration_id, group_id, submit=True)
+    except ValueError as exc:
+        return error_response(str(exc), getattr(exc, "status_code", 400))
 
     manager_rubrics    = iteration.get("rubrics", [])
     manager_rubric_ids = {str(r["id"]) for r in manager_rubrics}

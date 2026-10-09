@@ -1,4 +1,4 @@
-﻿# backend/app/blueprints/manager/dashboard.py
+# backend/app/blueprints/manager/dashboard.py
 """Manager Dashboard API endpoints."""
 
 from datetime import datetime
@@ -93,6 +93,13 @@ class Dashboard(Resource):
             except Exception:  # noqa: BLE001 - deliberate catch-all, returns partial dashboard response to client
                 attachments = []
 
+            # ── Upcoming Milestones ─────────────────────────────
+            try:
+                raw_milestones = list(mongo.db.iterations.find({}).sort("deadline", 1).limit(5))
+                upcoming_milestones = [_serialize_doc(m) for m in raw_milestones]
+            except Exception:  # noqa: BLE001 - optional dashboard preview must not break other dashboard data
+                upcoming_milestones = []
+
             return {
                 "success": True,
                 "message": "Dashboard data retrieved.",
@@ -105,7 +112,8 @@ class Dashboard(Resource):
                     "groups_remaining_evaluation": groups_remaining_evaluation,
                     "students_without_group": students_without_group,
                     "announcements": announcements,
-                    "attachments": attachments
+                    "attachments": attachments,
+                    "upcoming_milestones": upcoming_milestones,
                 }
             }, 200
 

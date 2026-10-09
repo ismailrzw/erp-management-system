@@ -1,4 +1,4 @@
-﻿# backend/app/blueprints/manager/courses.py
+# backend/app/blueprints/manager/courses.py
 """Manager course API endpoints."""
 
 from flask import request
@@ -29,8 +29,6 @@ course_model = courses_ns.model("Course", {
     "dept": fields.String(required=True),
     "min_group": fields.Integer(required=True),
     "max_group": fields.Integer(required=True),
-    "group_formation_deadline": fields.String(required=True, description="Group formation deadline (ISO date)"),
-    "deadline": fields.String(required=False, description="Legacy alias"),
     "deleted": fields.Boolean(readonly=True),
     "created_at": fields.String(readonly=True),
 })
@@ -39,16 +37,12 @@ create_model = courses_ns.model("CourseCreate", {
     "dept": fields.String(required=True, description="Department code, e.g. SE"),
     "min_group": fields.Integer(required=True, description="Minimum students per group"),
     "max_group": fields.Integer(required=True, description="Maximum students per group"),
-    "group_formation_deadline": fields.String(required=False, description="Group Formation Deadline (ISO date, e.g. 2026-08-15)"),
-    "deadline": fields.String(required=False, description="Legacy alias for Group Formation Deadline"),
 })
 update_model = courses_ns.model("CourseUpdate", {
     "name": fields.String(required=False),
     "dept": fields.String(required=False),
     "min_group": fields.Integer(required=False),
     "max_group": fields.Integer(required=False),
-    "group_formation_deadline": fields.String(required=False),
-    "deadline": fields.String(required=False),
 })
 
 
@@ -81,7 +75,6 @@ class CourseList(Resource):
                 dept=payload["dept"],
                 min_group=payload["min_group"],
                 max_group=payload["max_group"],
-                group_formation_deadline=payload.get("group_formation_deadline") or payload.get("deadline"),
             )
             log_audit(mongo.db, get_jwt_identity(), Role.MANAGER, "courses", "create",
                       target_id=course["id"], new_value=course)
@@ -89,7 +82,7 @@ class CourseList(Resource):
         except ValidationError as exc:
             return {"success": False, "message": exc.messages}, 422
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 409
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 409)
 
 
 @courses_ns.route("/<string:course_id>")
@@ -105,7 +98,7 @@ class CourseDetail(Resource):
                 return {"success": False, "message": "Course not found."}, 404
             return {"success": True, "data": course}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
 
     @courses_ns.doc(security="Bearer Auth")
     @courses_ns.expect(update_model)
@@ -120,7 +113,6 @@ class CourseDetail(Resource):
                 dept=payload.get("dept"),
                 min_group=payload.get("min_group"),
                 max_group=payload.get("max_group"),
-                group_formation_deadline=payload.get("group_formation_deadline") or payload.get("deadline"),
             )
             if course is None:
                 return {"success": False, "message": "Course not found."}, 404
@@ -131,7 +123,7 @@ class CourseDetail(Resource):
         except ValidationError as exc:
             return {"success": False, "message": exc.messages}, 422
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 409
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 409)
 
     @courses_ns.doc(security="Bearer Auth")
     @role_required(Role.MANAGER)
@@ -145,7 +137,7 @@ class CourseDetail(Resource):
                       target_id=course_id, old_value=course)
             return {"success": True, "message": "Course deleted.", "data": {"deleted": True, "course_id": course_id}}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 409
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 409)
 
 
 @courses_ns.route("/<string:course_id>/restore")
@@ -163,7 +155,7 @@ class CourseRestore(Resource):
                       target_id=course_id, new_value=course)
             return {"success": True, "message": "Course restored.", "data": {"restored": True, "course_id": course_id}}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
 
 
 @courses_ns.route("/<string:course_id>/permanent")
@@ -181,4 +173,4 @@ class CoursePermanentDelete(Resource):
                       target_id=course_id, old_value=course)
             return {"success": True, "message": "Course permanently deleted.", "data": {"deleted": True, "course_id": course_id}}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)

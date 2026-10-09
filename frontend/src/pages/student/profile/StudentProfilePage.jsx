@@ -1,3 +1,4 @@
+import { BackButton } from '../../../components/ui/BackButton';
 import { useState, useEffect } from 'react';
 import {
   GraduationCap,
@@ -7,13 +8,11 @@ import {
   Edit3,
 } from 'lucide-react';
 import { studentProfileApi } from '../../../api/studentProfileApi';
-import { useAuth } from '../../../context/useAuth';
 import { Toast } from '../../../components/ui/Toast';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { ChangePasswordModal } from '../../../components/profile/ChangePasswordModal';
 
 export const StudentProfilePage = () => {
-  const { updateUser } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ message: '', type: 'success' });
@@ -23,7 +22,7 @@ export const StudentProfilePage = () => {
 
   // Profile Form States
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState({ name: '', recovery_email: '' });
+  const [profileForm, setProfileForm] = useState({ recovery_email: '' });
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState('');
 
@@ -69,7 +68,6 @@ export const StudentProfilePage = () => {
         if (isMounted && res.success && res.data) {
           setProfile(res.data);
           setProfileForm({
-            name: res.data.name || '',
             recovery_email: res.data.recovery_email || '',
           });
         }
@@ -92,25 +90,17 @@ export const StudentProfilePage = () => {
 
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
-    const name = profileForm.name.trim();
     const recovery_email = profileForm.recovery_email.trim();
-
-    if (!name) {
-      setProfileError('Full Name is required.');
-      return;
-    }
 
     try {
       setSavingProfile(true);
       setProfileError('');
       const res = await studentProfileApi.updateProfile({
-        name,
         recovery_email: recovery_email || null,
       });
 
       if (res.success && res.data) {
         setProfile(res.data);
-        updateUser({ name: res.data.name });
         setIsEditingProfile(false);
         setToast({ message: 'Profile details updated successfully!', type: 'success' });
       }
@@ -124,6 +114,7 @@ export const StudentProfilePage = () => {
   if (loading) {
     return (
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+      <BackButton to="/student/dashboard" label="Back to Dashboard" />
         <ContentLoader label="Loading student settings..." />
       </div>
     );
@@ -133,6 +124,7 @@ export const StudentProfilePage = () => {
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+      <BackButton to="/student/dashboard" label="Back to Dashboard" />
       {/* Toast Feedback */}
       {toast.message && (
         <Toast
@@ -243,50 +235,20 @@ export const StudentProfilePage = () => {
           </button>
         </div>
 
-        {/* Account Settings / Password Row (Classroom style) */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '16px',
-            padding: '18px 0',
-            borderBottom: '1px solid #f1f5f9',
-          }}
-        >
-          <div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b' }}>
-              Account security
-            </div>
-            <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
-              Change your password and security credentials to protect your portal account.
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsPasswordModalOpen(true)}
-            className="btn btn-secondary"
-          >
-            <KeyRound size={15} />
-            <span>Change Password</span>
-          </button>
-        </div>
-
         {/* Inline Profile Edit Form (when expanded) */}
         {isEditingProfile && (
           <form
             onSubmit={handleProfileSubmit}
             style={{
               marginTop: '18px',
-              padding: '18px',
+              padding: '20px',
               backgroundColor: '#f8fafc',
               borderRadius: '8px',
               border: '1px solid #e2e8f0',
             }}
           >
-            <h4 style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 600, color: '#1e293b' }}>
-              Update Personal Details
+            <h4 style={{ margin: '0 0 14px', fontSize: '14px', fontWeight: 600, color: '#1e293b' }}>
+              Update Profile Details
             </h4>
 
             {profileError && (
@@ -298,7 +260,7 @@ export const StudentProfilePage = () => {
                   borderRadius: '6px',
                   fontSize: '12.5px',
                   color: '#b91c1c',
-                  marginBottom: '12px',
+                  marginBottom: '14px',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
@@ -309,50 +271,62 @@ export const StudentProfilePage = () => {
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                  Full Name <span style={{ color: '#dc2626' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={profileForm.name}
-                  onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    boxSizing: 'border-box',
-                  }}
-                  disabled={savingProfile}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                  Recovery / Personal Email
-                </label>
-                <input
-                  type="email"
-                  value={profileForm.recovery_email}
-                  placeholder="personal.email@example.com"
-                  onChange={(e) => setProfileForm({ ...profileForm, recovery_email: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    boxSizing: 'border-box',
-                  }}
-                  disabled={savingProfile}
-                />
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                Recovery / Personal Email
+              </label>
+              <input
+                type="email"
+                value={profileForm.recovery_email}
+                placeholder="personal.email@example.com"
+                onChange={(e) => setProfileForm({ ...profileForm, recovery_email: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '13px',
+                  boxSizing: 'border-box',
+                }}
+                disabled={savingProfile}
+              />
+              <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                Used for account recovery, notifications, and reset communications.
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px' }}>
+            {/* Change Password Option within Edit Profile Details */}
+            <div
+              style={{
+                marginTop: '14px',
+                paddingTop: '14px',
+                borderTop: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
+                  Account Password
+                </div>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                  Update your security credentials to protect your student portal account.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPasswordModalOpen(true)}
+                className="btn btn-secondary btn-sm"
+              >
+                <KeyRound size={14} />
+                <span>Change Password</span>
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '18px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
               <button
                 type="button"
                 onClick={() => setIsEditingProfile(false)}
@@ -411,10 +385,10 @@ export const StudentProfilePage = () => {
 
             <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
               <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                Assigned Teacher / Evaluator
+                Project Supervisor / Evaluator
               </div>
               <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a', marginTop: '3px' }}>
-                {profile?.teacher || 'Not Assigned'}
+                {profile?.supervisor_name || 'Not Assigned (Group-based)'}
               </div>
             </div>
 

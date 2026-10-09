@@ -12,7 +12,6 @@ from app.services.attachment_service import (
     delete_attachment,
     download_attachment,
     get_attachment_by_id,
-    list_attachments,
     update_attachment,
     upload_attachment,
 )
@@ -24,7 +23,7 @@ attachments_ns = Namespace("manager_attachments", description="Manager attachmen
 
 # All authenticated roles — used for read-only endpoints (list, download)
 # per SRS FR-10.4: "Any authenticated user shall view all attachments and download individual files."
-ALL_ROLES = (Role.MANAGER, Role.STUDENT, Role.EVALUATOR, Role.HOD, Role.HODIC, Role.DEAN)
+ALL_ROLES = tuple(Role.ALL)
 
 attachment_model = attachments_ns.model("Attachment", {
     "id": fields.String(readonly=True),
@@ -52,7 +51,8 @@ class AttachmentList(Resource):
     @role_required(*ALL_ROLES)
     def get(self):
         """List all attachments, newest first. Visible to all authenticated roles."""
-        return list_attachments(), 200
+        from app.services.file_access_service import visible_attachments
+        return visible_attachments(get_jwt_identity()), 200
 
     @attachments_ns.doc(security="Bearer Auth", consumes=["multipart/form-data"])
     @attachments_ns.expect(upload_parser)
@@ -62,12 +62,12 @@ class AttachmentList(Resource):
         try:
             args = upload_parser.parse_args()
             validated = CreateAttachmentSchema().load({"title": args["title"]})
-            attachment = upload_attachment(args["file"], validated["title"], get_jwt_identity())
+            attachment = upload_attachment(args["file"], validated["title"], get_jwt_identity(), academic_private=request.form.get("purpose") == "milestone")
             log_audit(mongo.db, get_jwt_identity(), Role.MANAGER, "attachments", "create",
                       target_id=attachment["id"], new_value={"title": attachment["title"]})
             return {"success": True, "message": "Attachment uploaded.", "data": attachment}, 201
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
         except Exception:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": "Unable to upload attachment."}, 500
 
@@ -80,12 +80,14 @@ class AttachmentDetail(Resource):
     def get(self, attachment_id):
         """Get attachment metadata. Visible to all authenticated roles."""
         try:
+            from app.services.file_access_service import authorize_attachment
+            authorize_attachment(get_jwt_identity(), attachment_id)
             attachment = get_attachment_by_id(attachment_id)
             if attachment is None:
                 return {"success": False, "message": "Attachment not found."}, 404
             return {"success": True, "data": attachment}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
 
     @attachments_ns.doc(security="Bearer Auth")
     @attachments_ns.expect(attachment_update_model)
@@ -101,7 +103,7 @@ class AttachmentDetail(Resource):
                       target_id=attachment_id, new_value={"title": attachment["title"]})
             return {"success": True, "message": "Attachment updated.", "data": attachment}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
         except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 422
 
@@ -117,7 +119,7 @@ class AttachmentDetail(Resource):
                       target_id=attachment_id, old_value={"title": attachment["title"]})
             return {"success": True, "message": "Attachment deleted."}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
 
 
 @attachments_ns.route("/<string:attachment_id>/download")
@@ -128,6 +130,10 @@ class AttachmentDownload(Resource):
     def get(self, attachment_id):
         """Download the original attachment file. Available to all authenticated roles."""
         try:
+            from flask_jwt_extended import get_jwt_identity
+
+            from app.services.file_access_service import authorize_attachment
+            authorize_attachment(get_jwt_identity(), attachment_id)
             result = download_attachment(attachment_id)
             if result is None:
                 return {"success": False, "message": "Attachment not found."}, 404
@@ -136,6 +142,6 @@ class AttachmentDownload(Resource):
                       target_id=attachment_id)
             return send_file(path, as_attachment=True, download_name=original_filename)
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
         except FileNotFoundError:
             return {"success": False, "message": "Attachment file is unavailable."}, 404

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Plus, Users, Search } from 'lucide-react';
+import { Calendar, Plus, Users, Search, AlertCircle, RefreshCw } from 'lucide-react';
 import { evaluatorApi } from '../../../api/evaluatorApi';
 import { MeetingFormModal } from './MeetingFormModal';
 
@@ -7,11 +7,13 @@ export function MeetingsPage() {
   const [meetings, setMeetings] = useState([]);
   const [assignedGroups, setAssignedGroups] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
 
   function loadData() {
     setLoading(true);
+    setError(null);
     Promise.all([
       evaluatorApi.getMeetings(selectedGroupFilter),
       evaluatorApi.getAssignedGroups(),
@@ -20,7 +22,9 @@ export function MeetingsPage() {
         if (mRes.data?.success) setMeetings(mRes.data.data.items || []);
         if (gRes.data?.success) setAssignedGroups(gRes.data.data.items || []);
       })
-      .catch(console.error)
+      .catch(err => {
+        setError(err.response?.data?.message || 'Failed to load meetings data.');
+      })
       .finally(() => setLoading(false));
   }
 
@@ -80,7 +84,19 @@ export function MeetingsPage() {
 
       {/* Meetings List */}
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading meetings...</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {[1, 2, 3].map(i => (
+            <div key={i} className="skeleton-shimmer" style={{ height: '90px', borderRadius: '10px' }} />
+          ))}
+        </div>
+      ) : error ? (
+        <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#fff', border: '1px solid #fecaca', borderRadius: '12px' }}>
+          <AlertCircle size={32} color="#dc2626" style={{ marginBottom: '10px' }} />
+          <div style={{ fontSize: '14px', fontWeight: 600, color: '#991b1b', marginBottom: '6px' }}>{error}</div>
+          <button type="button" onClick={loadData} className="btn btn-secondary btn-sm">
+            <RefreshCw size={13} /> <span>Retry</span>
+          </button>
+        </div>
       ) : meetings.length === 0 ? (
         <div style={{
           background: '#ffffff',
@@ -94,7 +110,7 @@ export function MeetingsPage() {
           <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
             No Meetings Logged
           </h3>
-          <p style={{ fontSize: '13px' }}>Click "Log New Meeting" above to record a supervision session.</p>
+          <p style={{ fontSize: '13px' }}>No meetings logged yet. Click "Log New Meeting" above to start tracking supervision sessions with your assigned groups.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

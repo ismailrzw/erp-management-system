@@ -86,18 +86,127 @@ def _dispatch_email(to_email: str, subject: str, text_content: str, html_content
         except Exception as exc:  # noqa: BLE001
             logger.error("SMTP dispatch failed for %s: %s", to_email, exc)
 
-    # 3. Development / Local Fallback (Logs to console)
-    logger.info(
-        "\n==================== [DEV EMAIL DISPATCH] ====================\n"
-        "To: %s\n"
-        "Subject: %s\n"
-        "Body:\n%s\n"
-        "===============================================================",
-        to_email,
-        subject,
-        text_content,
+    # 3. Development / Local Fallback (Guaranteed to show in Docker logs)
+    dev_banner = (
+        "\n"
+        "╔══════════════════════════════════════════════════════════════════════════════════════╗\n"
+        "║                     📧 [DEV OUTGOING EMAIL DISPATCH LOG]                             ║\n"
+        "╠══════════════════════════════════════════════════════════════════════════════════════╣\n"
+        f"║  To:      {to_email}\n"
+        f"║  From:    {from_name} <{from_address}>\n"
+        f"║  Subject: {subject}\n"
+        "╟──────────────────────────────────────────────────────────────────────────────────────╢\n"
+        "║  Content:\n"
+        + "\n".join(f"║    {line}" for line in text_content.strip().splitlines())
+        + "\n"
+        "╚══════════════════════════════════════════════════════════════════════════════════════╝\n"
     )
+    # Output to stdout directly with flush=True so Docker logs show it instantly
+    print(dev_banner, flush=True)
+    logger.info("Dev email dispatched to %s with subject: %s", to_email, subject)
     return True
+
+
+def send_student_credentials_email(
+    to_email: str,
+    student_name: str,
+    roll: str,
+    temporary_password: str,
+    setup_link: str | None = None,
+) -> bool:
+    """
+    Sends the student account creation credentials (email, roll, and temporary password).
+    Optionally also provides a one-time setup/activation link.
+    """
+    from_name = getattr(Config, "MAIL_FROM_NAME", "PBL Portal - BNU")
+    frontend_url = getattr(Config, "FRONTEND_URL", "http://localhost:5173")
+    subject = "Beaconhouse National University — Your PBL Portal Student Account & Password"
+
+    link_section = ""
+    if setup_link:
+        link_section = f"""
+Alternatively, you can click this direct setup link to set your own custom password immediately:
+{setup_link}
+"""
+
+    text_content = f"""Dear {student_name},
+
+Your student account has been created on the Beaconhouse National University PBL Management System.
+
+Here are your official login credentials:
+--------------------------------------------------
+Portal URL:         {frontend_url}/login
+Roll Number:        {roll}
+Registered Email:   {to_email}
+Temporary Password: {temporary_password}
+--------------------------------------------------
+{link_section}
+Please log in to the portal as soon as possible and change your password upon your first sign-in.
+
+Best regards,
+Department of Computer Science
+Beaconhouse National University
+"""
+
+    html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{subject}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #334155; background-color: #f8fafc; margin: 0; padding: 24px;">
+  <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+    <div style="background-color: #1e3a8a; padding: 24px; text-align: center;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700;">Beaconhouse National University</h1>
+      <p style="color: #93c5fd; margin: 4px 0 0; font-size: 13px;">Project-Based Learning (PBL) Management System</p>
+    </div>
+    <div style="padding: 28px 24px;">
+      <h2 style="font-size: 17px; color: #0f172a; margin-top: 0;">Welcome, {student_name}!</h2>
+      <p>An official student account has been created for you on the PBL Management System.</p>
+
+      <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 18px; margin: 20px 0;">
+        <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 14px; color: #1e293b; text-transform: uppercase; letter-spacing: 0.05em;">Your Login Credentials</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+          <tr>
+            <td style="padding: 6px 0; color: #64748b; width: 140px;">Roll Number:</td>
+            <td style="padding: 6px 0; font-weight: 600; color: #0f172a;">{roll}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;">Portal Email:</td>
+            <td style="padding: 6px 0; font-weight: 600; color: #0f172a;">{to_email}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;">Temporary Password:</td>
+            <td style="padding: 6px 0; font-weight: 700; font-family: monospace; font-size: 15px; color: #2563eb; background: #eff6ff; padding: 4px 8px; border-radius: 4px; display: inline-block;">{temporary_password}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="text-align: center; margin: 26px 0;">
+        <a href="{frontend_url}/login" target="_blank" style="background-color: #2563eb; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block;">
+          Log In To PBL Portal
+        </a>
+      </div>
+
+      {f'''
+      <p style="font-size: 13px; color: #64748b; margin-top: 20px; text-align: center;">
+        Or <a href="{setup_link}" style="color: #2563eb; font-weight: 600;">click here to set your password directly</a>.
+      </p>
+      ''' if setup_link else ''}
+
+      <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; padding: 12px; font-size: 12px; color: #92400e; margin-top: 20px;">
+        <strong>Security Tip:</strong> Please change your temporary password immediately upon your first sign in.
+      </div>
+    </div>
+    <div style="background-color: #f1f5f9; padding: 16px 24px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0;">
+      © {from_name}. Beaconhouse National University.
+    </div>
+  </div>
+</body>
+</html>
+"""
+    return _dispatch_email(to_email, subject, text_content, html_content)
 
 
 def send_password_set_email(to_email: str, student_name: str, set_link: str) -> bool:
@@ -229,3 +338,54 @@ Beaconhouse National University
 </html>
 """
     return _dispatch_email(to_email, subject, text_content, html_content)
+
+
+def send_manager_bulk_mail(to_email: str, recipient_name: str, subject: str, body: str) -> bool:
+    """
+    Sends a general communication email from the PBL Manager to students or group members.
+    """
+    from_name = getattr(Config, "MAIL_FROM_NAME", "PBL Management — BNU")
+    frontend_url = getattr(Config, "FRONTEND_URL", "http://localhost:5173")
+
+    text_content = f"""Dear {recipient_name},
+
+{body}
+
+Best regards,
+PBL Management Office
+Beaconhouse National University
+"""
+
+    html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{subject}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #334155; background-color: #f8fafc; margin: 0; padding: 24px;">
+  <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+    <div style="background-color: #0073aa; padding: 20px; text-align: center;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 18px; font-weight: 700;">PBL Project Communication</h1>
+      <p style="color: #e0f2fe; margin: 4px 0 0; font-size: 13px;">Beaconhouse National University</p>
+    </div>
+    <div style="padding: 24px;">
+      <p style="font-size: 15px; font-weight: 600; color: #0f172a; margin-top: 0;">Dear {recipient_name},</p>
+      <div style="white-space: pre-line; color: #334155; font-size: 14px; margin: 16px 0; line-height: 1.6;">
+        {body}
+      </div>
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="{frontend_url}/login" target="_blank" style="background-color: #0073aa; color: #ffffff; padding: 11px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 13.5px; display: inline-block;">
+          Access PBL Portal
+        </a>
+      </div>
+    </div>
+    <div style="background-color: #f1f5f9; padding: 14px 20px; text-align: center; font-size: 11.5px; color: #64748b; border-top: 1px solid #e2e8f0;">
+      © {from_name}. Beaconhouse National University.
+    </div>
+  </div>
+</body>
+</html>
+"""
+    return _dispatch_email(to_email, subject, text_content, html_content)
+

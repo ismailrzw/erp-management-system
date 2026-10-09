@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../../../hooks/useLiveRefresh';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../components/ui/PageHeader';
@@ -30,7 +31,7 @@ const tabStyle = (active) => ({
 export const StudentIterationsPage = () => {
   const [iterations, setIterations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState(null);
+  const [toast, setToast] = useState(null); const [loadError, setLoadError] = useState('');
   const [hasGroup, setHasGroup] = useState(true); // assume true until API says otherwise
   const [statusFilter, setStatusFilter] = useState('all');
   const navigate = useNavigate();
@@ -40,13 +41,14 @@ export const StudentIterationsPage = () => {
     try {
       const res = await studentIterationsApi.getAll();
       setIterations(res.data || []);
+      setHasGroup(true); setLoadError('');
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to fetch iterations.';
       // Detect "no group" state from error
       if (err.response?.status === 403 || msg.toLowerCase().includes('approved group')) {
         setHasGroup(false);
       }
-      setToast({ type: 'error', message: msg });
+      setLoadError(msg); setToast({ type: 'error', message: msg });
     } finally {
       setLoading(false);
     }
@@ -55,6 +57,8 @@ export const StudentIterationsPage = () => {
   useEffect(() => {
     fetchIterations();
   }, []);
+
+  useLiveRefresh(fetchIterations);
 
   // Apply status filter
   const filteredIterations = useMemo(() => {
@@ -78,6 +82,7 @@ export const StudentIterationsPage = () => {
         subtitle="Track course milestones, review evaluation rubrics, and submit group project files."
       />
 
+      {loadError && <p className="workflow-error" role="alert">{loadError} <button className="btn btn-secondary btn-sm" onClick={fetchIterations}>Retry</button></p>}
       {/* No-Group Warning Banner */}
       {!hasGroup && (
         <div
@@ -95,7 +100,7 @@ export const StudentIterationsPage = () => {
           <AlertCircle size={20} style={{ color: '#d97706', flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
             <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#92400e' }}>
-              You are not in an approved project group
+              Join or create a project group
             </p>
             <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#b45309' }}>
               You must be part of an approved group to submit iteration deliverables.

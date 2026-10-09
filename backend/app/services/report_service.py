@@ -1,4 +1,4 @@
-﻿# backend/app/services/report_service.py
+# backend/app/services/report_service.py
 """
 Report generation service for Manager exports.
 Supports generating group-wise reports as Excel (.xlsx) files via openpyxl.
@@ -6,6 +6,7 @@ Supports generating group-wise reports as Excel (.xlsx) files via openpyxl.
 
 import io
 import re
+from datetime import datetime
 
 import openpyxl
 from bson import ObjectId
@@ -185,6 +186,150 @@ def generate_group_report_excel(
         max_len = max(len(str(cell.value or "")) for cell in col)
         col_letter = openpyxl.utils.get_column_letter(col[0].column)
         ws.column_dimensions[col_letter].width = max(max_len + 4, 14)
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
+
+
+def generate_group_performance_export(group_id: str) -> io.BytesIO:
+    """
+    Generate an Excel (.xlsx) report containing detailed milestone performance
+    data for a single project group.
+    """
+    g_oid = ObjectId(group_id) if isinstance(group_id, str) and ObjectId.is_valid(group_id) else group_id
+    group = mongo.db[GROUPS_COLLECTION].find_one({"_id": g_oid})
+    if not group:
+        raise ValueError("Group not found.")
+
+    from app.services.manager_group_service import _resolve_group_members
+    resolved_members = _resolve_group_members(group)
+
+    course_name = group.get(GroupField.COURSE, "")
+    course_filter = {"$or": [{"course": course_name}, {"course": "All Courses"}]}
+    iterations = list(mongo.db.iterations.find(course_filter).sort([
+        ("sprint_name", 1),
+        ("milestone_order", 1),
+        ("createdAt", 1),
+    ]))
+
+    # Submissions lookup
+    submissions_by_iter = {}
+    for s in mongo.db.submissions.find({"group_id": g_oid}):
+        submissions_by_iter[str(s.get("iteration_id"))] = s
+
+    # Evaluations lookup
+    evals_by_iter_and_student = {}
+    for ev in mongo.db.student_evaluations.find({"iteration_id": {"$in": [it["_id"] for it in iterations]}}):
+        key = (str(ev.get("iteration_id")), str(ev.get("student_id")))
+        evals_by_iter_and_student[key] = ev
+
+    for evaluation in mongo.db.evaluations.find({"group_id": g_oid, "mode": "supervisor_group"}):
+        for member in resolved_members:
+            evals_by_iter_and_student[(str(evaluation["iteration_id"]), member["id"])] = evaluation
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Project Performance"
+
+    headers = [
+        "S.No",
+        "Project Group",
+        "Student Name",
+        "Roll Number",
+        "Role",
+        "Sprint",
+        "Milestone Title",
+        "Deadline",
+        "Submission Date",
+        "Submission Status",
+        "Marks Awarded",
+        "Max Marks",
+        "Score (%)",
+        "Feedback / Remarks",
+        "Raw Marks", "Late Penalty (%)", "Deduction",
+    ]
+
+    header_fill = PatternFill(start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    thin_border = Border(
+        left=Side(style="thin", color="E5E7EB"),
+        right=Side(style="thin", color="E5E7EB"),
+        top=Side(style="thin", color="E5E7EB"),
+        bottom=Side(style="thin", color="E5E7EB"),
+    )
+
+    ws.append(headers)
+    for col_idx in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_idx)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    serial = 1
+    group_name = group.get(GroupField.NAME, "")
+
+    for it in iterations:
+        it_id = str(it["_id"])
+        sprint_name = it.get("sprint_name") or "Sprint 1 — Requirement Engineering"
+        milestone_title = it.get("title") or "Milestone"
+        deadline_raw = it.get("deadline")
+        deadline_str = deadline_raw.strftime("%Y-%m-%d %H:%M") if isinstance(deadline_raw, datetime) else str(deadline_raw or "—")
+
+        sub = submissions_by_iter.get(it_id)
+        sub_date_str = "Not Submitted"
+        sub_status = "Not Submitted"
+        if sub:
+            sub_at = sub.get("submitted_at")
+            sub_date_str = sub_at.strftime("%Y-%m-%d %H:%M") if isinstance(sub_at, datetime) else str(sub_at or "Submitted")
+            sub_status = "Submitted Late" if sub.get("is_late") else "Submitted On Time"
+
+        rubrics = it.get("rubrics", [])
+        max_marks = sum(r.get("weight", 0) for r in rubrics) if rubrics else 100
+
+        for m in resolved_members:
+            m_id = m["id"]
+            role_label = "Leader" if m.get("is_leader") else "Member"
+
+            # Check individual evaluation
+            ev = evals_by_iter_and_student.get((it_id, m_id))
+            marks_awarded = ev.get("total_weighted_score") if ev else None
+            score_pct = f"{round((marks_awarded / max_marks) * 100, 1)}%" if marks_awarded is not None and max_marks else "—"
+            marks_str = str(marks_awarded) if marks_awarded is not None else "Pending Evaluation"
+            feedback_str = ev.get("feedback") or "" if ev else ""
+
+            ws.append([
+                serial,
+                group_name,
+                m.get("name", ""),
+                m.get("roll", ""),
+                role_label,
+                sprint_name,
+                milestone_title,
+                deadline_str,
+                sub_date_str,
+                sub_status,
+                marks_str,
+                max_marks,
+                score_pct,
+                feedback_str,
+                ev.get("raw_score", marks_awarded) if ev else None,
+                ev.get("late_penalty_percent", 0) if ev else None,
+                ev.get("deduction", 0) if ev else None,
+            ])
+            serial += 1
+
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=len(headers)):
+        for cell in row:
+            cell.border = thin_border
+            cell.font = Font(name="Calibri", size=10)
+            cell.alignment = Alignment(vertical="center")
+
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or "")) for cell in col)
+        col_letter = openpyxl.utils.get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = max(max_len + 4, 13)
 
     output = io.BytesIO()
     wb.save(output)

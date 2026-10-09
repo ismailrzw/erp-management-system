@@ -1,399 +1,410 @@
-# 🚀 Sprint 4 / Sprint 5+ Full System Implementation — Ismail's Detailed Context
+# 🚀 ERP System (PBL Management Portal) — Master Architectural & Implementation Context
 
-## 📋 Executive Overview
+## 📋 1. Executive Summary & Project Metadata
 
-- **Project:** ERP Management System (PBL Management System) · Beaconhouse National University
-- **Scope:** **Sprint 4 & Sprint 5+ (Group Auto-Naming, Supervisor Workflow & Quota Enforcements, Account Activation, Multi-Identifier Auth, Excel Reporting, Ungrouped Students Management, and Scoped Announcements)**
-- **Author:** Ismail Rizwan
-- **Specification Source:** [`documents/05-sprints/SPRINT-05-REQUIREMENTS-AND-PLAN.md`](file:///c:/Users/lenovo/Documents/University/1.%20ERP%20System/erp-management-system/documents/05-sprints/SPRINT-05-REQUIREMENTS-AND-PLAN.md)
-- **Architectural Decisions Implemented:**
-  - **D-01 (Supervisor = Evaluator role):** Instructors/supervisors utilize the existing `evaluator` role; no redundant database role created.
-  - **D-02 (Course Deadline Alignment):** `courses.deadline` migrated and renamed to `courses.group_formation_deadline` (the cutoff for group creation).
-  - **D-03 (Email Infrastructure):** `email_service.py` provides multi-backend email sending (SendGrid HTTP API, standard SMTP with TLS, and fallback console/log in local dev).
-  - **D-04 (Group Auto-Naming):** Formatted sequentially as `GRP-{YEAR}-{SEQ:03d}` with configurable pattern in `backend/app/config.py`.
-  - **D-05 (Supervisor Capacity Cap):** Maximum 4 active groups strictly enforced per supervisor.
-- **Frontend & Backend Verification Status:**
-  - Frontend: `npm run lint` passed (0 errors), `npm run build` passed cleanly (`dist/` generated).
-  - Backend: Dedicated Sprint 5+ test suite (`backend/tests/test_sprint5_features.py`) passed 100%.
-  - Critical Bug Fix: Resolved white-screen crash on Manager Dashboard when expanding "Ungrouped Students Management" (`res.data` array extraction).
+- **System:** Enterprise Resource Planning & Project-Based Learning Management System (ERP PBL Portal)
+- **Institution:** Beaconhouse National University (BNU) — School of Computer Science & IT (SCIT)
+- **Primary Architect / Lead Developer:** Ismail Rizwan
+- **Sprint Horizon:** **Sprint 4 & Sprint 5 Architecture & System Enhancements**
+- **Core Technology Stack:**
+  - **Backend:** Python 3.11, Flask, Flask-RESTX (OpenAPI/Swagger documentation), Flask-JWT-Extended, PyMongo (MongoDB 7.0), Marshmallow, OpenPyXL (Excel analytics generation), ReportLab (PDF generation), Bcrypt.
+  - **Frontend:** React 19, Vite, React Router v7, Lucide React Icons, Custom Vanilla CSS Design Token Engine.
+  - **Data Tier & Caching:** MongoDB 7.0 (Multi-collection B-Trees with sparse indexed fields), In-Memory SWR (Stale-While-Revalidate) Client-Side Cache (`apiCache.js`).
+  - **Infrastructure & Containerization:** Docker Compose (`pbl_backend`, `pbl_frontend`, `pbl_mongo`), Nginx Gateway, SMTP / SendGrid Email Dispatcher.
 
 ---
 
-## 🏛️ Architecture & System Design Breakdown
+## 🏛️ 2. Core Architectural Philosophy & System Guiding Principles
 
-### 1. Student Identity, One-Time Activation & Multi-Identifier Auth (REQ-01)
-- **Token Security:** 64-character cryptographic hex token (`secrets.token_hex(32)`) hashed with bcrypt and persisted in `password_set_tokens` with 24-hour expiration.
-- **Activation Flow:** When a student account is created by the Manager or bulk imported, a password-set token is generated and dispatched via email (`/set-password?token=...`). The student configures their own initial password.
-- **Resend Activation:** Manager can resend password setup emails at any time from `StudentListPage.jsx` or edit modals.
-- **Multi-Identifier Login:** Auth endpoint `/api/auth/login` accepts either the student's Roll Number (case-insensitive, e.g., `f2024-551` or `F2024-551`) or university email (`f2024-551@bnu.edu.pk`).
+### 2.1. Teacher vs. Evaluator Separation of Concerns
+The platform strictly decouples faculty supervisory guidance from independent examination:
+- **Teacher (Supervisor / Mentor):** Acts as an ongoing academic and technical mentor for FYP/PBL student teams. Enforces a strict capacity limit of **maximum 4 groups per course**. Monitors sprint deliverables, conducts supervision meetings, and approves or declines supervision invitations.
+- **Evaluator (Jury / Examiner):** Acts as an independent defense panelist or sprint milestone jury member. Conducts formal evaluation sessions, grades group-level and individual student performance via standardized Rubric Levels 0–5, and evaluates exhibition presentations.
 
-### 2. Automatic Group Naming & Formation Status Tracking (REQ-02, REQ-06)
-- **Sequential Group Naming:** Replaced arbitrary manual group names with sequential numbering `GRP-{YEAR}-{SEQ:03d}` (e.g., `GRP-2026-001`, `GRP-2026-002`).
-- **Deadline Comparison & Formation Status:** Calculated dynamically upon creation:
-  - `on_time`: Created strictly before `course.group_formation_deadline`.
-  - `on_deadline`: Created on the exact deadline date.
-  - `late`: Created after the deadline date.
-- **Proposal Document Upload:** Students must attach a mandatory Project Proposal PDF/DOCX upon group creation. Stored via `attachment_service.py` and linked directly to the group record.
-- **Submission Status:** Monitored as `not_submitted`, `pending`, `submitted`, or `evaluated`.
+### 2.2. Strict Identity Immutability
+Institutional identity attributes are unchangeable post-creation:
+- **Student & Faculty Names:** Protected against arbitrary modifications in edit profiles and management modals (enforced on frontend forms and strictly guarded by `protect_identity` schema rules on the backend).
+- **Roll Numbers & Institutional Emails:** Canonical identifiers locked at registration.
+- **Account Security:** Students, Teachers, and Managers manage credentials exclusively via embedded **Change Password** security modules that mandate current password verification.
 
-### 3. Supervisor Expertise Browsing, Request Workflow & Capacity Enforcement (REQ-03, REQ-04)
-- **Expertise Domain Tags:** Evaluators/Supervisors can manage their research and project domains (e.g., "Artificial Intelligence", "Robotics", "Web3").
-- **Browsing & Discovery:** Students browse eligible supervisors with real-time capacity badges (`X/4 Groups Supervised`), availability filtering, and domain search.
-- **Group Request Submission:** Group Leaders submit requests with custom pitch notes. Only one pending request is permitted per group.
-- **Evaluator Decision Inbox:** Evaluators can view pending group requests on their dashboard, accept requests (with strict atomic validation preventing exceeding 4 active groups), or decline requests with explanatory feedback.
+### 2.3. Academic Integrity & Relational Safety
+Destructive database cascades are strictly prevented:
+- **Parent-Child Integrity:** Departments cannot be deleted if active courses, teachers, or students are assigned. Courses cannot be deleted if active groups or iterations exist.
+- **Soft-Delete Recycle Bins:** Deleted entities transition to `is_deleted: true` status with full audit logging. Dedicated Trash Views (`StudentTrashPage`, `TeacherTrashPage`, `CourseTrashPage`, `DepartmentTrashPage`, `EvaluatorTrashPage`) allow one-click **Restore** (with re-validated academic integrity) or **Permanent Purge** with destructive confirmation modals.
+- **Atomic Mutation Guard (`@academic_write`):** All multi-document write operations execute under an atomic write coordinator validating prerequisites before committing state changes.
 
-### 4. Manager Reporting & Ungrouped Students Management (REQ-05, REQ-07)
-- **12-Column Comprehensive Group Excel Report:** Generated via `openpyxl` at `/api/manager/reports/groups` with columns:
-  1. Serial No.
-  2. Group Name (`GRP-YYYY-XXX`)
-  3. Project Title
-  4. Course
-  5. Department
-  6. Supervisor Name
-  7. Team Leader (Name & Roll No.)
-  8. Formation Status (`On-Time` / `On-Deadline` / `Late`)
-  9. Submission Status
-  10. Members Count
-  11. Member Names & Rolls
-  12. Created Date
-- **Ungrouped Students Dashboard Panel:**
-  - Real-time expandable view on Manager Dashboard of students without an active group.
-  - Department and course filtering.
-  - Export to Excel (`/api/manager/students/ungrouped/export`).
-  - Broadcast reminder emails (`/api/manager/students/notify-ungrouped`) with course deadline information.
+### 2.4. Decoupled Milestones & Dynamic Formation Timeliness
+- **Elimination of Hardcoded Course Deadlines:** Project deadlines, group creation cutoffs, deliverable dates, and evaluation windows are defined as discrete **Iteration Milestones**.
+- **Dynamic Timeliness Engine:** When student groups are formed, their creation timestamp is dynamically compared against the designated `group_formation` Iteration Milestone for that course. Groups formed after the milestone receive a `late` status and are flagged with configurable late penalty deductions (e.g. `-10%`).
 
-### 5. Targeted Announcements by Audience Scope (REQ-08)
-- **Scope Model:** Extended announcements to support 3 distinct target levels:
-  - `broadcast`: Visible to all users campus-wide.
-  - `department`: Targeted to specific academic departments (e.g., `CS`, `SE`).
-  - `group`: Targeted to specific project group IDs.
-- **Student Filtering:** Students only see announcements matching their scope, department, or assigned group.
+### 2.5. Thread-Safe Sequential Auto-Naming & Proposal Enforcement
+- **Institutional Group ID Format:** Eliminates arbitrary manual group names in favor of structured identifiers: `GRP-{YEAR}-{SEQ:03d}` (e.g., `GRP-2026-001`, `GRP-2026-002`). Managed via atomic counter increments in `group_service.py`.
+- **Mandatory Proposal Document:** Group creation requires uploading a formal Project Proposal (PDF/DOCX, max 10MB) via `attachment_service.py`, which is immediately attached to the group record for supervisor review.
+
+### 2.6. Universal Design System & Responsive Navigation
+- **Standardized Navigation (`BackButton.jsx`):** Positioned left-aligned above `PageHeader` in a `.page-back-slot`. Features responsive label visibility: displays descriptive text label on desktop screens (`>= 768px`) and automatically collapses to an accessible icon button on mobile devices (`< 768px`).
+- **Interactive Option Selectors (`OptionCardGroup.jsx`):** Replaces basic radio lists/dropdowns with interactive selection cards across form workflows (e.g. Add Evaluator, Broadcast Mail target selection).
+- **2-Column Group Workspace:** Left sticky team roster panel (`GroupMembersPanel.jsx`) + right collapsible section dropdowns (`CollapsibleSection.jsx` for Proposal, Milestone Deliverables with `TaskReview.jsx`, and Activity Timeline).
+- **Zero-Latency Client-Side SWR Cache:** In-memory request caching with automatic invalidation on any write operation (`POST`, `PUT`, `PATCH`, `DELETE`).
 
 ---
 
-## 📂 Detailed File-by-File Changes (Git Status Inventory)
+## 🛠️ 3. Subsystem Deep-Dive & End-to-End Workflows
 
-### 1. Backend New & Untracked Files
+### 3.1. Authentication, Identity Lifecycle & Account Provisioning
 
-| File Path | Description & Functional Purpose |
-| :--- | :--- |
-| `backend/app/models/password_set_token.py` | Schema field constants for `password_set_tokens` collection (one-time activation). |
-| `backend/app/models/supervisor_request.py` | Schema field constants and statuses (`pending`, `accepted`, `rejected`, `cancelled`) for supervisor requests. |
-| `backend/app/services/email_service.py` | Email transport supporting SendGrid API, SMTP TLS, and local mock fallback. Sends password activation and ungrouped reminders. |
-| `backend/app/services/supervisor_service.py` | Business logic for supervisor directory, domain tags, request workflows, and atomic cap checks (`<= 4`). |
-| `backend/app/services/report_service.py` | High-fidelity Excel workbook generator utilizing `openpyxl` with styled headers, auto-fit columns, and 12-column group summary. |
-| `backend/app/blueprints/student/supervisors.py` | Flask-RESTX endpoints for student supervisor browsing (`/api/student/supervisors`) and group request lifecycle. |
-| `backend/app/blueprints/evaluator/supervisor_requests.py` | Evaluator endpoints for incoming supervisor requests, accepting with cap enforcement, rejection reasons, and domain updates. |
-| `backend/app/blueprints/manager/reports.py` | Manager endpoint for streaming Excel group reports (`/api/manager/reports/groups`). |
-| `backend/seed/migrate_course_deadline.py` | Migration script updating existing MongoDB course records from `deadline` to `group_formation_deadline`. |
-| `backend/tests/test_sprint5_features.py` | Comprehensive integration test suite covering activation, multi-identifier auth, auto-naming, cap enforcement, reports, and scoped announcements. |
-
-### 2. Backend Modified Files
-
-| File Path | Key Modifications |
-| :--- | :--- |
-| `backend/app/__init__.py` | Registered new namespaces: `student_supervisors_ns`, `student_supervisor_requests_ns`, `manager_reports_ns`, and evaluator supervisor routes. |
-| `backend/app/config.py` | Added SendGrid/SMTP mail configurations, `FRONTEND_URL`, and `GROUP_NAME_FORMAT = "GRP-{year}-{seq:03d}"`. |
-| `backend/app/models/announcement.py` | Added `AnnouncementScope` (`broadcast`, `department`, `group`) and `TARGET_IDS` constants. |
-| `backend/app/models/course.py` | Renamed `DEADLINE` to `GROUP_FORMATION_DEADLINE = "group_formation_deadline"` while maintaining backward compatibility. |
-| `backend/app/models/group.py` | Added constants for `FORMATION_STATUS` (`on_time`, `on_deadline`, `late`), `SUBMISSION_STATUS`, `SUPERVISOR_ID`, `SUPERVISOR_NAME`, and `PROPOSAL_ATTACHMENT_ID`. |
-| `backend/app/models/user.py` | Added `MAX_SUPERVISION_CAP = 4`, `DOMAINS`, `ACTIVE_SUPERVISION_COUNT`, `PASSWORD_SET`, and `PASSWORD_SET_AT`. |
-| `backend/app/schemas/student_schema.py` | Updated student roll number validation to enforce `^f\d{4}-\d+$` format. |
-| `backend/app/schemas/auth_schema.py` | Added `SetPasswordSchema` (`token`, `new_password`) and support for `email_or_roll` in login schema. |
-| `backend/app/schemas/course_schema.py` | Updated schema to validate `group_formation_deadline` alongside legacy `deadline`. |
-| `backend/app/schemas/announcement_schema.py` | Added `scope` (`OneOf(['broadcast', 'department', 'group'])`) and `target_ids` list validation. |
-| `backend/app/services/auth_service.py` | Multi-identifier login lookup, token generation, and dual ObjectId/string matching in `set_password_with_token`. |
-| `backend/app/services/student_service.py` | Case-insensitive roll handling, account activation link dispatch, resend activation, ungrouped students listing, and email reminder dispatch. |
-| `backend/app/services/course_service.py` | Aligned course CRUD with `group_formation_deadline`. |
-| `backend/app/services/group_service.py` | Automatic sequential naming, deadline status computation, proposal file attachments, and case-insensitive peer invitations. |
-| `backend/app/services/manager_group_service.py` | Serializer updated to include formation status, supervisor details, and proposal attachment download links. |
-| `backend/app/services/teacher_service.py` | Real-time calculation of active supervised groups (`active_supervision_count`) and domain tags. |
-| `backend/app/services/announcement_service.py` | Filter student announcements by broadcast scope, student department, and student group ID. |
-| `backend/app/blueprints/auth/routes.py` | Added `/api/auth/set-password` endpoint. |
-| `backend/app/blueprints/manager/students.py` | Added `/api/manager/students/ungrouped`, `/export`, `/notify-ungrouped`, and `/<id>/resend-password-email`. |
-| `backend/app/blueprints/manager/teachers.py` | Added domain tag updates and supervisor project quota indicators. |
-| `backend/app/blueprints/manager/courses.py` | Aligned parameters with `group_formation_deadline`. |
-| `backend/app/blueprints/manager/announcements.py` | Enabled scope and target ID parameters during announcement creation. |
-| `backend/app/blueprints/student/groups.py` | Added multipart proposal upload support and automatic sequential naming fallback. |
-| `backend/tests/conftest.py` | Updated test fixtures to generate valid `f{year}-{number}` rolls and activate student accounts via token. |
-| `backend/tests/test_students.py` | Aligned student creation tests with roll formats and password activation. |
-
-### 3. Frontend New & Untracked Files
-
-| File Path | Description & Functional Purpose |
-| :--- | :--- |
-| `frontend/src/pages/auth/SetPasswordPage.jsx` | Dedicated account activation page with password visibility toggle, requirements checklist, and auto-redirect to login. |
-| `frontend/src/api/supervisorsApi.js` | Axios API client for supervisor discovery, group requests, and evaluator decision actions. |
-| `frontend/src/api/reportsApi.js` | Axios API client for triggering and downloading Excel group reports. |
-
-### 4. Frontend Modified Files
-
-| File Path | Key Modifications |
-| :--- | :--- |
-| `frontend/src/App.jsx` | Registered public `/set-password` route. |
-| `frontend/src/api/authApi.js` | Added `setPassword({ token, new_password })` and updated login to support `email_or_roll`. |
-| `frontend/src/api/studentsApi.js` | Added methods for ungrouped listing, Excel export, email notification, and password resend. |
-| `frontend/src/pages/auth/SignInPage.jsx` | Updated credentials field label and placeholder to "Roll Number or Email". |
-| `frontend/src/pages/manager/ManagerDashboard.jsx` | Added Ungrouped Students Management collapsible panel (with department/course filter, Excel export, and reminder email modal). Fixed array extraction bug that caused blank screen crash. Updated announcement creation modal with scope selectors. |
-| `frontend/src/pages/manager/groups/ManageGroupsPage.jsx` | Added "Download Group Report" (.xlsx) button, formation status pills, supervisor column, and proposal document download link. |
-| `frontend/src/pages/manager/students/AddStudentPage.jsx` | Roll number format helper (`f2024-551`), email activation notification banner, mandatory vs optional field visual markers. |
-| `frontend/src/pages/manager/students/StudentListPage.jsx` | Added "Resend Password Email" action button, department filters, and updated roll badge styles. |
-| `frontend/src/pages/manager/courses/AddCoursePage.jsx` | Aligned field labels with "Group Formation Deadline". |
-| `frontend/src/pages/manager/courses/CourseListPage.jsx` | Table column updated to "Group Formation Deadline". |
-| `frontend/src/pages/manager/teachers/TeacherListPage.jsx` | Added expertise domain tag badges and active supervision quota progress (`X/4 Groups`). |
-| `frontend/src/pages/manager/profile/ManagerProfilePage.jsx` | Added evaluator domain expertise tag manager. |
-| `frontend/src/pages/student/groups/CreateGroupPage.jsx` | Replaced manual group naming with auto-naming info banner and added required Project Proposal document upload. |
-| `frontend/src/pages/student/groups/MyGroupPage.jsx` | Full supervisor workflow: assigned supervisor card, pending request alert banner with cancel action, and supervisor discovery directory with domain filters. |
-| `frontend/src/pages/evaluator/EvaluatorDashboard.jsx` | Added incoming supervisor requests inbox with Accept/Decline action buttons and decline reason modal. |
-
----
-
-## 🐛 Bug Fixes & Stability Hardening
-
-1. **Manager Dashboard White Screen Resolution (`TypeError: ungroupedStudents.map`):**
-   - *Root Cause:* The backend endpoint `GET /api/manager/students/ungrouped` returns an object `{ items: [...], total: N }`. The frontend code originally stored `res.data` directly into `ungroupedStudents`. When expanding the accordion, React attempted `ungroupedStudents.map(...)` on an Object, causing an uncaught exception that rendered the screen completely white.
-   - *Fix:* Safely unpacked `const items = Array.isArray(res.data) ? res.data : (res.data?.items || [])` and added fallback key identifiers (`key={s.id || s._id || s.roll}`).
-2. **Evaluator Supervisor Request Route Matching:**
-   - Evaluator blueprint routes were updated with `strict_slashes=False` to handle requests with and without trailing slashes gracefully.
-3. **Database ObjectId / String Hybrid Matching:**
-   - In `AuthService.set_password_with_token`, updated query to `{"_id": {"$in": target_ids}}` where `target_ids` includes both string and `ObjectId` representations, ensuring flawless password activation.
-4. **Group Creation Name Parsing:**
-   - In `student/groups.py`, ensured `name = json_body.get("name")` is parsed when receiving `application/json`, preserving custom test names while auto-generating names when omitted.
-
----
-
----
-
-## 🚀 Iterations Group Formation Cutoff & Per-Course Supervisor Cap (New Architecture)
-
-### 1. Architectural Problem & Solved Need
-- **Prior Restriction:** The manager was forced to define a group formation deadline at the moment of course creation (`AddCoursePage.jsx`). If semester dates shifted or requirements evolved, course configurations were rigid.
-- **New Pattern (Decoupled Course Shell):** Course creation is now decoupled from the group formation cutoff. The manager defines basic academic parameters (`name`, `dept`, `min_group`, `max_group`), while **Iteration Milestones** serve as the dynamic deadline and deliverable authority.
-- **Iteration Cutoff Designation:** The manager can designate any Iteration Milestone as the official **Group Formation & Proposal Cutoff** (`is_group_formation = True`) and configure a specific grade deduction penalty (`late_penalty_percent`, e.g., `-10%`).
-- **Late Formation Defaulter Tracking:**
-  - When students create groups, their formation timeliness is dynamically evaluated against the milestone deadline (`on_time` vs `late`).
-  - In `IterationSubmissionsPage.jsx`, groups formed after the cutoff receive a prominent `⚠️ Late Formation (-X%)` tag.
-  - An **Ungrouped Students / Defaulters** section appears directly beneath the submissions table, highlighting students enrolled in the course who failed to form or join a group by the cutoff date.
-- **Per-Course Supervisor Quota (`<= 4` groups per specific course):**
-  - Clarified and enforced supervisor capacity strictly **per course**. An internal or external evaluator can oversee up to 4 groups in *Course A* (e.g. Capstone) and still take on groups in *Course B* (e.g. FYP).
-  - Student supervisor browsing filters and capacity badges (`{count}/4 Groups in {course}`) accurately reflect capacity in the student's enrolled course.
-  - Evaluator Dashboard reports `supervision_by_course` breakdowns and issues course-scoped capacity warnings.
-
-### 2. File Updates for Iteration Formation & Per-Course Quota
-- `backend/app/schemas/course_schema.py`: Made `group_formation_deadline` and `deadline` optional in `CreateCourseSchema`.
-- `backend/app/services/course_service.py`: `create_course` no longer requires `effective_deadline`.
-- `backend/app/models/iteration.py`: Added `IS_GROUP_FORMATION = "is_group_formation"` and `LATE_PENALTY_PERCENT = "late_penalty_percent"`.
-- `backend/app/blueprints/manager/iterations.py`:
-  - Added `is_group_formation` and `late_penalty_percent` to `POST /api/manager/iterations` and `PUT /api/manager/iterations/<id>`.
-  - Enriched `GET /api/manager/iterations/<id>/submissions` to return `formation_status`, `is_formation_late` per group, and `ungrouped_students` in that course.
-- `backend/app/services/group_service.py`: Updated `compute_formation_status` to prioritize Iteration Milestone deadlines for the course before falling back to course defaults.
-- `backend/app/services/supervisor_service.py`:
-  - `get_evaluator_active_count(evaluator_id, course_name=None)`: filters active groups by course name when provided.
-  - `list_available_supervisors`: computes `active_supervision_count` and availability strictly per course.
-  - `create_supervisor_request` & `accept_supervisor_request`: enforce the 4-group limit against `group.course`.
-- `backend/app/blueprints/student/supervisors.py`: Pass student course to `list_available_supervisors`.
-- `backend/app/blueprints/evaluator/routes.py`: Enriched `GET /api/evaluator/dashboard` with `active_supervision_count` and `supervision_by_course` breakdown.
-- `frontend/src/pages/manager/courses/AddCoursePage.jsx`: Group formation deadline made optional with helper notice directing to Iterations.
-- `frontend/src/pages/manager/iterations/IterationFormModal.jsx`: Added toggle for "Designate as Group Formation & Proposal Cutoff" and input for "Late Group Formation Penalty (%)".
-- `frontend/src/pages/manager/iterations/IterationsManagePage.jsx`: Added milestone badge for `Formation Cutoff (-X%)`.
-- `frontend/src/pages/manager/iterations/IterationSubmissionsPage.jsx`: Banner for formation cutoff, stat cards for late formations and ungrouped defaulters, `Late Formation` badges, and dedicated defaulters table.
-- `frontend/src/pages/student/groups/MyGroupPage.jsx`: Supervisor capacity pills and browse UI clarify the limit is 4 groups per course.
-- `frontend/src/pages/evaluator/EvaluatorDashboard.jsx`: Displays `supervision_by_course` breakdown and course-scoped cap warnings.
-- `backend/tests/test_sprint5_features.py`: Added `test_course_decoupling_and_iteration_group_formation` and `test_supervisor_cap_enforced_per_course`.
-
----
-
-## 👥 Ungrouped Students Management Relocation (Manage Groups Integration)
-
-### 1. Motivation & UX Optimization
-- **Original Placement:** Ungrouped students management lived inside a large expandable accordion panel on the Manager Dashboard (`ManagerDashboard.jsx`).
-- **Issues:** Decluttered dashboard space, separated ungrouped students from the group formation workflows, and caused navigation fragmentation.
-- **Relocated Pattern:** Relocated into **Manage Project Groups** (`ManageGroupsPage.jsx`) as a dedicated, first-class tab (`Ungrouped Students`), complete with real-time counter badge, search, department/course filters, Excel export, and email notification modal.
-- **Deep Linking & Backward Compatibility:**
-  - Clicking the "Students Without a Group" StatCard on `ManagerDashboard.jsx` smoothly routes to `/manager/groups?tab=ungrouped`.
-  - In `App.jsx`, route `/manager/ungrouped-students` redirects to `/manager/groups?tab=ungrouped`.
-  - In `IterationSubmissionsPage.jsx`, the "Manage Ungrouped Students &rarr;" button directly navigates to `/manager/groups?tab=ungrouped`.
-
-### 2. Files Updated
-- `frontend/src/pages/manager/groups/ManageGroupsPage.jsx`: Added `useSearchParams` tab synchronization, `Ungrouped Students` tab button with live count badge, filter toolbar, full student roster table, Excel export, and custom email notification modal.
-- `frontend/src/pages/manager/ManagerDashboard.jsx`: Removed accordion panel and notify modal; updated "Students Without a Group" `StatCard` with click navigation to `/manager/groups?tab=ungrouped`.
-- `frontend/src/App.jsx`: Added redirect `<Route path="ungrouped-students" element={<Navigate to="/manager/groups?tab=ungrouped" replace />} />`.
-- `frontend/src/pages/manager/iterations/IterationSubmissionsPage.jsx`: Updated navigation button to `/manager/groups?tab=ungrouped`.
-
----
-
-## ⚡ Performance, SWR Caching & Responsive Frame Architecture
-
-### 1. Authentication Latency Acceleration (<100ms)
-- **Root Cause of Slowness:** Previously, `AuthService.authenticate_user()` executed case-insensitive `$regex` queries across the entire `users` collection. Additionally, the `roll` field lacked an index in MongoDB, causing full-collection scans on every login attempt.
-- **Optimizations Implemented:**
-  - **Indexed B-tree Point Lookups:** In `backend/app/services/auth_service.py`, lookups now execute direct point matches with `$in: [clean_id, clean_id.lower(), clean_id.upper()]` on `email` and `roll` indexes first (resolving in <1ms). Case-insensitive regex is preserved strictly as a fallback.
-  - **Automated Startup Indexing:** Enforced unique index on `email` and sparse index on `roll` during application initialization in `backend/app/__init__.py`.
-  - **Synchronous Auth Hydration:** In `frontend/src/context/AuthContext.jsx`, initial user session and `isLoading` are hydrated synchronously from localStorage, eliminating the initial loading flash/spinner upon page reload.
-
-### 2. Reload & Flicker Elimination (In-Memory SWR Client Cache)
-- **Root Cause of Flickers:**
-  - Navigating back and forth across routes or switching tabs triggered full-screen skeleton wipes due to root `if (loading) return <ContentLoader />` checks.
-  - PageHeader breadcrumbs used raw `<a href="...">` anchors that caused full browser hard-reloads.
-- **Optimizations Implemented:**
-  - **In-Memory SWR Client Cache (`frontend/src/api/apiCache.js` & `client.js`):** Intercepts `GET` requests to return cached responses immediately (0ms latency), completely preventing skeleton flashes during navigation. Background revalidation updates the UI silently.
-  - **Automatic Cache Invalidation:** Any mutation (`POST`, `PUT`, `PATCH`, `DELETE`) automatically invalidates related cached endpoints in real-time.
-  - **Persistent Shell Hierarchy:** Replaced root loader wipes with persistent shells across all dashboards and listings (`ManagerDashboard`, `StudentDashboard`, `EvaluatorDashboard`). The layout frames stay mounted while inner content shimmers smoothly.
-  - **SPA Breadcrumbs:** Replaced raw `<a>` tags with React Router `<Link>` in `frontend/src/components/ui/PageHeader.jsx`.
-
-### 3. Responsive Frame Layouts & Mobile Containment
-- **`frontend/src/index.css` Utilities:**
-  - `.page-frame-container`: Max-width 1400px centered layout frame with fluid padding (`1rem` on mobile $\to$ `2rem` on desktop).
-  - `.scrollable-tabs-bar`: Touch-friendly swipeable tab navigation with hidden scrollbars and momentum scrolling (`-webkit-overflow-scrolling: touch`).
-  - `.stat-grid-responsive` & `.stat-grid-4`: Fluid auto-collapsing grid (4 columns $\to$ 2 columns $\to$ 1 column).
-- **`AppShell.jsx` Overflow Containment:** Enforced `overflowX: 'hidden'`, `width: '100%'`, and `boxSizing: 'border-box'` to stop horizontal screen wobble on mobile viewports.
-
----
-
-## 📝 Per-Student Rubric Evaluation & Custom Evaluator Criteria
-
-### 1. Functional Architecture
-- **Dual Rubric Sources:**
-  1. **Manager Milestones:** Iteration-level rubric criteria defined by the manager.
-  2. **Evaluator Custom Rubrics:** Supervisor/evaluator custom criteria tailored for the specific group (`/api/evaluator/rubrics`).
-- **Per-Student Individual Scoring:**
-  - Evaluators can evaluate each team member individually or as a group.
-  - Features real-time weighted scoring per student combining manager rubric weights and evaluator rubric weights.
-  - Evaluators can record student-specific remarks as well as an overarching group remark.
-- **Evaluation Locking & Audit:**
-  - Submissions are permanently locked upon completion (`locked: true`) with immutable snapshots of the applied criteria stored in `evaluator_rubric_snapshot`.
-- **Files Modified:**
-  - `backend/app/blueprints/evaluator/evaluations.py`: Added `_compute_weighted`, per-student score validation, combined grade computation, and audit logging.
-  - `backend/app/blueprints/evaluator/routes.py`: Evaluator rubric CRUD and per-student evaluation endpoints.
-  - `frontend/src/api/evaluatorApi.js`: Added evaluator rubrics and evaluation submission client methods.
-  - `frontend/src/pages/evaluator/evaluations/EvaluationSheet.jsx`: Complete UI redesign with per-student tabbed navigation, weighted grade live calculations, custom criteria manager, and submission locking.
-
----
-
-## 📦 Complete Git Commit History & Execution Inventory
-
-The codebase changes have been paired and committed cleanly following Conventional Commits. The sequence is summarized below:
-
-### Part 1: Core Feature Commits
-```bash
-# 1. Docs
-git add documents/05-sprints/SPRINT-05-REQUIREMENTS-AND-PLAN.md context-files/sprint-4/
-git commit -m "docs: add Sprint 5 requirements, implementation plan, and sprint-4 context"
-
-# 2. Student Password Backend
-git add backend/app/models/password_set_token.py backend/app/services/email_service.py backend/app/services/student_service.py backend/app/schemas/student_schema.py backend/app/blueprints/manager/students.py backend/tests/test_students.py
-git commit -m "feat(auth): implement password setup token and invitation email service for students"
-
-# 3. Student Password Frontend
-git add frontend/src/pages/auth/SetPasswordPage.jsx frontend/src/api/authApi.js
-git commit -m "feat(auth): add set-password account activation page and auth API methods"
-
-# 4. Auth Acceleration
-git add backend/app/__init__.py backend/app/config.py backend/app/models/user.py backend/app/schemas/auth_schema.py backend/app/services/auth_service.py backend/app/blueprints/auth/routes.py backend/tests/conftest.py backend/tests/test_auth.py frontend/src/context/AuthContext.jsx frontend/src/pages/auth/SignInPage.jsx
-git commit -m "perf(auth): accelerate login with indexed B-tree point lookups and sync session hydration"
-
-# 5. Supervisors
-git add backend/app/models/supervisor_request.py backend/app/services/supervisor_service.py backend/app/services/teacher_service.py backend/app/blueprints/student/supervisors.py backend/app/blueprints/evaluator/supervisor_requests.py backend/app/blueprints/evaluator/__init__.py backend/app/blueprints/evaluator/routes.py backend/app/blueprints/manager/teachers.py frontend/src/api/supervisorsApi.js
-git commit -m "feat(supervisors): add supervisor request workflow and per-course supervision cap"
-
-# 6. Courses
-git add backend/app/models/course.py backend/app/models/iteration.py backend/app/schemas/course_schema.py backend/app/services/course_service.py backend/app/blueprints/manager/courses.py backend/app/blueprints/manager/iterations.py backend/seed/migrate_course_deadline.py
-git commit -m "feat(courses): decouple group formation deadline to iteration 1 and add migration"
-
-# 7. Announcements
-git add backend/app/models/announcement.py backend/app/schemas/announcement_schema.py backend/app/services/announcement_service.py backend/app/blueprints/manager/announcements.py
-git commit -m "feat(announcements): add department and course targeting with capped query sync"
-
-# 8. Reports & Groups
-git add backend/app/models/group.py backend/app/services/group_service.py backend/app/services/manager_group_service.py backend/app/services/report_service.py backend/app/blueprints/student/groups.py backend/app/blueprints/manager/reports.py backend/tests/test_sprint5_features.py frontend/src/api/reportsApi.js frontend/src/api/studentsApi.js
-git commit -m "feat(reports): add group status analytics, excel exports, and ungrouped email notifications"
-
-# 9. SWR Cache & Link
-git add frontend/src/api/apiCache.js frontend/src/api/client.js frontend/src/components/ui/PageHeader.jsx
-git commit -m "perf(frontend): introduce SWR client cache and replace raw links with router Link"
-
-# 10. Responsive Layout
-git add frontend/src/components/layout/AppShell.jsx frontend/src/components/layout/Navbar.jsx frontend/src/index.css frontend/src/App.jsx
-git commit -m "style(layout): add responsive frame containers, scrollable tabs, and mobile viewport protection"
-
-# 11. Dashboards
-git add frontend/src/pages/manager/ManagerDashboard.jsx frontend/src/pages/manager/profile/ManagerProfilePage.jsx frontend/src/pages/evaluator/EvaluatorDashboard.jsx frontend/src/pages/student/StudentDashboard.jsx
-git commit -m "refactor(dashboards): harmonize manager, evaluator, and student dashboards with persistent shells"
-
-# 12. Management Pages
-git add frontend/src/pages/manager/groups/ManageGroupsPage.jsx frontend/src/pages/manager/students/ frontend/src/pages/manager/teachers/ frontend/src/pages/manager/courses/ frontend/src/pages/manager/departments/ frontend/src/pages/manager/iterations/ frontend/src/pages/evaluator/exhibition/ExhibitionPage.jsx frontend/src/pages/evaluator/groups/AssignedGroupsPage.jsx frontend/src/pages/student/groups/
-git commit -m "refactor(pages): standardize listing pages, modals, and group detail views across all roles"
+```mermaid
+flowchart TD
+    A[Manager / Admin] -->|Bulk Import Excel or Add Student| B[Backend: student_service.py]
+    B -->|Generate User Record & 64-char Hex Token| C[(MongoDB: password_set_tokens)]
+    B -->|Dispatch Activation Email with Token| D[Email Service / SMTP]
+    D -->|Activation Link| E[Student Browser: /set-password]
+    E -->|Submit Secure Password| F[Backend: /api/auth/set-password]
+    F -->|Bcrypt Hash & Activate Account| G[(MongoDB: users is_active=true)]
+    G -->|Direct Login| H[SignInPage.jsx]
 ```
 
-### Part 2: Codebase Polish & Refactoring Commits
-```bash
-# 1. Base UI & CSS
-git add frontend/src/components/ui/ConfirmDialog.jsx frontend/src/components/ui/FormError.jsx frontend/src/components/ui/Accordion.jsx frontend/src/components/ui/ContentLoader.jsx frontend/src/components/ui/FileDropzone.jsx frontend/src/index.css
-git commit -m "style(ui): add reusable UI components, accordions, and responsive design tokens"
+1. **Dual-Identifier Login (`/api/auth/login`):**
+   - Students authenticate using either their official Roll Number (case-insensitive point lookup, e.g. `f2023-551` or `F2023-551`) or institutional email (`f2023-551@bnu.edu.pk`).
+   - Managers, Teachers, and Evaluators log in using institutional email credentials.
+   - Accelerated via indexed point matches with `$in: [identifier, identifier.lower(), identifier.upper()]` over MongoDB B-trees (<1ms lookup).
+2. **Cryptographic Account Activation (`/set-password`):**
+   - User creation (single or bulk Excel import) generates a secure 64-character hexadecimal token (`secrets.token_hex(32)`), stored as a salted bcrypt hash in `password_set_tokens` (24-hour expiration window).
+   - An activation email is automatically dispatched. Managers can re-dispatch activation emails on demand from `StudentListPage.jsx`.
+3. **Profile Settings & Password Security:**
+   - **Student Profile (`StudentProfilePage.jsx`):** Full name is immutable. Change Password is integrated directly inside the expanded **Edit Profile Details** form under an "Account Security" subsection.
+   - **Teacher Profile (`TeacherProfilePage.jsx`):** Displays faculty profile, research domain expertise manager, and an Account Security card triggering `ChangePasswordModal.jsx`.
+   - **Manager Profile (`ManagerProfilePage.jsx`):** Provides coordinator profile updates and password security.
 
-# 2. Backend Core & Utils
-git add backend/app/__init__.py backend/app/config.py backend/app/extensions.py backend/app/middleware/ backend/app/utils/ backend/tests/conftest.py backend/tests/test_auth.py
-git commit -m "refactor(backend): update app config, middleware handlers, and fix mongo index specs in test fixtures"
+---
 
-# 3. Models & Schemas
-git add backend/app/models/ backend/app/schemas/
-git commit -m "refactor(models): standardize schema validations, fields, and collection definitions"
+### 3.2. Academic Integrity, Write Operations & Soft-Delete Recycle Bins
 
-# 4. Services
-git add backend/app/services/
-git commit -m "refactor(services): refine business logic across auth, groups, student profiles, and reports"
-
-# 5. Blueprints
-git add backend/app/blueprints/
-git commit -m "refactor(api): clean up route handlers and status responses across auth, manager, evaluator, and student APIs"
-
-# 6. Evaluator Portal
-git add frontend/src/pages/evaluator/
-git commit -m "refactor(evaluator): polish evaluation forms, exhibition sheets, and meeting management views"
-
-# 7. Manager Portal
-git add frontend/src/pages/manager/
-git commit -m "refactor(manager): streamline trash pages, rubric builder modal, and resource management views"
-
-# 8. Student Portal & Sign-In
-git add frontend/src/pages/auth/SignInPage.jsx frontend/src/components/student/groups/GroupMemberList.jsx frontend/src/pages/student/
-git commit -m "refactor(student): refine student iterations, profile settings, and responsive sign-in container"
+```mermaid
+stateDiagram-v2
+    [*] --> Active: Created by Manager
+    Active --> SoftDeleted: Delete Request (assert_deletable)
+    SoftDeleted --> Active: Restore (assert_restorable)
+    SoftDeleted --> Purged: Permanent Purge (ConfirmModal)
+    Purged --> [*]
 ```
 
-### Part 3: Evaluator Per-Student Evaluations & Custom Criteria Commit
-```bash
-git add backend/app/blueprints/evaluator/evaluations.py backend/app/blueprints/evaluator/routes.py frontend/src/api/evaluatorApi.js frontend/src/pages/evaluator/EvaluatorDashboard.jsx frontend/src/pages/evaluator/evaluations/EvaluationSheet.jsx frontend/src/pages/evaluator/exhibition/ExhibitionPage.jsx frontend/src/pages/evaluator/groups/GroupEvalDetail.jsx
-git commit -m "feat(evaluator): add per-student rubric evaluation and custom evaluator criteria support"
+1. **Atomic Write Coordinator (`@academic_write`):**
+   - Guarantees transactional consistency across multi-document mutations (group approvals, grading, supervisor allocations, milestone creation).
+2. **Relational Deletion Guards (`assert_deletable` / `assert_restorable`):**
+   - Blocks soft or permanent deletion of departments that have active enrolled courses, faculty, or students.
+   - Blocks deletion of courses with active groups or iterations.
+3. **Soft-Delete Recycle Bin Suite:**
+   - Dedicated Trash pages across Manager portal:
+     - `StudentTrashPage.jsx` (`/api/manager/students/?deleted=true`)
+     - `TeacherTrashPage.jsx` (`/api/manager/teachers/?deleted=true`)
+     - `DepartmentTrashPage.jsx` (`/api/manager/departments/?deleted=true`)
+     - `CourseTrashPage.jsx` (`/api/manager/courses/?deleted=true`)
+     - `EvaluatorTrashPage.jsx` (`/api/manager/evaluators/?deleted=true`)
+   - Complete with search, filter, one-click **Restore**, and permanent **Purge** capabilities.
+
+---
+
+### 3.3. Group Auto-Naming, Proposal Upload & Timeliness Tracking
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Student as Student Leader
+    participant UI as CreateGroupPage.jsx
+    participant API as /api/student/groups
+    participant GS as group_service.py
+    participant DB as MongoDB
+
+    Student->>UI: Fill Group Details + Attach Proposal PDF/DOCX
+    UI->>API: POST /api/student/groups (multipart/form-data)
+    API->>GS: create_group()
+    GS->>DB: Atomic Next Sequence: GRP-2026-XXX
+    GS->>DB: Fetch Active Iteration Milestone (group_formation)
+    alt Creation <= Milestone Deadline
+        GS->>GS: Set timeliness = "on_time", penalty = 0%
+    else Creation > Milestone Deadline
+        GS->>GS: Set timeliness = "late", penalty = 10%
+    end
+    GS->>DB: Save Group & Upload Proposal Attachment
+    GS-->>UI: Group Created (GRP-2026-001)
+```
+
+1. **Sequential Auto-Naming Pattern (`GRP-{YEAR}-{SEQ:03d}`):**
+   - Automatically generates institutional identifiers (`GRP-2026-001`, `GRP-2026-002`) via thread-safe counters in `group_service.py`.
+2. **Mandatory Project Proposal Document:**
+   - Group creation mandates attaching a project proposal document (PDF/DOCX, max 10MB) handled via `attachment_service.py`.
+3. **Dynamic Timeliness Evaluation:**
+   - Evaluates submission date against the course's `group_formation` Iteration Milestone.
+   - Late groups automatically receive late penalty markers (`late_penalty_percent`, e.g. `-10%`) that carry forward into milestone evaluations and grading sheets.
+
+---
+
+### 3.4. Teacher & Supervisor Portal Subsystem
+
+1. **Dedicated Supervisor Blueprint (`/api/teacher/`):**
+   - `dashboard.py`: Returns supervisor statistics (`active_groups_count`, `max_supervision_cap = 4`, `total_students_count`, `pending_requests_count`), group roster, pending invitations, and per-course breakdown.
+   - `groups.py`: Returns detailed supervised group workspace (`/api/teacher/groups/<id>`), team member profiles, proposal downloads, deliverable reviews, and supervision meeting logs.
+   - `students.py`: Searchable and course-filterable directory of all students mentored across active groups (`/api/teacher/students`).
+   - `profile.py`: Supervisor profile settings and domain expertise tags (`GET /api/teacher/profile`, `PUT /api/teacher/profile/domains`).
+   - `supervisor_requests.py`: Accept/Decline incoming supervisor invitations with quota enforcement and decline feedback.
+2. **Supervisor UI Suite (`frontend/src/pages/teacher/`):**
+   - **`TeacherDashboard.jsx`:** Features 4 `StatCard` metrics (`.stat-grid-4`), pending request alert banner with Accept/Decline modals, and `.dashboard-dual-grid` cards.
+   - **`TeacherGroupDetailPage.jsx`:** Supervised workspace with team member cards, proposal summary, milestone submission review, and meeting logs.
+   - **`TeacherStudentsPage.jsx`:** Mentored student directory with search and course filtering.
+   - **`TeacherProfilePage.jsx`:** Settings view with profile info, research domain manager, and password change security.
+
+---
+
+### 3.5. Iterations, Reusable Rubric Templates & Student Submissions
+
+1. **Reusable Rubric Templates (`/api/manager/rubric-templates`):**
+   - Dedicated Blueprint in `rubric_templates.py`.
+   - Supports creating reusable grading rubrics with strict **100% total weight validation** (returns `422 Unprocessable Entity` on mismatch).
+   - Enforces criteria descriptors across performance levels 0 through 5.
+   - Scopeable to `"All Courses"` or specific academic courses.
+2. **Iteration Milestones & Deliverables (`/api/manager/iterations` & `/api/student/iterations`):**
+   - Defines milestones with deadlines, deliverable descriptions, linked rubric templates, and maximum marks.
+   - Dynamic collective statistics aggregated directly in `GET /api/manager/iterations`:
+     - `total_groups`, `submitted_count`, `late_count`, `by_course` breakdown.
+   - Student submission portal (`IterationDetailPage.jsx`): File upload, countdown timers, late status indicators, and feedback/grades view.
+
+---
+
+### 3.6. Evaluator Portal & Per-Student Rubric Grading
+
+1. **Evaluator Blueprint (`/api/evaluator/`):**
+   - `evaluations.py`: Handles rubric-based grading for sprint milestones and final defense sessions.
+   - `meetings.py`: Schedules and manages evaluation meetings with student groups.
+   - `routes.py`: Evaluator dashboard, assigned group lists, and exhibition rosters.
+2. **Interactive Rubric Evaluation Sheet (`EvaluationSheet.jsx`):**
+   - Features Level 0–5 radio chips for each rubric criterion.
+   - Supports **Per-Student Individual Scoring**: Evaluators score both the collective project deliverable and the individual contribution of each team member.
+   - Includes custom evaluator remarks and real-time total percentage score calculation.
+
+---
+
+### 3.7. Manager Workspaces, Group Reporting & Evaluator Experience
+
+1. **Manager Project Workspace Revamp (`ProjectDetailWorkspace.jsx`):**
+   - Structured 2-column layout:
+     - **Left Column (Sticky ~340px):** `GroupMembersPanel.jsx` showing member avatar initials, student names, roll numbers, emails, sections, Team Leader badges, and supervisor info block.
+     - **Right Column (Flex):** Three collapsible dropdown sections (`CollapsibleSection.jsx`):
+       1. *Project Proposal & Scope* (embedded `ProposalSummary.jsx`).
+       2. *Sprint Milestone Deliverables & Activity* (milestone submission cards with `TaskReview.jsx`).
+       3. *Sprint Milestone & Performance Timeline* (`ProjectActivityTimeline.jsx`).
+2. **Manager Add Evaluator Page (`AddEvaluatorPage.jsx`):**
+   - 650px centered card format with `PageHeader` breadcrumbs and Toast feedback.
+   - Interactive option cards (`OptionCardGroup.jsx`) for selecting **Internal Faculty** (`@bnu.edu.pk`) vs **External Industry Expert**.
+3. **Broadcast Mail Subsystem (`BroadcastMailPage.jsx`):**
+   - Interactive audience card selector (`OptionCardGroup.jsx`): *All Formed Groups*, *Specific Groups* (interactive multi-select with search), and *Ungrouped Students*.
+   - Preset templates ("Milestone Deadline Reminder", "Rubrics Released", "Group Formation Reminder").
+4. **Excel Group Analytics Report (`/api/manager/reports/groups`):**
+   - Streams styled 12-column Excel spreadsheets generated via `openpyxl` (Group ID, Project Title, Course, Dept, Supervisor, Leader, Formation Timeliness, Submission Status, Member Count, Member Roster, Created Date).
+5. **Ungrouped Students Management:**
+   - Dedicated tab inside **Manage Project Groups** (`ManageGroupsPage.jsx?tab=ungrouped`).
+   - Live count badges, department/course filters, Excel export (`/api/manager/students/ungrouped/export`), and reminder email modals.
+
+---
+
+### 3.8. Standardized Back Button Navigation System
+
+- **Core Component:** [`BackButton.jsx`](file:///c:/Users/lenovo/Documents/University/1.%20ERP%20System/erp-management-system/frontend/src/components/ui/BackButton.jsx)
+- **Responsive Architecture (`index.css`):**
+  - Left-aligned above the main page `PageHeader` inside a standardized `.page-back-slot` wrapper.
+  - **Desktop (`>= 768px`):** Displays arrow icon + descriptive destination text (e.g. `← Back to Evaluators`, `← Back to All Groups`).
+  - **Mobile (`< 768px`):** Automatically hides the text label (`.btn-back-label { display: none }`) while keeping the clickable arrow with accessible `aria-label` and tooltip to eliminate layout cramming.
+- **Rollout Coverage:** Standardized across all 25+ subpages across Manager, Teacher, Student, Evaluator, and Shared modules.
+
+---
+
+## 📂 4. Complete Repository Directory & File Inventory
+
+```
+erp-management-system/
+├── backend/
+│   ├── app/
+│   │   ├── __init__.py                     # Flask App Factory, CORS, JWT, Swagger & Blueprint Registration
+│   │   ├── config.py                       # Application Configurations (Dev, Testing, Production)
+│   │   ├── blueprints/
+│   │   │   ├── auth/                       # Auth & One-Time Password Activation routes
+│   │   │   ├── manager/                    # Students, Teachers, Courses, Depts, Groups, Iterations, Rubrics, Reports, Broadcast
+│   │   │   ├── teacher/                    # Supervisor Dashboard, Supervised Groups, Students Directory, Profile, Requests
+│   │   │   ├── student/                    # Student Dashboard, Groups, Iterations, Submissions, Supervisor Discovery, Profile
+│   │   │   ├── evaluator/                  # Evaluator Dashboard, Rubric Grading, Meetings, Exhibitions
+│   │   │   ├── files.py                    # Secure file streaming & attachment download endpoints
+│   │   │   ├── notifications.py            # User notification feeds & read tracking
+│   │   │   └── workflow.py                 # Academic workflow lifecycle routes
+│   │   ├── models/                         # Domain constants & schema definitions (user, group, course, iteration, rubric, etc.)
+│   │   ├── schemas/                        # Marshmallow validation schemas (protect_identity, rubric_schema, etc.)
+│   │   ├── services/                       # Business logic services:
+│   │   │   ├── academic_integrity_service.py # Entity deletion & relational dependency validators
+│   │   │   ├── academic_write_service.py     # Transactional write operations wrapper
+│   │   │   ├── announcement_service.py       # Global & course announcement management
+│   │   │   ├── attachment_service.py         # File uploads, proposal attachments & validation
+│   │   │   ├── auth_service.py               # User authentication, token activation & hashing
+│   │   │   ├── bulk_import_service.py        # Excel/CSV student spreadsheet parser & user provisioner
+│   │   │   ├── course_service.py             # Course CRUD & department linking
+│   │   │   ├── department_service.py         # Department management & integrity checks
+│   │   │   ├── email_service.py              # SMTP / SendGrid templated email dispatcher
+│   │   │   ├── evaluator_service.py          # Evaluator assignments & criteria scoring
+│   │   │   ├── file_access_service.py        # Secure tokenized attachment access
+│   │   │   ├── group_service.py              # Group auto-naming, membership, proposal & timeliness
+│   │   │   ├── manager_group_service.py      # Manager group administration & supervisor overrides
+│   │   │   ├── milestone_service.py          # Iteration milestones & deliverable submissions
+│   │   │   ├── milestone_setup_service.py    # Default iteration milestone seeders
+│   │   │   ├── report_service.py             # OpenPyXL Excel reports & ReportLab PDF generators
+│   │   │   ├── storage_service.py            # Local filesystem disk storage coordinator
+│   │   │   ├── student_profile_service.py    # Student profile updates & security
+│   │   │   ├── student_service.py            # Student directory, filtering & status tracking
+│   │   │   ├── supervisor_service.py         # Teacher supervision requests & quota validation
+│   │   │   ├── teacher_service.py            # Teacher directory & research domains management
+│   │   │   └── user_service.py               # Core user model operations & identity security
+│   │   └── utils/                          # Decorators (@academic_write, @role_required), date utils, error handlers
+│   └── tests/                              # Pytest test suites (test_teacher_portal, test_courses, test_rubrics, etc.)
+│
+└── frontend/
+    └── src/
+        ├── api/                            # Axios API clients with SWR in-memory caching:
+        │   ├── apiCache.js                 # 0ms SWR caching & mutation cache-busting
+        │   ├── client.js                   # Base Axios instance with JWT interceptors & error handlers
+        │   ├── authApi.js                  # Authentication & Set-Password endpoints
+        │   ├── teacherPortalApi.js         # Supervisor dashboard, groups, students, profile API
+        │   ├── studentGroupApi.js          # Student group creation, proposal upload, invitations API
+        │   ├── studentIterationsApi.js     # Student deliverables & milestone submissions API
+        │   ├── studentsApi.js              # Manager student CRUD & bulk import API
+        │   ├── teachersApi.js              # Manager teacher CRUD & soft-delete API
+        │   ├── coursesApi.js               # Manager course CRUD & trash API
+        │   ├── departmentsApi.js           # Manager department CRUD & trash API
+        │   ├── evaluatorsApi.js            # Manager evaluator CRUD & trash API
+        │   ├── iterationsApi.js            # Manager iteration milestones & stats API
+        │   ├── rubricTemplatesApi.js       # Manager rubric templates CRUD API
+        │   ├── managerGroupsApi.js         # Manager group management & workspace API
+        │   └── reportsApi.js               # Manager Excel/PDF export API
+        ├── components/
+        │   ├── ui/                         # Reusable UI component library:
+        │   │   ├── BackButton.jsx          # Responsive desktop/mobile back navigation button
+        │   │   ├── OptionCardGroup.jsx     # Interactive option selector cards
+        │   │   ├── CollapsibleSection.jsx  # Animated accordion / collapsible card
+        │   │   ├── Select.jsx              # Custom styled select dropdown with SVG chevron
+        │   │   ├── DateTimePicker.jsx      # Modern date/time picker with presets & preview
+        │   │   ├── ConfirmModal.jsx        # Standard confirmation & destructive modal
+        │   │   ├── ChangePasswordModal.jsx # Shared password change modal
+        │   │   ├── StatusBadge.jsx         # Uniform color-coded status badges
+        │   │   ├── PageHeader.jsx          # Standardized header with breadcrumbs & actions
+        │   │   ├── Toast.jsx               # Floating notification toasts
+        │   │   └── Table.jsx               # Modern styled data table
+        │   ├── groups/                     # Domain group workspace components:
+        │   │   ├── GroupMembersPanel.jsx   # Sticky 2-column left member roster & supervisor card
+        │   │   ├── ProposalSummary.jsx     # Project proposal document viewer & scope card
+        │   │   ├── TaskReview.jsx          # Milestone deliverable submission review card
+        │   │   └── ProjectActivityTimeline.jsx # Visual sprint milestone activity timeline
+        │   └── layout/                     # Application shell, responsive sidebar, navbar
+        └── pages/
+            ├── auth/                       # SignInPage.jsx, SetPasswordPage.jsx
+            ├── manager/                    # 15+ Manager pages (Dashboard, Students, Teachers, Courses, Depts, Evaluators, Groups, Iterations, Rubrics, Reports, Trash pages)
+            ├── teacher/                    # TeacherDashboard.jsx, TeacherGroupDetailPage.jsx, TeacherStudentsPage.jsx, TeacherProfilePage.jsx
+            ├── student/                    # StudentDashboard.jsx, BrowseGroupsPage.jsx, CreateGroupPage.jsx, MyGroupPage.jsx, StudentIterationsPage.jsx, StudentProfilePage.jsx
+            ├── evaluator/                  # EvaluatorDashboard.jsx, GroupEvalDetail.jsx, EvaluationSheet.jsx, EvaluatorMeetingsPage.jsx, ExhibitionEvaluationPage.jsx
+            └── AnnouncementsPage.jsx       # Global announcements board
 ```
 
 ---
 
-## 🎯 Verification Commands & Health Checklist
+## 🔌 5. Complete REST API Specifications & Routing Matrix
 
-To verify the entire repository locally:
-
-```bash
-# 1. Backend Verification
-docker compose exec backend pytest tests/test_auth.py -v
-docker compose exec backend pytest tests/test_sprint5_features.py -v
-
-# 2. Frontend Code Quality & Build
-cd frontend
-npm run lint    # 0 errors
-npm run build   # Completed cleanly with Vite production bundle
-```
+| Blueprint / Namespace | HTTP Method | Endpoint Path | Description | Access Role |
+| :--- | :--- | :--- | :--- | :--- |
+| **Auth** | `POST` | `/api/auth/login` | Multi-identifier login (Roll No / Email + Password) | Public |
+| | `POST` | `/api/auth/set-password` | Activate account via 64-char one-time cryptographic token | Public |
+| | `POST` | `/api/auth/change-password` | Change password with current password verification | Authenticated |
+| **Teacher Portal** | `GET` | `/api/teacher/dashboard` | Supervisor stats (active groups, max cap, pending requests) | Teacher |
+| | `GET` | `/api/teacher/groups` | List of all groups supervised by faculty member | Teacher |
+| | `GET` | `/api/teacher/groups/<id>` | Full supervised group workspace, proposal & deliverables | Teacher |
+| | `GET` | `/api/teacher/students` | Mentored students directory with course & search filters | Teacher |
+| | `GET` | `/api/teacher/profile` | Teacher profile details & research domain expertise | Teacher |
+| | `PUT` | `/api/teacher/profile/domains` | Update supervisor research domain tags | Teacher |
+| | `POST` | `/api/teacher/requests/<id>/accept` | Accept supervision invitation with 4-group quota check | Teacher |
+| | `POST` | `/api/teacher/requests/<id>/decline` | Decline supervision invitation with feedback remarks | Teacher |
+| **Manager Portal** | `GET` | `/api/manager/dashboard` | Manager system-wide overview metrics & analytics | Manager |
+| | `GET` / `POST` | `/api/manager/students` | List / create students (supports single & bulk import) | Manager |
+| | `GET` / `PUT` / `DELETE` | `/api/manager/students/<id>` | View, update details (name immutable), soft-delete student | Manager |
+| | `POST` | `/api/manager/students/<id>/resend-activation` | Re-dispatch cryptographic activation email | Manager |
+| | `GET` / `POST` | `/api/manager/teachers` | List / create faculty teacher records | Manager |
+| | `GET` / `POST` | `/api/manager/courses` | List / create academic courses with department links | Manager |
+| | `GET` / `POST` | `/api/manager/departments` | List / create academic departments | Manager |
+| | `GET` / `POST` | `/api/manager/evaluators` | List / register internal faculty or external evaluators | Manager |
+| | `GET` / `POST` | `/api/manager/rubric-templates` | List / create reusable rubrics (strict 100% weight check) | Manager |
+| | `GET` / `POST` | `/api/manager/iterations` | List / create sprint iteration milestones with rubrics | Manager |
+| | `GET` | `/api/manager/iterations/<id>/submissions` | View all group deliverable submissions for a milestone | Manager |
+| | `GET` | `/api/manager/reports/groups` | Stream styled 12-column Excel groups report | Manager |
+| | `POST` | `/api/manager/broadcast` | Broadcast emails to groups or ungrouped students | Manager |
+| **Student Portal** | `GET` | `/api/student/dashboard` | Student dashboard (group status, countdowns, milestones) | Student |
+| | `GET` / `POST` | `/api/student/groups` | Browse groups / create group with proposal upload | Student |
+| | `GET` | `/api/student/groups/my` | Current group workspace, roster, leader status, supervisor | Student |
+| | `POST` | `/api/student/groups/invite` | Send team invitation to peer student | Student Leader |
+| | `GET` | `/api/student/iterations` | List course iteration milestones & submission deadlines | Student |
+| | `POST` | `/api/student/iterations/<id>/submit` | Upload sprint milestone deliverable files | Student Leader |
+| | `GET` | `/api/student/supervisors` | Discover available teachers with domain filters & quotas | Student |
+| | `POST` | `/api/student/supervisors/request` | Dispatch supervision request to faculty member | Student Leader |
+| **Evaluator Portal** | `GET` | `/api/evaluator/dashboard` | Evaluator dashboard (assigned groups & pending reviews) | Evaluator |
+| | `GET` | `/api/evaluator/groups/<id>` | Group evaluation workspace & submitted deliverables | Evaluator |
+| | `POST` | `/api/evaluator/evaluations` | Submit rubric grading sheet (group + per-student scores) | Evaluator |
+| | `GET` / `POST` | `/api/evaluator/meetings` | List / schedule evaluation meetings with student teams | Evaluator |
 
 ---
 
-## 💡 Quick Start Guide for the Next Developer
+## 🧪 6. Verification, Testing & Quality Assurance
 
-1. **Containers:** Run `docker compose up -d` to ensure `pbl_backend`, `pbl_frontend`, and `pbl_mongo` are active.
-2. **Database Indices:** Automated indexing runs on app startup for `users.email` and `users.roll`.
-3. **Roles & Portals:**
-   - Manager: `zaman.aziz@bnu.edu.pk` / `Password123!` $\to$ `/manager/dashboard`
-   - Evaluator: `evaluator@bnu.edu.pk` / `Password123!` $\to$ `/evaluator/dashboard`
-   - Student: `f2024-551` or `f2024-551@bnu.edu.pk` $\to$ `/student/dashboard`
-4. **Caching Rule:** Any new API mutation routes added to the frontend should declare cache invalidation via `apiCache.invalidateMatching(route)` to maintain the 0ms navigation speed without serving stale mutation state.
+### 6.1. Frontend Production Build & Lint Quality Gate
+The frontend codebase adheres to strict build and bundle optimization standards:
+- **Build Command:** `npm run build` inside `frontend/`
+- **Verification Status:** **100% Clean Compilation (0 errors, 0 warnings)**
+  - `dist/index.html` (~0.75 kB)
+  - `dist/assets/index.css` (~20.6 kB)
+  - `dist/assets/index.js` (~898 kB)
+- **Lint Command:** `npm run lint` executes with zero JSX syntax or import warnings.
 
+### 6.2. Backend Automated Test Suite Execution
+Backend tests run against the dedicated testing database (`pbl_system_test`):
+```bash
+# 1. Run Teacher & Supervisor Portal Integration Test Suite
+backend\venv\Scripts\pytest backend\tests\test_teacher_portal.py -v
 
+# 2. Run Course Management & Academic Integrity Test Suite
+backend\venv\Scripts\pytest backend\tests\test_courses.py -v
 
+# 3. Run Reusable Rubric Templates Validation Suite
+backend\venv\Scripts\pytest backend\tests\test_rubric_templates.py -v
+
+# 4. Run Sprint Milestones & Submissions Suite
+backend\venv\Scripts\pytest backend\tests\test_iterations.py backend\tests\test_submissions.py -v
+
+# 5. Run Student Group Formation & Timeliness Suite
+backend\venv\Scripts\pytest backend\tests\test_student_groups.py -v
+
+# 6. Run Academic Integrity Relational Guard Suite
+backend\venv\Scripts\pytest backend\tests\test_academic_integrity.py -v
+
+# 7. Run Comprehensive Sprint 5 Features Suite
+backend\venv\Scripts\pytest backend\tests\test_sprint5_features.py -v
+```
+
+> [!IMPORTANT]
+> **Database Isolation During Testing:** Test fixtures execute `mongo.db.users.delete_many({})` and related cleanup routines. Always run test suites sequentially or in isolation to avoid cross-test race conditions on the shared test database.
+
+---
+
+## ⚡ 7. Performance Optimizations & Developer Notes
+
+1. **Client-Side SWR In-Memory API Cache (`apiCache.js`):**
+   - Intercepts `GET` requests to return cached payload with 0ms latency during navigation, eliminating layout flashes and redundant network requests.
+   - Any state-mutating operation (`POST`, `PUT`, `PATCH`, `DELETE`) automatically clears the cache for relevant endpoint paths.
+2. **MongoDB Database Indexes:**
+   - Startup index initialization ensures unique index on `users.email` and sparse unique index on `users.roll`.
+   - Compound indexes on `groups.course_id`, `groups.status`, and `iterations.course_id` optimize group listings and milestone lookups.
+3. **Default Development & Testing Credentials:**
+   - **Manager:** `zamanaziz@bnu.edu.pk` / `11223344`
+   - **Teacher / Supervisor:** `teacher.portal.test@bnu.edu.pk` / `11223344`
+   - **Student:** `f2023-101` / `11223344`
+   - **Evaluator:** `evaluator@bnu.edu.pk` / `11223344`

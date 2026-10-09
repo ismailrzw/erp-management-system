@@ -1,6 +1,6 @@
-﻿# backend/app/blueprints/manager/teachers.py
+# backend/app/blueprints/manager/teachers.py
 """
-Manager teacher/evaluator API endpoints.
+Manager teacher (supervisor) API endpoints.
 
 Data lifecycle enforced here:
   1. Raw JSON arrives at the endpoint.
@@ -19,7 +19,6 @@ from flask_restx import Namespace, Resource, fields, inputs
 from marshmallow import ValidationError
 
 from app.extensions import mongo
-from app.models.teacher import TeacherType
 from app.models.user import Role
 from app.schemas.teacher_schema import CreateTeacherSchema, UpdateTeacherSchema
 from app.services.teacher_service import (
@@ -34,7 +33,7 @@ from app.services.teacher_service import (
 from app.utils.audit import log_audit
 from app.utils.decorators import role_required
 
-teachers_ns = Namespace("manager_teachers", description="Manager teacher/evaluator operations")
+teachers_ns = Namespace("manager_teachers", description="Manager teacher / supervisor operations")
 
 # ── Swagger models ──────────────────────────────────────────
 teacher_model = teachers_ns.model("Teacher", {
@@ -42,20 +41,21 @@ teacher_model = teachers_ns.model("Teacher", {
     "name":       fields.String(required=True),
     "email":      fields.String(required=True),
     "dept":       fields.String(required=True),
-    "type":       fields.String(required=True, enum=TeacherType.ALL),
+    "domains":    fields.List(fields.String(), description="Expertise domains"),
+    "active_supervision_count": fields.Integer(readonly=True),
     "deleted":    fields.Boolean(readonly=True),
     "created_at": fields.String(readonly=True),
 })
 create_model = teachers_ns.model("TeacherCreate", {
-    "name":  fields.String(required=True),
-    "email": fields.String(required=True),
-    "dept":  fields.String(required=True),
-    "type":  fields.String(required=True, enum=TeacherType.ALL),
+    "name":    fields.String(required=True),
+    "email":   fields.String(required=True),
+    "dept":    fields.String(required=True),
+    "domains": fields.List(fields.String(), required=False),
 })
 update_model = teachers_ns.model("TeacherUpdate", {
-    "name": fields.String(required=False),
-    "dept": fields.String(required=False),
-    "type": fields.String(required=False, enum=TeacherType.ALL),
+    "name":    fields.String(required=False),
+    "dept":    fields.String(required=False),
+    "domains": fields.List(fields.String(), required=False),
 })
 
 list_parser = teachers_ns.parser()
@@ -78,7 +78,7 @@ class TeacherList(Resource):
     @teachers_ns.expect(create_model)
     @role_required(Role.MANAGER)
     def post(self):
-        """Add a new teacher/evaluator.  An initial password is auto-generated and returned once."""
+        """Add a new teacher / supervisor. An initial password is auto-generated and returned once."""
         # Check 1 — schema validation
         try:
             payload = CreateTeacherSchema().load(request.get_json() or {})
@@ -87,7 +87,12 @@ class TeacherList(Resource):
 
         # Check 2 — service-layer (email uniqueness, password hash, DB insert)
         try:
-            teacher = create_teacher(payload["name"], payload["email"], payload["dept"], payload["type"])
+            teacher = create_teacher(
+                name=payload["name"],
+                email=payload["email"],
+                dept=payload["dept"],
+                domains=payload.get("domains"),
+            )
         except ValueError as exc:
             return {"success": False, "message": str(exc)}, 409
 
@@ -104,7 +109,7 @@ class TeacherDetail(Resource):
     @teachers_ns.doc(security="Bearer Auth")
     @role_required(Role.MANAGER)
     def get(self, teacher_id):
-        """Get a single teacher/evaluator by ID."""
+        """Get a single teacher by ID."""
         teacher = get_teacher_by_id(teacher_id)
         if teacher is None:
             return {"success": False, "message": "Teacher not found."}, 404
@@ -114,7 +119,7 @@ class TeacherDetail(Resource):
     @teachers_ns.expect(update_model)
     @role_required(Role.MANAGER)
     def put(self, teacher_id):
-        """Update a teacher's name, dept, and/or type.  Email is immutable."""
+        """Update a teacher's name, dept, and/or domains. Email is immutable."""
         raw_body = request.get_json() or {}
 
         # Check 1 — schema validation (email is excluded from UpdateTeacherSchema)
@@ -134,7 +139,12 @@ class TeacherDetail(Resource):
 
         # Check 2 — service-layer persistence
         try:
-            teacher = update_teacher(teacher_id, payload.get("name"), payload.get("dept"), payload.get("type"))
+            teacher = update_teacher(
+                teacher_id,
+                name=payload.get("name"),
+                dept=payload.get("dept"),
+                domains=payload.get("domains"),
+            )
         except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 422
 
@@ -151,7 +161,10 @@ class TeacherDetail(Resource):
     @role_required(Role.MANAGER)
     def delete(self, teacher_id):
         """Soft-delete a teacher/evaluator (moves to recycle bin)."""
-        teacher = soft_delete_teacher(teacher_id)
+        try:
+            teacher = soft_delete_teacher(teacher_id)
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
         if teacher is None:
             return {"success": False, "message": "Teacher not found."}, 404
         log_audit(
@@ -168,7 +181,10 @@ class TeacherRestore(Resource):
     @role_required(Role.MANAGER)
     def post(self, teacher_id):
         """Restore a soft-deleted teacher/evaluator."""
-        teacher = restore_teacher(teacher_id)
+        try:
+            teacher = restore_teacher(teacher_id)
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 409)
         if teacher is None:
             return {"success": False, "message": "Teacher not found."}, 404
         log_audit(
@@ -185,7 +201,10 @@ class TeacherPermanentDelete(Resource):
     @role_required(Role.MANAGER)
     def delete(self, teacher_id):
         """Permanently delete a teacher/evaluator.  Must already be soft-deleted."""
-        teacher = permanent_delete_teacher(teacher_id)
+        try:
+            teacher = permanent_delete_teacher(teacher_id)
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
         if teacher is None:
             return {"success": False, "message": "Teacher not found."}, 404
         log_audit(
@@ -212,3 +231,72 @@ class TeacherDomains(Resource):
             return {"success": False, "message": str(exc)}, 400
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500
+
+
+@teachers_ns.route("/<string:teacher_id>/projects")
+@teachers_ns.param("teacher_id", "MongoDB teacher ID")
+class TeacherProjects(Resource):
+    @teachers_ns.doc(security="Bearer Auth")
+    @role_required(Role.MANAGER)
+    def get(self, teacher_id):
+        """Get all projects supervised by this teacher with members and milestone progress."""
+        from bson import ObjectId
+
+        from app.models.group import COLLECTION as GROUPS_COLLECTION
+        from app.models.group import Field as GroupField
+        from app.models.group import Status as GroupStatus
+        from app.models.user import UserFields
+        from app.services.manager_group_service import _resolve_group_members
+        try:
+            t_oid = ObjectId(teacher_id)
+            teacher_doc = mongo.db[UserFields.COLLECTION].find_one({"_id": t_oid})
+            if not teacher_doc:
+                return {"success": False, "message": "Teacher not found."}, 404
+
+            groups = list(mongo.db[GROUPS_COLLECTION].find({
+                GroupField.SUPERVISOR_ID: t_oid,
+                GroupField.STATUS: {"$ne": GroupStatus.DELETED},
+            }).sort(GroupField.CREATED_AT, -1))
+
+            projects = []
+            for g in groups:
+                gid_str = str(g["_id"])
+                resolved_members = _resolve_group_members(g)
+                # Count milestone submissions
+                sub_count = mongo.db.submissions.count_documents({"group_id": g["_id"]})
+
+                projects.append({
+                    "id": gid_str,
+                    "name": g.get(GroupField.NAME, ""),
+                    "project_title": g.get(GroupField.PROJECT_TITLE, "Untitled Project"),
+                    "course": g.get(GroupField.COURSE, ""),
+                    "dept": g.get(GroupField.DEPT, ""),
+                    "section": g.get(GroupField.SECTION, ""),
+                    "status": g.get(GroupField.STATUS, "pending"),
+                    "formation_status": g.get(GroupField.FORMATION_STATUS, "on_time"),
+                    "submission_status": g.get(GroupField.SUBMISSION_STATUS, "not_submitted"),
+                    "member_count": len(resolved_members),
+                    "members": resolved_members,
+                    "submissions_count": sub_count,
+                    "created_at": g.get(GroupField.CREATED_AT).isoformat() if g.get(GroupField.CREATED_AT) else None,
+                })
+
+            return {
+                "success": True,
+                "message": "Supervised projects retrieved.",
+                "data": {
+                    "teacher": {
+                        "id": str(teacher_doc["_id"]),
+                        "name": teacher_doc.get(UserFields.NAME, ""),
+                        "email": teacher_doc.get(UserFields.EMAIL, ""),
+                        "dept": teacher_doc.get(UserFields.DEPT, ""),
+                        "domains": teacher_doc.get(UserFields.DOMAINS, []),
+                        "active_supervision_count": len(projects),
+                    },
+                    "projects": projects,
+                    "total": len(projects),
+                },
+            }, 200
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "message": str(exc)}, 500
+

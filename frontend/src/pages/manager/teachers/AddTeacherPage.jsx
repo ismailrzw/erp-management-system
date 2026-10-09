@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { GraduationCap, CheckCircle2, AlertCircle } from 'lucide-react';
 import { teachersApi } from '../../../api/teachersApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { Toast } from '../../../components/ui/Toast';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export const AddTeacherPage = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     dept: 'CS',
-    type: 'Internal Faculty',
+    domainsInput: '',
   });
 
   const [departments, setDepartments] = useState([]);
@@ -55,13 +57,18 @@ export const AddTeacherPage = () => {
       return;
     }
 
+    const parsedDomains = formData.domainsInput
+      .split(',')
+      .map((d) => d.trim())
+      .filter(Boolean);
+
     try {
       setIsSubmitting(true);
       const res = await teachersApi.create({
         name: cleanName,
         email: cleanEmail,
         dept: formData.dept,
-        type: formData.type,
+        domains: parsedDomains,
       });
 
       if (res.success && res.data) {
@@ -78,30 +85,26 @@ export const AddTeacherPage = () => {
   };
 
   return (
-    <div style={{ maxWidth: '650px', margin: '0 auto' }}>
+    <div className="page-frame-container">
       <Toast
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      <div style={{ marginBottom: '20px' }}>
-        <button
-          type="button"
-          onClick={() => navigate('/manager/teachers/view')}
-          className="btn btn-back"
-          style={{ marginBottom: '10px' }}
-        >
-          <ArrowLeft size={16} />
-          <span>Back to Teachers List</span>
-        </button>
-        <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-          Add New Teacher / Evaluator
-        </h1>
-        <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-          Create an evaluator account. An initial login password will be generated.
-        </div>
-      </div>
+      <BackButton to="/manager/teachers/view" label="Back to Teachers List" />
+
+      <PageHeader
+        title="Add New Teacher / Supervisor"
+        subtitle="Create a university faculty member account. An initial login password will be generated."
+        breadcrumbs={[
+          { label: 'Home', to: '/manager/dashboard' },
+          { label: 'Teachers', to: '/manager/teachers/view' },
+          { label: 'Add New Teacher' },
+        ]}
+      />
+
+      <div style={{ maxWidth: '650px', margin: '0 auto' }}>
 
       {error && (
         <div
@@ -127,7 +130,7 @@ export const AddTeacherPage = () => {
         <div
           style={{
             backgroundColor: '#ffffff',
-            borderRadius: '6px',
+            borderRadius: '8px',
             border: '1px solid #e2e8f0',
             padding: '30px',
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
@@ -136,7 +139,7 @@ export const AddTeacherPage = () => {
         >
           <CheckCircle2 size={48} color="#16a34a" style={{ margin: '0 auto 12px' }} />
           <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#1e293b', marginBottom: '8px' }}>
-            Evaluator Created!
+            Teacher / Supervisor Created!
           </h2>
           <p style={{ color: '#64748b', fontSize: '13.5px', marginBottom: '24px' }}>
             Account for <strong>{createdTeacher.name}</strong> is active. Credentials:
@@ -173,7 +176,7 @@ export const AddTeacherPage = () => {
                   name: '',
                   email: '',
                   dept: departments[0]?.code || 'CS',
-                  type: 'Internal Faculty',
+                  domainsInput: '',
                 });
               }}
               className="btn btn-primary"
@@ -193,7 +196,7 @@ export const AddTeacherPage = () => {
         <div
           style={{
             backgroundColor: '#ffffff',
-            borderRadius: '6px',
+            borderRadius: '8px',
             border: '1px solid #e2e8f0',
             padding: '24px 28px',
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
@@ -222,48 +225,47 @@ export const AddTeacherPage = () => {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="e.g. sarah.ahmed@superior.edu.pk"
+                placeholder="e.g. sarah.ahmed@bnu.edu.pk"
                 required
                 style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '14px', marginBottom: '24px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Department *
-                </label>
-                <select
-                  value={formData.dept}
-                  onChange={(e) => setFormData({ ...formData, dept: e.target.value })}
-                  required
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 34px 9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
-                >
-                  {departments.length === 0 ? (
-                    <option value="CS">CS - Computer Science</option>
-                  ) : (
-                    departments.map((d) => (
-                      <option key={d.id || d._id || d.code} value={d.code}>
-                        {d.code} - {d.name}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                Department *
+              </label>
+              <select
+                value={formData.dept}
+                onChange={(e) => setFormData({ ...formData, dept: e.target.value })}
+                required
+                style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 34px 9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
+              >
+                {departments.length === 0 ? (
+                  <option value="CS">CS - Computer Science</option>
+                ) : (
+                  departments.map((d) => (
+                    <option key={d.id || d._id || d.code} value={d.code}>
+                      {d.code} - {d.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
 
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Faculty Type *
-                </label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  required
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 34px 9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
-                >
-                  <option value="Internal Faculty">Internal Faculty</option>
-                  <option value="External Industry">External Industry</option>
-                </select>
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                Expertise & Domains (Comma-separated)
+              </label>
+              <input
+                type="text"
+                value={formData.domainsInput}
+                onChange={(e) => setFormData({ ...formData, domainsInput: e.target.value })}
+                placeholder="e.g. Machine Learning, NLP, Data Science"
+                style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
+              />
+              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                Students can search and filter available supervisors by these expertise areas.
               </div>
             </div>
 
@@ -287,6 +289,7 @@ export const AddTeacherPage = () => {
           </form>
         </div>
       )}
+      </div>
     </div>
   );
 };

@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Trash2, RotateCcw, ArrowLeft, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Trash2, RotateCcw, RefreshCw, AlertTriangle } from 'lucide-react';
 import { teachersApi } from '../../../api/teachersApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export const TeacherTrashPage = () => {
   const [deletedTeachers, setDeletedTeachers] = useState([]);
@@ -13,8 +14,6 @@ export const TeacherTrashPage = () => {
   const [teacherToPermanentDelete, setTeacherToPermanentDelete] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
-
-  const navigate = useNavigate();
 
   const fetchDeleted = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -96,51 +95,36 @@ export const TeacherTrashPage = () => {
   };
 
   return loading ? (
-    <div><ContentLoader label="Loading deleted teachers..." /></div>
+    <div className="page-frame-container"><ContentLoader label="Loading deleted teachers..." /></div>
   ) : (
-    <div>
+    <div className="page-frame-container">
       <Toast
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '20px',
-        }}
-      >
-        <div>
-          <button
-            type="button"
-            onClick={() => navigate('/manager/teachers/view')}
-            className="btn btn-back"
-            style={{ marginBottom: '10px' }}
-          >
-            <ArrowLeft size={16} />
-            <span>Back to Active Teachers</span>
-          </button>
-          <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-            Teachers Recycle Bin
-          </h1>
-          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-            Manage soft-deleted teachers and evaluators.
-          </div>
-        </div>
+      <BackButton to="/manager/teachers/view" label="Back to Teachers" />
 
+      <PageHeader
+        title="Teachers Recycle Bin"
+        subtitle="Manage and restore soft-deleted teachers or permanently purge them."
+        breadcrumbs={[
+          { label: 'Home', to: '/manager/dashboard' },
+          { label: 'Teachers', to: '/manager/teachers/view' },
+          { label: 'Recycle Bin' },
+        ]}
+      >
         <button
           type="button"
           onClick={() => fetchDeleted(true)}
           disabled={refreshing}
-          className="btn btn-secondary btn-sm"
+          className="btn btn-secondary"
         >
           <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
           <span>Refresh</span>
         </button>
-      </div>
+      </PageHeader>
 
       <div
         style={{

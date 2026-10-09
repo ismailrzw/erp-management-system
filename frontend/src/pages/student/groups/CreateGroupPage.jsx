@@ -1,8 +1,9 @@
+import { GroupSetupPanel } from '../../../components/student/groups/GroupSetupPanel';
+import { useLiveRefresh } from '../../../hooks/useLiveRefresh';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   PlusCircle,
-  ArrowLeft,
   Info,
   AlertCircle,
   Loader2,
@@ -11,29 +12,34 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { studentGroupApi } from '../../../api/studentGroupApi';
-import { studentDashboardApi } from '../../../api/studentDashboardApi';
 import { Toast } from '../../../components/ui/Toast';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export const CreateGroupPage = () => {
+  const navigate = useNavigate();
   const [projectTitle, setProjectTitle] = useState('');
   const [proposalFile, setProposalFile] = useState(null);
   const [existingGroup, setExistingGroup] = useState(null);
+  const [departments, setDepartments] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [selectedDept, setSelectedDept] = useState('');
+  const [selectedCourse, setSelectedCourse] = useState('');
   const [studentInfo, setStudentInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [createdGroup, setCreatedGroup] = useState(null);
   const [error, setError] = useState('');
   const [toast, setToast] = useState({ message: '', type: 'success' });
-  const navigate = useNavigate();
 
   useEffect(() => {
     let isMounted = true;
     const checkState = async () => {
       try {
-        const res = await studentDashboardApi.getDashboard();
+        const res = await studentGroupApi.getEnrollment();
         if (isMounted && res.success && res.data) {
           setStudentInfo(res.data.student);
+          setDepartments(res.data.departments || []); setCourses(res.data.courses || []);
           if (res.data.group) {
             setExistingGroup(res.data.group);
           }
@@ -69,6 +75,9 @@ export const CreateGroupPage = () => {
       return;
     }
 
+    if (!(studentInfo?.dept || selectedDept) || !(studentInfo?.course || selectedCourse)) {
+      setError('Choose a valid Department and Course first.'); return;
+    }
     try {
       setSubmitting(true);
       setError('');
@@ -76,6 +85,8 @@ export const CreateGroupPage = () => {
       const formData = new FormData();
       formData.append('project_title', cleanTitle);
       formData.append('proposal', proposalFile);
+      formData.append('dept', studentInfo?.dept || selectedDept);
+      formData.append('course', studentInfo?.course || selectedCourse);
 
       const res = await studentGroupApi.createGroup(formData);
       if (res.success && res.data) {
@@ -83,11 +94,17 @@ export const CreateGroupPage = () => {
         setToast({ message: `Group '${res.data.name}' created successfully!`, type: 'success' });
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to create group');
+      setError(err.response?.data?.message || err.message || 'Group creation was not confirmed. Checking your current group.');
+      try { const latest = await studentGroupApi.getEnrollment(); if (latest.data?.group) setExistingGroup(latest.data.group); } catch { /* Preserve the form until the server can be reached. */ }
     } finally {
       setSubmitting(false);
     }
   };
+
+  useLiveRefresh(async () => {
+    const result = await studentGroupApi.getEnrollment();
+    if (result.data) { setStudentInfo(result.data.student); setDepartments(result.data.departments); setCourses(result.data.courses); }
+  });
 
   if (loading) {
     return (
@@ -100,6 +117,7 @@ export const CreateGroupPage = () => {
   if (existingGroup) {
     return (
       <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+        <BackButton to="/student/dashboard" label="Back to Dashboard" />
         <div className="card-responsive" style={{ borderTop: '3px solid var(--warning)', textAlign: 'center', padding: '36px 20px' }}>
           <div
             style={{
@@ -135,7 +153,7 @@ export const CreateGroupPage = () => {
               className="btn btn-secondary"
               onClick={() => navigate('/student/dashboard')}
             >
-              Back to Dashboard
+              Return to Dashboard
             </button>
           </div>
         </div>
@@ -161,7 +179,7 @@ export const CreateGroupPage = () => {
             Project Group Registered!
           </h2>
           <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '24px' }}>
-            Your group has been registered with auto-assigned identifier:
+            Your group has been registered with the permanent identifier:
           </p>
 
           <div
@@ -183,9 +201,10 @@ export const CreateGroupPage = () => {
           </div>
 
           <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '28px' }}>
-            You can now browse and request supervisors, and invite peers from your section to join your team.
+            Invite students in your Course. They must accept before they become members.
           </div>
 
+          <GroupSetupPanel initialGroup={createdGroup} />
           <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
             <button
               type="button"
@@ -212,23 +231,14 @@ export const CreateGroupPage = () => {
       )}
 
       {/* Back Button & Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-        <button
-          type="button"
-          className="btn btn-back"
-          onClick={() => navigate('/student/dashboard')}
-          title="Back to Dashboard"
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: 'var(--heading)' }}>
-            Create Project Group
-          </h1>
-          <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--muted)' }}>
-            Enter your project proposal details to generate your official FYP group.
-          </p>
-        </div>
+      <BackButton to="/student/dashboard" label="Back to Dashboard" />
+      <div style={{ marginBottom: '20px' }}>
+        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: 'var(--heading)' }}>
+          Create Project Group
+        </h1>
+        <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--muted)' }}>
+          Enter your project proposal details to generate your official FYP group.
+        </p>
       </div>
 
       {/* Info Card */}
@@ -239,10 +249,10 @@ export const CreateGroupPage = () => {
         <Info size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
         <div>
           <div>
-            You are creating a group for <b>{studentInfo?.course || 'Course'}</b> (Department of <b>{studentInfo?.dept}</b>, Section <b>{studentInfo?.section}</b>).
+            You are creating a group for <b>{studentInfo?.course || selectedCourse || 'your selected Course'}</b> (Department of <b>{studentInfo?.dept || selectedDept || 'not selected'}</b>).
           </div>
           <div style={{ marginTop: '4px', fontSize: '12px', opacity: 0.8 }}>
-            The system will <strong>automatically generate your Group Name</strong> (e.g. <code>GRP-2026-001</code>) and record your creation status against the course deadline.
+            The system will <strong>automatically generate your Group Name</strong> (e.g. <code>grp-2026-001</code>) and record your creation status against the course deadline.
           </div>
         </div>
       </div>
@@ -269,6 +279,11 @@ export const CreateGroupPage = () => {
           </div>
         )}
 
+        <section className="workflow-form" style={{ marginBottom: '20px' }}>
+          <label>Department{studentInfo?.dept ? <input value={studentInfo.dept} readOnly /> : <select value={selectedDept} onChange={(e) => { setSelectedDept(e.target.value); setSelectedCourse(''); }}><option value="">Select Department</option>{departments.map((d) => <option key={d.id || d._id} value={d.code}>{d.name}</option>)}</select>}</label>
+          <label>Course{studentInfo?.course ? <input value={studentInfo.course} readOnly /> : <select value={selectedCourse} onChange={(e) => setSelectedCourse(e.target.value)}><option value="">Select Course</option>{courses.filter((c) => c.dept === (studentInfo?.dept || selectedDept)).map((c) => <option key={c.id || c._id} value={c.name}>{c.name}</option>)}</select>}</label>
+          {!courses.some((c) => c.dept === (studentInfo?.dept || selectedDept)) && <p>No eligible Course is available. Ask the Manager to configure or correct enrollment.</p>}
+        </section>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
             <label

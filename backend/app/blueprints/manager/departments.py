@@ -65,7 +65,7 @@ class DepartmentList(Resource):
                       target_id=department["id"], new_value=department)
             return {"success": True, "message": "Department added successfully.", "data": department}, 201
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 409
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 409)
         except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 422
 
@@ -83,7 +83,7 @@ class DepartmentDetail(Resource):
                 return {"success": False, "message": "Department not found."}, 404
             return {"success": True, "data": department}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
 
     @departments_ns.doc(security="Bearer Auth")
     @departments_ns.expect(update_model)
@@ -99,7 +99,7 @@ class DepartmentDetail(Resource):
                       target_id=department_id, new_value=department)
             return {"success": True, "message": "Department updated.", "data": department}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 409
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 409)
         except Exception as exc:  # noqa: BLE001 - deliberate catch-all, returns error response to client
             return {"success": False, "message": str(exc)}, 422
 
@@ -115,7 +115,7 @@ class DepartmentDetail(Resource):
                       target_id=department_id, old_value=department)
             return {"success": True, "message": "Department deleted.", "data": {"deleted": True, "department_id": department_id}}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
 
 
 @departments_ns.route("/<string:department_id>/restore")
@@ -133,7 +133,7 @@ class DepartmentRestore(Resource):
                       target_id=department_id, new_value=department)
             return {"success": True, "message": "Department restored.", "data": {"restored": True, "department_id": department_id}}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
 
 
 @departments_ns.route("/<string:department_id>/permanent")
@@ -151,4 +151,4 @@ class DepartmentPermanentDelete(Resource):
                       target_id=department_id, old_value=department)
             return {"success": True, "message": "Department permanently deleted.", "data": {"deleted": True, "department_id": department_id}}, 200
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)

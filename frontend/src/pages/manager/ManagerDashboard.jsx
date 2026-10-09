@@ -11,11 +11,15 @@ import {
   Search,
   X,
   Edit2,
+  Target,
+  CheckCircle2,
+  ExternalLink,
 } from 'lucide-react';
 import { dashboardApi } from '../../api/dashboardApi';
 import { announcementsApi } from '../../api/announcementsApi';
 import { attachmentsApi } from '../../api/attachmentsApi';
 import { departmentsApi } from '../../api/departmentsApi';
+import { managerGroupsApi } from '../../api/managerGroupsApi';
 import { StatCard } from '../../components/ui/StatCard';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { AccordionItem } from '../../components/ui/Accordion';
@@ -66,6 +70,10 @@ export const ManagerDashboard = () => {
   // Delete Attachment Modal
   const [attToDelete, setAttToDelete] = useState(null);
 
+  // Pending groups approval queue
+  const [pendingGroups, setPendingGroups] = useState([]);
+  const [approvalProcessingId, setApprovalProcessingId] = useState(null);
+
   const fetchDashboardData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
@@ -87,6 +95,26 @@ export const ManagerDashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  useEffect(() => {
+    managerGroupsApi.getGroups({ status: 'pending', limit: 5 })
+      .then(res => { if (res.success && res.data) setPendingGroups(res.data.items || []); })
+      .catch(() => {});
+  }, []);
+
+  const handleApproveGroup = async (groupId) => {
+    setApprovalProcessingId(groupId);
+    try {
+      await managerGroupsApi.approveGroup(groupId);
+      setPendingGroups(prev => prev.filter(g => g.id !== groupId && g._id !== groupId));
+      fetchDashboardData(true);
+      setToast({ message: 'Group approved successfully!', type: 'success' });
+    } catch (err) {
+      setToast({ message: err.response?.data?.message || 'Failed to approve group', type: 'error' });
+    } finally {
+      setApprovalProcessingId(null);
+    }
+  };
 
   useEffect(() => {
     const loadRefData = async () => {
@@ -350,6 +378,195 @@ export const ManagerDashboard = () => {
           onClick={() => navigate('/manager/groups?tab=ungrouped')}
           subtext="Click to manage"
         />
+        <StatCard
+          title="Pending Approval"
+          count={data?.pending_groups}
+          iconName="clock"
+          variant="warning"
+          onClick={() => navigate('/manager/groups?status=pending')}
+          subtext="Groups awaiting review"
+        />
+        <StatCard
+          title="Groups Evaluated"
+          count={data?.total_groups_evaluated}
+          iconName="check"
+          variant="success"
+          onClick={() => navigate('/manager/groups?status=evaluated')}
+          subtext="Fully graded groups"
+        />
+      </div>
+
+      {/* Upcoming Milestones Bar */}
+      {data?.upcoming_milestones && data.upcoming_milestones.length > 0 && (
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
+            padding: '16px 20px',
+            marginBottom: '20px',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+            borderLeft: '4px solid #ea580c',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Target size={18} color="#ea580c" />
+              <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
+                Upcoming Sprint Milestones & Project Deadlines
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/manager/iterations')}
+              className="btn btn-ghost btn-sm"
+              style={{ fontSize: '12.5px' }}
+            >
+              <span>Manage Sprints & Milestones →</span>
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+            {data.upcoming_milestones.slice(0, 4).map((m) => {
+              const dl = new Date(m.deadline);
+              const isPast = dl < new Date();
+              return (
+                <div
+                  key={m.id || m._id}
+                  style={{
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    padding: '10px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
+                      {m.sprint_name || 'Sprint'} #{m.milestone_order || 1}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        backgroundColor: isPast ? '#fee2e2' : '#fef3c7',
+                        color: isPast ? '#b91c1c' : '#b45309',
+                      }}
+                    >
+                      {isPast ? 'Passed' : 'Upcoming'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', marginBottom: '4px' }}>
+                    {m.title}
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                    Due: {formatDate(m.deadline)} • {m.course || 'All Courses'}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Pending Approval Queue */}
+      <div
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+          marginBottom: '24px',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            padding: '16px 20px',
+            borderBottom: '1px solid #e2e8f0',
+            borderTop: '3px solid #f59e0b',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '8px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Target size={18} color="#d97706" />
+            <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
+              Pending Group Approvals
+            </h2>
+            {pendingGroups.length > 0 && (
+              <span style={{ fontSize: '11px', fontWeight: 600, backgroundColor: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '12px', border: '1px solid #fde68a' }}>
+                {pendingGroups.length}
+              </span>
+            )}
+          </div>
+          <button type="button" onClick={() => navigate('/manager/groups?status=pending')} className="btn btn-ghost btn-sm">
+            <ExternalLink size={13} />
+            <span>View All</span>
+          </button>
+        </div>
+
+        {pendingGroups.length === 0 ? (
+          <div style={{ padding: '28px', textAlign: 'center', color: '#94a3b8', fontSize: '13.5px', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <CheckCircle2 size={32} color="#16a34a" style={{ opacity: 0.7 }} />
+            <span style={{ fontWeight: 600, color: '#475569' }}>All caught up!</span>
+            <span>No pending group proposals awaiting your approval.</span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {pendingGroups.map((grp) => {
+              const id = grp.id || grp._id;
+              const isProcessing = approvalProcessingId === id;
+              return (
+                <div
+                  key={id}
+                  style={{
+                    padding: '14px 20px',
+                    borderBottom: '1px solid #f1f5f9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: '14px', color: '#0f172a' }}>{grp.name}</div>
+                    <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
+                      {grp.project_title || 'No title'} • {grp.course || 'N/A'} • {grp.dept || 'N/A'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/manager/groups/${id}`)}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      <ExternalLink size={13} />
+                      <span>Review</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApproveGroup(id)}
+                      disabled={isProcessing}
+                      className="btn btn-success btn-sm"
+                    >
+                      <CheckCircle2 size={13} />
+                      <span>{isProcessing ? 'Approving...' : 'Approve'}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="dashboard-dual-grid">

@@ -1,3 +1,6 @@
+import { EditMenu } from '../../../components/ui/EditMenu';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { iterationsApi } from '../../../api/iterationsApi';
 import { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { EmptyState } from '../../../components/ui/EmptyState';
@@ -8,17 +11,19 @@ import { rubricTemplatesApi } from '../../../api/rubricTemplatesApi';
 import { coursesApi } from '../../../api/coursesApi';
 import { RubricBuilderModal } from './RubricBuilderModal';
 import { IterationsTabBar } from './IterationsTabBar';
-import { Plus, Edit2, Trash2, FileText, ChevronDown, ChevronUp, Layers, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, FileText, ChevronDown, ChevronUp, Layers, AlertTriangle } from 'lucide-react';
 
 export const RubricTemplatesPage = () => {
+  const [query] = useSearchParams(); const navigate = useNavigate();
   const [templates, setTemplates] = useState([]);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [loadError, setLoadError] = useState('');
   const [expandedId, setExpandedId] = useState(null);
 
   // Modal state
-  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+  const [isBuilderOpen, setIsBuilderOpen] = useState(Boolean(query.get('iteration_id')));
   const [editingTemplate, setEditingTemplate] = useState(null);
 
   // Delete modal state
@@ -29,9 +34,9 @@ export const RubricTemplatesPage = () => {
     setLoading(true);
     try {
       const res = await rubricTemplatesApi.getAll();
-      setTemplates(res.data || []);
+      setTemplates(res.data || []); setLoadError('');
     } catch (err) {
-      setToast({ type: 'error', message: err.message || 'Failed to fetch templates.' });
+      setLoadError(err.response?.data?.message || 'Templates could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -79,7 +84,7 @@ export const RubricTemplatesPage = () => {
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="page-frame-container iterations-page">
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
       {/* Top Sub-Navigation Bar */}
@@ -101,7 +106,7 @@ export const RubricTemplatesPage = () => {
 
       {loading ? (
         <ContentLoader label="Loading rubric templates..." />
-      ) : templates.length === 0 ? (
+      ) : loadError ? (<EmptyState title="Could not load rubrics" description={loadError} actionLabel="Retry" onAction={fetchTemplates} />) : templates.length === 0 ? (
         <EmptyState
           title="No Rubric Templates"
           description="Create your first rubric template to reuse across multiple iterations."
@@ -190,23 +195,7 @@ export const RubricTemplatesPage = () => {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handleEdit(tpl); }}
-                      title="Edit Template"
-                      className="btn btn-secondary btn-sm"
-                    >
-                      <Edit2 size={14} />
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setTemplateToDelete(tpl); }}
-                      title="Delete Template"
-                      className="btn btn-danger-outline btn-sm"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div onClick={event => event.stopPropagation()}><EditMenu><button type="button" onClick={() => handleEdit(tpl)}>Edit Rubric</button><button type="button" onClick={() => setTemplateToDelete(tpl)} className="danger">Delete Template</button></EditMenu></div>
                     {isExpanded ? <ChevronUp size={18} style={{ color: '#94a3b8' }} /> : <ChevronDown size={18} style={{ color: '#94a3b8' }} />}
                   </div>
                 </div>
@@ -240,7 +229,7 @@ export const RubricTemplatesPage = () => {
                                 border: '1px solid rgba(0, 115, 170, 0.2)',
                               }}
                             >
-                              Weight: {c.weight}%
+                              Marks: {c.weight}
                             </span>
                           </div>
                           {c.levels && (
@@ -273,7 +262,11 @@ export const RubricTemplatesPage = () => {
         template={editingTemplate}
         templateMode={!editingTemplate}
         courses={courses}
-        onSave={() => {
+        onSave={async (template) => {
+          if (query.get('iteration_id')) {
+            await iterationsApi.update(query.get('iteration_id'), { rubric_template_id: template._id || template.id });
+            navigate('/manager/iterations');
+          }
           setToast({ type: 'success', message: editingTemplate ? 'Template updated.' : 'Template created.' });
           fetchTemplates();
         }}

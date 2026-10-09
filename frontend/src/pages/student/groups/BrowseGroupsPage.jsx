@@ -59,25 +59,25 @@ export const BrowseGroupsPage = () => {
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-      const [dashRes, invitesRes, sentReqRes, groupsRes] = await Promise.all([
+      const [dashRes, invitesRes, sentReqRes, groupsRes] = await Promise.allSettled([
         studentDashboardApi.getDashboard(),
         studentGroupApi.getPendingInvitations(),
         studentGroupApi.getMySentRequests(),
         studentGroupApi.browseGroups({ search: searchQuery, status: statusFilter }),
       ]);
 
-      if (dashRes.success && dashRes.data) {
-        setStudentInfo(dashRes.data.student);
-        setExistingGroup(dashRes.data.group);
+      if (dashRes.status === 'fulfilled' && dashRes.value?.success && dashRes.value.data) {
+        setStudentInfo(dashRes.value.data.student);
+        setExistingGroup(dashRes.value.data.group);
       }
-      if (invitesRes.success && invitesRes.data) {
-        setInvitations(invitesRes.data.items || invitesRes.data || []);
+      if (invitesRes.status === 'fulfilled' && invitesRes.value?.success && invitesRes.value.data) {
+        setInvitations(invitesRes.value.data.items || invitesRes.value.data || []);
       }
-      if (sentReqRes.success && sentReqRes.data) {
-        setSentRequests(sentReqRes.data.items || []);
+      if (sentReqRes.status === 'fulfilled' && sentReqRes.value?.success && sentReqRes.value.data) {
+        setSentRequests(sentReqRes.value.data.items || []);
       }
-      if (groupsRes.success && groupsRes.data) {
-        const rawGroups = groupsRes.data.items || [];
+      if (groupsRes.status === 'fulfilled' && groupsRes.value?.success && groupsRes.value.data) {
+        const rawGroups = groupsRes.value.data.items || [];
         rawGroups.sort((a, b) => (b.is_my_group ? 1 : 0) - (a.is_my_group ? 1 : 0));
         setGroups(rawGroups);
       }
@@ -515,7 +515,7 @@ export const BrowseGroupsPage = () => {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))',
                 gap: '16px',
               }}
             >
@@ -716,6 +716,15 @@ export const BrowseGroupsPage = () => {
                           <Users size={12} />
                           <span>Group Full</span>
                         </span>
+                      ) : g.can_request_to_join ? (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenJoinModal(g)}
+                          className="btn btn-primary btn-sm"
+                        >
+                          <UserPlus size={13} />
+                          <span>Request to Join</span>
+                        </button>
                       ) : existingGroup ? (
                         <span
                           title="You must leave your current group to request to join another."
@@ -727,16 +736,7 @@ export const BrowseGroupsPage = () => {
                         >
                           In Another Group
                         </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenJoinModal(g)}
-                          className="btn btn-primary btn-sm"
-                        >
-                          <UserPlus size={13} />
-                          <span>Request to Join</span>
-                        </button>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 );
