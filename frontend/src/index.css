@@ -648,16 +648,48 @@ html, body {
 }
 
 /* Back — text link style, no background */
+.page-back-slot {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+}
+
 .btn-back {
   background: none;
   border: none;
   color: #64748b;
-  padding: 0;
+  padding: 4px 0;
   font-weight: 500;
-  font-size: 13px;
+  font-size: 13.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: color 0.15s ease, transform 0.15s ease;
+  line-height: 1;
 }
+
 .btn-back:hover:not(:disabled) {
-  color: #334155;
+  color: #0f172a;
+}
+
+.btn-back:hover:not(:disabled) svg {
+  transform: translateX(-2px);
+}
+
+.btn-back svg {
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-back-label {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .btn-back-label {
+    display: inline;
+  }
 }
 
 /* Size modifiers */
