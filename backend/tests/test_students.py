@@ -5,10 +5,15 @@ STUDENTS_URL = "/api/manager/students/"
 
 
 def student_payload(roll="f2024-001"):
-    return {"name": "Ada Lovelace", "roll": roll, "dept": "CS", "section": "A", "session": "2024", "course": "PBL", "teacher": "Dr. Turing", "recovery_email": "ada@example.com"}
+    return {"name": "Ada Lovelace", "roll": roll, "dept": "CS", "section": "A", "session": "2024", "course": "PBL", "recovery_email": "ada@example.com"}
 
 
 def create_student(client, manager_headers, roll="f2024-001"):
+    from app.extensions import mongo
+
+    with client.application.app_context():
+        mongo.db.departments.update_one({"code": "CS"}, {"$set": {"name": "Computer Science", "deleted": False}}, upsert=True)
+        mongo.db.courses.update_one({"name": "PBL"}, {"$set": {"dept": "CS", "min_group": 2, "max_group": 4, "deleted": False}}, upsert=True)
     response = client.post(STUDENTS_URL, json=student_payload(roll), headers=manager_headers)
     assert response.status_code == 201, response.get_json()
     return response.get_json()["data"]
@@ -37,6 +42,8 @@ def test_list_students_returns_paginated_structure(client, manager_headers):
     assert data["total"] == 1
     assert data["items"][0]["roll"] == "f2024-001"
     assert "password_hash" not in data["items"][0]
+    assert "teacher" not in data["items"][0]
+    assert "assigned_teacher_id" not in data["items"][0]
 
 
 def test_get_student_by_id(client, manager_headers):
@@ -44,6 +51,7 @@ def test_get_student_by_id(client, manager_headers):
     response = client.get(f"{STUDENTS_URL}{student['student_id']}", headers=manager_headers)
     assert response.status_code == 200, response.get_json()
     assert response.get_json()["data"]["id"] == student["student_id"]
+    assert "teacher" not in response.get_json()["data"]
 
 
 def test_get_missing_student_returns_404(client, manager_headers):
@@ -53,12 +61,13 @@ def test_get_missing_student_returns_404(client, manager_headers):
 
 def test_update_student(client, manager_headers):
     student = create_student(client, manager_headers)
-    response = client.put(f"{STUDENTS_URL}{student['student_id']}", json={"name": "Grace Hopper", "section": "B"}, headers=manager_headers)
+    response = client.put(f"{STUDENTS_URL}{student['student_id']}", json={"section": "B", "teacher": "Dr. Ignored"}, headers=manager_headers)
     assert response.status_code == 200, response.get_json()
     assert response.get_json()["data"]["updated"] is True
     fetched = client.get(f"{STUDENTS_URL}{student['student_id']}", headers=manager_headers).get_json()["data"]
-    assert fetched["name"] == "Grace Hopper"
+    assert fetched["name"] == "Ada Lovelace"
     assert fetched["section"] == "B"
+    assert "teacher" not in fetched
 
 
 @pytest.mark.parametrize("method,path,json", [

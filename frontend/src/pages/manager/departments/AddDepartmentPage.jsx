@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Building2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { Toast } from '../../../components/ui/Toast';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export const AddDepartmentPage = () => {
   const [formData, setFormData] = useState({ code: '', name: '' });
@@ -47,40 +49,26 @@ export const AddDepartmentPage = () => {
   };
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+    <div className="page-frame-container">
       <Toast
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      <div style={{ marginBottom: '20px' }}>
-        <button
-          type="button"
-          onClick={() => navigate('/manager/departments/view')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'none',
-            border: 'none',
-            color: '#64748b',
-            cursor: 'pointer',
-            fontSize: '13px',
-            padding: 0,
-            marginBottom: '10px',
-          }}
-        >
-          <ArrowLeft size={16} />
-          <span>Back to Departments</span>
-        </button>
-        <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-          Add New Department
-        </h1>
-        <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-          Define a new academic department for the PBL portal.
-        </div>
-      </div>
+      <BackButton to="/manager/departments/view" label="Back to Departments" />
+
+      <PageHeader
+        title="Add New Department"
+        subtitle="Define a new academic department for the PBL portal."
+        breadcrumbs={[
+          { label: 'Home', to: '/manager/dashboard' },
+          { label: 'Departments', to: '/manager/departments/view' },
+          { label: 'Add New Department' },
+        ]}
+      />
+
+      <div style={{ maxWidth: '600px', margin: '0 auto' }}>
 
       {error && (
         <div
@@ -241,6 +229,7 @@ export const AddDepartmentPage = () => {
           </form>
         </div>
       )}
+      </div>
     </div>
   );
 };

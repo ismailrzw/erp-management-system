@@ -41,11 +41,11 @@ def test_get_profile_rejects_manager_token(client, manager_headers):
 
 # ── PUT profile ────────────────────────────────────────────────────────────────
 
-def test_update_profile_name(client, real_student_headers):
-    """PUT updates name successfully."""
+def test_update_profile_name(client, real_student_headers, student_user):
+    """PUT rejects a name change and preserves the recorded identity."""
     response = client.put(PROFILE_URL, json={"name": "Sara Khan"}, headers=real_student_headers)
-    assert response.status_code == 200, response.get_json()
-    assert response.get_json()["data"]["name"] == "Sara Khan"
+    assert response.status_code == 422, response.get_json()
+    assert client.get(PROFILE_URL, headers=real_student_headers).get_json()["data"]["name"] == student_user["name"]
 
 
 def test_update_profile_recovery_email(client, real_student_headers):
@@ -77,11 +77,10 @@ def test_update_profile_empty_body_returns_400(client, real_student_headers):
 
 
 def test_update_profile_cannot_change_roll(client, real_student_headers, student_user):
-    """Roll number must be immutable — the field is silently ignored."""
+    """Roll number must be immutable and rejected explicitly."""
     response = client.put(PROFILE_URL, json={"roll": "HACKED-ROLL"}, headers=real_student_headers)
-    # Either 400 (no updatable fields) or 200 with roll unchanged
-    if response.status_code == 200:
-        assert response.get_json()["data"]["roll"] == student_user["roll"]
+    assert response.status_code == 422, response.get_json()
+    assert client.get(PROFILE_URL, headers=real_student_headers).get_json()["data"]["roll"] == student_user["roll"]
 
 
 def test_update_profile_name_too_short_returns_422(client, real_student_headers):

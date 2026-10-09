@@ -5,7 +5,7 @@ Student Profile API endpoints.
 Routes
 ------
 GET  /api/student/profile                  — get own profile
-PUT  /api/student/profile                  — update name / recovery_email
+PUT  /api/student/profile                  — update recovery_email
 POST /api/student/profile/change-password  — change password securely
 
 Data lifecycle
@@ -43,7 +43,6 @@ student_profile_ns = Namespace(
 
 # ── Swagger request models ─────────────────────────────────────────────────────
 update_profile_model = student_profile_ns.model("StudentProfileUpdate", {
-    "name":           fields.String(description="Full name (2–100 chars)"),
     "recovery_email": fields.String(description="Optional personal/recovery email"),
 })
 
@@ -76,7 +75,7 @@ class StudentProfile(Resource):
     @student_profile_ns.expect(update_profile_model)
     @role_required(Role.STUDENT)
     def put(self):
-        """Update own name and/or recovery email.  Roll, email, dept cannot be changed."""
+        """Update own recovery email; identity and enrollment are read-only."""
         # Check 1 — schema validation
         try:
             validated = UpdateProfileSchema().load(request.get_json() or {})

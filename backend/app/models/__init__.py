@@ -1,4 +1,4 @@
-﻿# backend/app/models/__init__.py
+# backend/app/models/__init__.py
 """
 Models package.
 
@@ -18,7 +18,7 @@ from .group import Field as GroupField
 from .group import Status as GroupStatus
 from .student import COLLECTION as STUDENT_COLLECTION
 from .student import Field as StudentField
-from .teacher import TeacherType
+from .teacher import EvaluatorType
 from .user import Role, UserFields, hash_password, utcnow, verify_password
 
 __all__ = [
@@ -30,11 +30,11 @@ __all__ = [
     "AttachmentFields",
     "CourseField",
     "DepartmentFields",
+    "EvaluatorType",
     "GroupField",
     "GroupStatus",
     "Role",
     "StudentField",
-    "TeacherType",
     "UserFields",
     "hash_password",
     "utcnow",

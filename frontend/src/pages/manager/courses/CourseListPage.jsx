@@ -7,7 +7,6 @@ import {
   Edit2,
   RefreshCw,
   BookOpen,
-  Calendar,
 } from 'lucide-react';
 import { coursesApi } from '../../../api/coursesApi';
 import { departmentsApi } from '../../../api/departmentsApi';
@@ -15,7 +14,6 @@ import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
-import { formatDate } from '../../../utils/dateUtils';
 
 export const CourseListPage = () => {
   const [courses, setCourses] = useState([]);
@@ -34,7 +32,6 @@ export const CourseListPage = () => {
     dept: '',
     min_group: 1,
     max_group: 4,
-    group_formation_deadline: '',
   });
   const [courseToDelete, setCourseToDelete] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -104,14 +101,12 @@ export const CourseListPage = () => {
   };
 
   const handleOpenEdit = (course) => {
-    const rawDeadline = course.group_formation_deadline || course.deadline;
     setEditFormData({
       id: course.id || course._id,
       name: course.name,
       dept: course.dept,
       min_group: course.min_group || 1,
       max_group: course.max_group || 4,
-      group_formation_deadline: rawDeadline ? rawDeadline.split('T')[0] : '',
     });
     setIsEditModalOpen(true);
   };
@@ -125,7 +120,6 @@ export const CourseListPage = () => {
         dept: editFormData.dept,
         min_group: parseInt(editFormData.min_group, 10),
         max_group: parseInt(editFormData.max_group, 10),
-        group_formation_deadline: editFormData.group_formation_deadline || undefined,
       });
       setToast({ message: 'Course updated successfully', type: 'success' });
       setIsEditModalOpen(false);
@@ -147,6 +141,7 @@ export const CourseListPage = () => {
       await coursesApi.delete(courseToDelete.id || courseToDelete._id);
       setToast({ message: 'Course moved to Recycle Bin', type: 'success' });
       setCourseToDelete(null);
+      setIsEditModalOpen(false);
       fetchCourses(true);
     } catch (err) {
       setToast({
@@ -166,7 +161,7 @@ export const CourseListPage = () => {
           subtitle="Manage course offerings, credit hours, and department affiliations."
           breadcrumbs={[
             { label: 'Home', to: '/manager/dashboard' },
-            { label: 'Courses', to: '/manager/courses' },
+            { label: 'Courses', to: '/manager/courses/view' },
             { label: 'View All Courses' },
           ]}
         />
@@ -320,14 +315,13 @@ export const CourseListPage = () => {
                 <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '160px' }}>Course Name</th>
                 <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '70px' }}>Dept</th>
                 <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '110px' }}>Group Limits</th>
-                <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, minWidth: '180px' }}>Group Formation Deadline</th>
                 <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 600, textAlign: 'right', minWidth: '100px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {courses.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: '36px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                  <td colSpan={4} style={{ padding: '36px 20px', textAlign: 'center', color: '#94a3b8' }}>
                     <BookOpen size={36} style={{ margin: '0 auto 10px', opacity: 0.5 }} />
                     <div style={{ fontWeight: 600, color: '#475569', fontSize: '14px' }}>No courses found</div>
                   </td>
@@ -356,12 +350,6 @@ export const CourseListPage = () => {
                     <td style={{ padding: '12px 16px', color: '#475569' }}>
                       {c.min_group || 1} – {c.max_group || 4} members
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12.5px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Calendar size={13} />
-                        <span>{formatDate(c.group_formation_deadline || c.deadline) || 'No deadline'}</span>
-                      </div>
-                    </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
                         <button
@@ -371,14 +359,6 @@ export const CourseListPage = () => {
                         >
                           <Edit2 size={13} />
                           <span>Edit</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCourseToDelete(c)}
-                          className="btn btn-danger-outline btn-sm"
-                        >
-                          <Trash2 size={13} />
-                          <span>Delete</span>
                         </button>
                       </div>
                     </td>
@@ -453,19 +433,10 @@ export const CourseListPage = () => {
             </div>
           </div>
 
-          <div style={{ marginBottom: '18px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
-              Group Formation Deadline (YYYY-MM-DD)
-            </label>
-            <input
-              type="date"
-              value={editFormData.group_formation_deadline}
-              onChange={(e) => setEditFormData({ ...editFormData, group_formation_deadline: e.target.value })}
-              style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 12px', fontSize: '13.5px', outline: 'none' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
+            <button type="button" disabled={actionLoading} className="btn btn-danger-outline" onClick={() => setCourseToDelete({ id: editFormData.id, name: editFormData.name })}>
+              <Trash2 size={13} /> Delete Course
+            </button>
             <button
               type="button"
               onClick={() => setIsEditModalOpen(false)}

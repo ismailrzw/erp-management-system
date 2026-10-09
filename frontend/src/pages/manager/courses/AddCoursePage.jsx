@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { BookOpen, CheckCircle2, AlertCircle } from 'lucide-react';
 import { coursesApi } from '../../../api/coursesApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { Toast } from '../../../components/ui/Toast';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export const AddCoursePage = () => {
   const [formData, setFormData] = useState({
@@ -11,7 +13,6 @@ export const AddCoursePage = () => {
     dept: 'CS',
     min_group: 1,
     max_group: 4,
-    group_formation_deadline: '',
   });
 
   const [departments, setDepartments] = useState([]);
@@ -74,7 +75,6 @@ export const AddCoursePage = () => {
         dept: formData.dept,
         min_group: minGroup,
         max_group: maxGroup,
-        group_formation_deadline: formData.group_formation_deadline || undefined,
       });
 
       if (res.success && res.data) {
@@ -91,30 +91,26 @@ export const AddCoursePage = () => {
   };
 
   return (
-    <div style={{ maxWidth: '650px', margin: '0 auto' }}>
+    <div className="page-frame-container">
       <Toast
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      <div style={{ marginBottom: '20px' }}>
-        <button
-          type="button"
-          onClick={() => navigate('/manager/courses/view')}
-          className="btn btn-back"
-          style={{ marginBottom: '10px' }}
-        >
-          <ArrowLeft size={16} />
-          <span>Back to Courses List</span>
-        </button>
-        <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-          Add New Course
-        </h1>
-        <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-          Configure a course with group size boundaries and group formation cutoff deadline.
-        </div>
-      </div>
+      <BackButton to="/manager/courses/view" label="Back to Courses List" />
+
+      <PageHeader
+        title="Add New Course"
+        subtitle="Configure a course with department and student group size boundaries."
+        breadcrumbs={[
+          { label: 'Home', to: '/manager/dashboard' },
+          { label: 'Courses', to: '/manager/courses/view' },
+          { label: 'Add New Course' },
+        ]}
+      />
+
+      <div style={{ maxWidth: '650px', margin: '0 auto' }}>
 
       {error && (
         <div
@@ -165,7 +161,6 @@ export const AddCoursePage = () => {
                   dept: departments[0]?.code || 'CS',
                   min_group: 1,
                   max_group: 4,
-                  group_formation_deadline: '2026-12-31',
                 });
               }}
               className="btn btn-primary"
@@ -258,24 +253,7 @@ export const AddCoursePage = () => {
               </div>
             </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
-                  Group Formation Deadline <span style={{ fontWeight: 400, color: '#64748b' }}>(Optional)</span>
-                </label>
-              </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', lineHeight: '1.4' }}>
-                Group formation deadlines, rubrics, and deliverable penalties are managed dynamically within <strong>Iteration Milestones</strong>. You may also specify an optional fallback deadline date here.
-              </div>
-              <input
-                type="date"
-                value={formData.group_formation_deadline}
-                onChange={(e) => setFormData({ ...formData, group_formation_deadline: e.target.value })}
-                style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px' }}>
               <button
                 type="button"
                 onClick={() => navigate('/manager/courses/view')}
@@ -295,6 +273,7 @@ export const AddCoursePage = () => {
           </form>
         </div>
       )}
+      </div>
     </div>
   );
 };

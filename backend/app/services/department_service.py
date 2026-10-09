@@ -6,6 +6,8 @@ from bson import ObjectId
 
 from app.extensions import mongo
 from app.models.department import DepartmentFields
+from app.services.academic_integrity_service import assert_deletable
+from app.services.academic_write_service import academic_write
 
 
 def _object_id(department_id: str) -> ObjectId:
@@ -27,6 +29,7 @@ def _serialize(document: dict | None) -> dict | None:
     return result
 
 
+@academic_write
 def create_department(name: str, code: str) -> dict:
     """Create a new department. Raises ValueError if the code already exists."""
     code = code.strip().upper()
@@ -71,6 +74,7 @@ def get_department_by_id(department_id: str) -> dict | None:
     return _serialize(document)
 
 
+@academic_write
 def update_department(department_id: str, name: str | None = None, code: str | None = None) -> dict | None:
     """Update a department's name and/or code. Raises ValueError on duplicate code."""
     updates = {DepartmentFields.UPDATED_AT: datetime.now(timezone.utc)}
@@ -78,6 +82,9 @@ def update_department(department_id: str, name: str | None = None, code: str | N
         updates[DepartmentFields.NAME] = name.strip()
     if code is not None:
         code = code.strip().upper()
+        current = mongo.db.departments.find_one({"_id": _object_id(department_id)})
+        if current and code != current.get("code"):
+            assert_deletable("department", current, action="change the code of")
         existing = mongo.db[DepartmentFields.COLLECTION].find_one({
             DepartmentFields.CODE: code,
             DepartmentFields.ID: {"$ne": _object_id(department_id)},
@@ -95,8 +102,13 @@ def update_department(department_id: str, name: str | None = None, code: str | N
     return _serialize(result)
 
 
+@academic_write
 def soft_delete_department(department_id: str) -> dict | None:
     """Soft-delete a department (moves it to the recycle bin)."""
+    document = mongo.db.departments.find_one({"_id": _object_id(department_id)})
+    if document is None:
+        return None
+    assert_deletable("department", document)
     result = mongo.db[DepartmentFields.COLLECTION].find_one_and_update(
         {DepartmentFields.ID: _object_id(department_id)},
         {"$set": {
@@ -109,8 +121,13 @@ def soft_delete_department(department_id: str) -> dict | None:
     return _serialize(result)
 
 
+@academic_write
 def restore_department(department_id: str) -> dict | None:
     """Restore a soft-deleted department from the recycle bin."""
+    from app.services.academic_integrity_service import assert_restorable
+    record = mongo.db.departments.find_one({"_id": _object_id(department_id)})
+    if record:
+        assert_restorable("department", record)
     result = mongo.db[DepartmentFields.COLLECTION].find_one_and_update(
         {DepartmentFields.ID: _object_id(department_id)},
         {"$set": {
@@ -123,6 +140,7 @@ def restore_department(department_id: str) -> dict | None:
     return _serialize(result)
 
 
+@academic_write
 def permanent_delete_department(department_id: str) -> dict | None:
     """Permanently remove a soft-deleted department. Only allowed if already soft-deleted."""
     document = mongo.db[DepartmentFields.COLLECTION].find_one({DepartmentFields.ID: _object_id(department_id)})
@@ -130,5 +148,6 @@ def permanent_delete_department(department_id: str) -> dict | None:
         return None
     if not document.get(DepartmentFields.DELETED):
         raise ValueError("Department must be soft-deleted before it can be permanently deleted.")
+    assert_deletable("department", document)
     mongo.db[DepartmentFields.COLLECTION].delete_one({DepartmentFields.ID: _object_id(department_id)})
     return _serialize(document)

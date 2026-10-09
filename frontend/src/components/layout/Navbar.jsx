@@ -1,5 +1,6 @@
+import { NotificationBell } from './NotificationBell';
 import { useState, useRef, useEffect } from 'react';
-import { Menu, Bell, ChevronDown, LogOut, User as UserIcon } from 'lucide-react';
+import { Menu, ChevronDown, LogOut, User as UserIcon } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { useNavigate } from 'react-router-dom';
 
@@ -41,16 +42,6 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
     if (role === 'evaluator') return 'Evaluator Portal';
     if (role === 'pbl_manager') return 'PBL Management Portal';
     return 'PBL Portal';
-  };
-
-  const handleNotificationClick = () => {
-    if (user?.role === 'student') {
-      navigate('/student/dashboard');
-    } else if (user?.role === 'evaluator') {
-      navigate('/evaluator/dashboard');
-    } else {
-      navigate('/manager/dashboard');
-    }
   };
 
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
@@ -189,23 +180,7 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={handleNotificationClick}
-          style={{
-            border: 'none',
-            background: 'none',
-            color: '#64748b',
-            cursor: 'pointer',
-            padding: '6px',
-            borderRadius: '50%',
-            display: 'flex',
-            position: 'relative',
-          }}
-          title="Notifications"
-        >
-          <Bell size={19} />
-        </button>
+        <NotificationBell />
 
         <div style={{ position: 'relative' }} ref={dropdownRef}>
           <button
@@ -277,6 +252,8 @@ export const Navbar = ({ onToggleSidebar, isSidebarCollapsed, isMobileView }) =>
                     navigate('/student/settings');
                   } else if (user?.role === 'evaluator') {
                     navigate('/evaluator/settings');
+                  } else if (user?.role === 'teacher') {
+                    navigate('/teacher/profile');
                   } else {
                     navigate('/manager/settings');
                   }

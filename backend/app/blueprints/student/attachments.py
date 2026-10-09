@@ -19,7 +19,7 @@ from flask import send_file
 from flask_restx import Namespace, Resource
 
 from app.models.user import Role
-from app.services.attachment_service import download_attachment, list_attachments
+from app.services.attachment_service import download_attachment
 from app.utils.decorators import role_required
 
 # ── Namespace ──────────────────────────────────────────────────────────────────
@@ -36,7 +36,10 @@ class StudentAttachmentList(Resource):
     def get(self):
         """List all uploaded attachments.  Students may download but not upload or delete."""
         try:
-            items = list_attachments()
+            from flask_jwt_extended import get_jwt_identity
+
+            from app.services.file_access_service import visible_attachments
+            items = visible_attachments(get_jwt_identity())
             # Strip internal file_path from student-facing responses
             for item in items:
                 item.pop("file_path", None)
@@ -57,6 +60,10 @@ class StudentAttachmentDownload(Resource):
     def get(self, attachment_id):
         """Download an attachment file by its ID."""
         try:
+            from flask_jwt_extended import get_jwt_identity
+
+            from app.services.file_access_service import authorize_attachment
+            authorize_attachment(get_jwt_identity(), attachment_id)
             result = download_attachment(attachment_id)
             if result is None:
                 return {"success": False, "message": "Attachment not found."}, 404
@@ -65,6 +72,6 @@ class StudentAttachmentDownload(Resource):
         except FileNotFoundError as exc:
             return {"success": False, "message": str(exc)}, 404
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}, 400
+            return {"success": False, "message": str(exc)}, getattr(exc, "status_code", 400)
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "message": str(exc)}, 500

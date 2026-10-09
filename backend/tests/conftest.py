@@ -99,6 +99,23 @@ def client(app):
         yield test_client
 
 
+@pytest.fixture(autouse=True)
+def isolate_email_delivery(monkeypatch):
+    """Tests must never send credentials or notifications through configured mail providers."""
+    monkeypatch.setattr("app.services.email_service._dispatch_email", lambda *args, **kwargs: True)
+
+
+@pytest.fixture
+def academic_setup(app):
+    """Create real academic parents only in tests that need enrolled students."""
+    with app.app_context():
+        for code, course in (("CS", "PBL"), ("SE", "Final Year Project")):
+            mongo.db.departments.update_one({"code": code}, {"$set": {"name": code, "deleted": False}}, upsert=True)
+            mongo.db.courses.update_one({"name": course}, {"$set": {
+                "dept": code, "deleted": False, "min_group": 2, "max_group": 4,
+            }}, upsert=True)
+
+
 @pytest.fixture
 def manager_token(client) -> str:
     response = client.post("/api/auth/login", json={"email": MANAGER_EMAIL, "password": MANAGER_PASSWORD})
@@ -129,7 +146,7 @@ def student_headers(app, client) -> dict[str, str]:
 # ── Student fixtures for dashboard & group integration tests ───────────────────
 
 @pytest.fixture
-def student_user(app, manager_headers, client) -> dict:
+def student_user(app, manager_headers, client, academic_setup) -> dict:
     """
     Create a real student via the Manager API and return their credentials.
 
@@ -146,7 +163,6 @@ def student_user(app, manager_headers, client) -> dict:
         "section": "A",
         "session": "Fall 2023",
         "course": "Final Year Project",
-        "teacher": "Dr. Imran",
     }
     response = client.post("/api/manager/students/", json=payload, headers=manager_headers)
     assert response.status_code == 201, response.get_json()
@@ -177,7 +193,7 @@ def real_student_headers(student_token) -> dict[str, str]:
 
 
 @pytest.fixture
-def second_student_user(app, manager_headers, client) -> dict:
+def second_student_user(app, manager_headers, client, academic_setup) -> dict:
     """Create a second student in the same dept/section for invitation workflow tests."""
     import uuid
     uid = uuid.uuid4().hex[:4]
@@ -189,7 +205,6 @@ def second_student_user(app, manager_headers, client) -> dict:
         "section": "A",
         "session": "Fall 2023",
         "course": "Final Year Project",
-        "teacher": "Dr. Imran",
     }
     response = client.post("/api/manager/students/", json=payload, headers=manager_headers)
     assert response.status_code == 201, response.get_json()

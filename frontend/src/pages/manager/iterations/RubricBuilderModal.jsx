@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Modal } from '../../../components/ui/Modal';
 import { iterationsApi } from '../../../api/iterationsApi';
 import { rubricTemplatesApi } from '../../../api/rubricTemplatesApi';
@@ -29,6 +29,7 @@ export const RubricBuilderModal = ({
   onSave,
   onSuccess,
 }) => {
+  const createdTemplateId = useRef(null);
   const [rubrics, setRubrics] = useState([EMPTY_RUBRIC()]);
   const [templateName, setTemplateName] = useState('');
   const [templateCourse, setTemplateCourse] = useState('All Courses');
@@ -43,6 +44,7 @@ export const RubricBuilderModal = ({
 
   useEffect(() => {
     if (!isOpen) return;
+    createdTemplateId.current = null;
 
     if (template) {
       // Editing an existing template
@@ -136,6 +138,7 @@ export const RubricBuilderModal = ({
     setSaving(true);
     setError('');
     try {
+      let saved;
       if (isTemplateOperation) {
         if (!templateName.trim()) {
           setError('Template name is required.');
@@ -148,16 +151,17 @@ export const RubricBuilderModal = ({
           criteria: rubrics,
         };
         if (template?._id) {
-          await rubricTemplatesApi.update(template._id, payload);
+          saved = await rubricTemplatesApi.update(template._id, payload);
         } else {
-          await rubricTemplatesApi.create(payload);
+          saved = createdTemplateId.current ? await rubricTemplatesApi.update(createdTemplateId.current, payload) : await rubricTemplatesApi.create(payload);
+          createdTemplateId.current = saved.data?._id || saved.data?.id;
         }
       } else {
-        await iterationsApi.setRubrics(iteration._id, rubrics);
+        saved = await iterationsApi.setRubrics(iteration._id, rubrics);
       }
       const callback = onSave || onSuccess;
       if (typeof callback === 'function') {
-        callback();
+        await callback(saved?.data);
       }
       onClose();
     } catch (err) {
@@ -175,7 +179,7 @@ export const RubricBuilderModal = ({
     : `Build Rubric — ${iteration?.title || ''}`;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={modalTitle} maxWidth="780px">
+    <Modal isOpen={isOpen} onClose={() => !saving && onClose()} title={modalTitle} maxWidth="780px">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
 

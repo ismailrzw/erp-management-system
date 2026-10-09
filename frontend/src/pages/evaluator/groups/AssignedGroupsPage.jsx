@@ -1,23 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, CheckCircle2, ChevronRight, FolderGit2 } from 'lucide-react';
+import { Users, CheckCircle2, ChevronRight, FolderGit2, AlertCircle, RefreshCw } from 'lucide-react';
 import { evaluatorApi } from '../../../api/evaluatorApi';
 
 export function AssignedGroupsPage() {
   const navigate = useNavigate();
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const loadGroups = useCallback(() => {
+    setLoading(true);
+    setError(null);
     evaluatorApi.getAssignedGroups()
       .then(res => {
         if (res.data?.success) {
           setGroups(res.data.data.items || []);
         }
       })
-      .catch(console.error)
+      .catch(err => {
+        setError(err.response?.data?.message || 'Failed to load assigned groups.');
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { loadGroups(); }, [loadGroups]);
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -31,7 +38,19 @@ export function AssignedGroupsPage() {
       </div>
 
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading groups...</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {[1, 2, 3].map(i => (
+            <div key={i} className="skeleton-shimmer" style={{ height: '52px', borderRadius: '8px' }} />
+          ))}
+        </div>
+      ) : error ? (
+        <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#fff', border: '1px solid #fecaca', borderRadius: '12px' }}>
+          <AlertCircle size={32} color="#dc2626" style={{ marginBottom: '10px' }} />
+          <div style={{ fontSize: '14px', fontWeight: 600, color: '#991b1b', marginBottom: '6px' }}>{error}</div>
+          <button type="button" onClick={loadGroups} className="btn btn-secondary btn-sm">
+            <RefreshCw size={13} /> <span>Retry</span>
+          </button>
+        </div>
       ) : groups.length === 0 ? (
         <div style={{
           background: '#ffffff',
@@ -45,7 +64,7 @@ export function AssignedGroupsPage() {
           <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
             No Groups Assigned
           </h3>
-          <p style={{ fontSize: '13px' }}>You have not been assigned to evaluate any project groups yet.</p>
+          <p style={{ fontSize: '13px' }}>Student group leaders will send you supervisor requests. Accept them from your dashboard to get assigned.</p>
         </div>
       ) : (
         <div className="table-responsive-container table-wide" style={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>

@@ -1,426 +1,73 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ContentLoader } from '../../../components/ui/ContentLoader';
-import { Toast } from '../../../components/ui/Toast';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import { studentIterationsApi } from '../../../api/studentIterationsApi';
-import {
-  ArrowLeft,
-  Download,
-  User,
-  ClipboardList,
-  Plus,
-  X,
-  File,
-  Paperclip,
-} from 'lucide-react';
-
-const formatHumanDate = (dateStr) => {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
-
-const formatHumanTime = (dateStr) => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
+import { downloadFile } from '../../../api/downloadFile';
+import { PrivateComments } from '../../../components/groups/PrivateComments';
+import { DeadlineInfo } from '../../../components/ui/DeadlineInfo';
+import { ContentLoader } from '../../../components/ui/ContentLoader';
+import { BackButton } from '../../../components/ui/BackButton';
+import { useLiveRefresh } from '../../../hooks/useLiveRefresh';
 
 export const IterationDetailPage = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
-
-  const [iteration, setIteration] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [note, setNote] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState(null);
-  const [mountTime] = useState(() => Date.now());
-
-  const fetchDetail = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await studentIterationsApi.getById(id);
-      setIteration(res.data);
-      if (res.data?.submission?.note) {
-        setNote(res.data.submission.note);
-      }
-    } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to fetch iteration details.';
-      setToast({ type: 'error', message: msg });
-    } finally {
-      setLoading(false);
-    }
+  const [task, setTask] = useState(null); const [loading, setLoading] = useState(true);
+  const [file, setFile] = useState(null); const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
+  const [now, setNow] = useState(() => Date.now()); const controller = useRef(null);
+  const load = useCallback(async () => {
+    try { const result = await studentIterationsApi.getById(id); setTask(result.data); setError(''); }
+    catch (err) { setError(err.response?.data?.message || 'Milestone could not be loaded. Please retry.'); }
+    finally { setLoading(false); }
   }, [id]);
-
-  useEffect(() => {
-    fetchDetail();
-  }, [fetchDetail]);
-
-  const hasSubmission = Boolean(iteration?.has_submitted);
-  const isPastDeadline = Boolean(iteration?.deadline && new Date(iteration.deadline).getTime() < mountTime);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedFile && !hasSubmission) {
-      setToast({ type: 'error', message: 'Please select a file to turn in.' });
-      return;
-    }
-
-    setSubmitting(true);
+  useEffect(() => { load(); const timer = setInterval(() => setNow(Date.now()), 1000); return () => { clearInterval(timer); controller.current?.abort(); }; }, [load]);
+  useLiveRefresh(load);
+  const submit = async (event) => {
+    event.preventDefault(); if (!file) return; setBusy(true); setError(''); setNotice('');
+    controller.current = new AbortController();
+    const body = new FormData(); body.append('file', file); body.append('note', note);
+    if (task.submission) body.append('expected_submission', task.submission.id || task.submission._id);
+    let submitError = "";
     try {
-      const formData = new FormData();
-      if (selectedFile) {
-        formData.append('file', selectedFile);
-      }
-      if (note.trim()) {
-        formData.append('note', note.trim());
-      }
-
-      const res = await studentIterationsApi.submit(id, formData);
-      setToast({ type: 'success', message: res.message || 'Work turned in successfully.' });
-      setSelectedFile(null);
-      fetchDetail();
-    } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to submit work.';
-      setToast({ type: 'error', message: msg });
-    } finally {
-      setSubmitting(false);
-    }
+      await studentIterationsApi.submit(id, body, controller.current.signal); setFile(null); setNotice('Group work submitted. All members share this submission.');
+    } catch (err) { submitError = err.code === 'ERR_CANCELED' ? 'Upload stopped in this browser. Checking the server; a received submission must be unsubmitted separately.' : err.response?.data?.message || 'Submission was not confirmed. Refresh before retrying.'; }
+    finally { setBusy(false); controller.current = null; await load(); if (submitError) setError(submitError); }
   };
-
-  if (loading) {
-    return (
-      <div style={{ backgroundColor: '#ffffff', minHeight: '100vh', padding: '24px 32px' }}>
-        <ContentLoader label="Loading assignment details..." />
-      </div>
-    );
-  }
-  if (!iteration) return null;
-
-  const submission = iteration.submission;
-  const rubrics = iteration.rubrics || [];
-  const totalPoints = rubrics.reduce((sum, r) => sum + Number(r.weight || 0), 0);
-
-  // Work Status pill calculation
-  let statusText = 'Assigned';
-  let statusBg = '#e8f0fe';
-  let statusColor = '#1a73e8';
-
-  if (hasSubmission) {
-    if (submission?.is_late) {
-      statusText = 'Turned in (Late)';
-      statusBg = '#fef3c7';
-      statusColor = '#b45309';
-    } else {
-      statusText = 'Turned in';
-      statusBg = '#e6f4ea';
-      statusColor = '#137333';
-    }
-  } else if (isPastDeadline) {
-    statusText = 'Missing';
-    statusBg = '#fce8e6';
-    statusColor = '#c5221f';
-  }
-
-
-  return (
-    <div style={{ backgroundColor: '#ffffff', minHeight: '100vh', padding: '24px 32px' }}>
-      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
-
-      {/* Back Button */}
-      <button
-        type="button"
-        onClick={() => navigate('/student/iterations')}
-        className="btn btn-back"
-        style={{ marginBottom: '20px' }}
-      >
-        <ArrowLeft size={16} />
-        Back to Class Iterations
-      </button>
-
-      {/* Main Google Classroom Layout Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) 340px',
-          gap: '32px',
-          maxWidth: '1180px',
-          margin: '0 auto',
-        }}
-      >
-        {/* LEFT COLUMN: Main Task Assignment */}
-        <div>
-          {/* Header Row */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-            {/* Green Classroom Clipboard Icon */}
-            <div
-              style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '50%',
-                backgroundColor: '#e6f4ea',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                marginTop: '4px',
-              }}
-            >
-              <ClipboardList size={24} style={{ color: '#137333' }} />
-            </div>
-
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <h1 style={{ margin: '0 0 4px', fontSize: '26px', fontWeight: 500, color: '#202124', letterSpacing: '-0.01em' }}>
-                  {iteration.title}
-                </h1>
-              </div>
-
-              <div style={{ fontSize: '13px', color: '#5f6368', marginBottom: '4px' }}>
-                <span>PBL Manager / Evaluator</span>
-                {iteration.createdAt && <span> • {formatHumanDate(iteration.createdAt)}</span>}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px', borderBottom: '1px solid #dadce0', paddingBottom: '14px' }}>
-                <span style={{ fontSize: '13.5px', fontWeight: 500, color: '#3c4043' }}>
-                  {totalPoints > 0 ? `${totalPoints} points` : 'Graded Milestone'}
-                </span>
-                {iteration.deadline && (
-                  <span style={{ fontSize: '13.5px', fontWeight: 500, color: isPastDeadline && !hasSubmission ? '#c5221f' : '#3c4043' }}>
-                    Due {formatHumanDate(iteration.deadline)}, {formatHumanTime(iteration.deadline)}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Details / Instructions Body */}
-          <div style={{ marginTop: '20px', fontSize: '14px', color: '#3c4043', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-            {iteration.details || 'No additional instructions provided for this milestone.'}
-          </div>
-
-          {/* Attached Document Card (if provided by manager) */}
-          {iteration.document_url && (
-            <div style={{ marginTop: '20px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#5f6368', marginBottom: '8px' }}>
-                Attachment Guidelines
-              </div>
-              <a
-                href={iteration.document_url}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #dadce0',
-                  backgroundColor: '#ffffff',
-                  color: '#1a73e8',
-                  textDecoration: 'none',
-                  fontSize: '13.5px',
-                  fontWeight: 500,
-                  maxWidth: '380px',
-                  boxShadow: '0 1px 2px rgba(60,64,67,0.08)',
-                  transition: 'background-color 0.15s ease',
-                }}
-              >
-                <div style={{ width: '36px', height: '36px', borderRadius: '6px', backgroundColor: '#e8f0fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Paperclip size={18} style={{ color: '#1a73e8' }} />
-                </div>
-                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  <div style={{ fontWeight: 600, color: '#202124', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {iteration.document_name || 'Guidelines Document'}
-                  </div>
-                  <div style={{ fontSize: '11.5px', color: '#5f6368', marginTop: '2px' }}>Click to download file</div>
-                </div>
-              </a>
-            </div>
-          )}
-
-
-        </div>
-
-        {/* RIGHT COLUMN: Google Classroom "Your work" & Comments Cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-          {/* CARD 1: "Your work" Card */}
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '12px',
-              border: '1px solid #dadce0',
-              padding: '20px 24px',
-              boxShadow: '0 1px 3px rgba(60,64,67,0.12)',
-            }}
-          >
-            {/* Header: Title & Status Badge */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <span style={{ fontSize: '18px', fontWeight: 500, color: '#202124' }}>
-                Your work
-              </span>
-              <span
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  padding: '3px 10px',
-                  borderRadius: '12px',
-                  backgroundColor: statusBg,
-                  color: statusColor,
-                }}
-              >
-                {statusText}
-              </span>
-            </div>
-
-            {/* Submitted File View (if turned in) */}
-            {hasSubmission && submission && !selectedFile && (
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '8px', border: '1px solid #dadce0', backgroundColor: '#f8f9fa' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                    <File size={18} style={{ color: '#1a73e8', flexShrink: 0 }} />
-                    <span style={{ fontSize: '13px', fontWeight: 500, color: '#202124', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {submission.file_name}
-                    </span>
-                  </div>
-                  {submission.file_url && (
-                    <a
-                      href={submission.file_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ color: '#1a73e8', display: 'flex', alignItems: 'center' }}
-                      title="Download file"
-                    >
-                      <Download size={16} />
-                    </a>
-                  )}
-                </div>
-                {submission.submitted_at && (
-                  <div style={{ fontSize: '11.5px', color: '#5f6368', marginTop: '6px', textAlign: 'right' }}>
-                    Turned in on {new Date(submission.submitted_at).toLocaleDateString()}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* File Selected Preview (before submitting) */}
-            {selectedFile && (
-              <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '8px', border: '1px solid #1a73e8', backgroundColor: '#e8f0fe' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                  <File size={18} style={{ color: '#1a73e8', flexShrink: 0 }} />
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#1a73e8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {selectedFile.name}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedFile(null)}
-                  className="btn btn-back"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            )}
-
-            {/* Hidden File Input & "+ Add or create" Button */}
-            <input
-              type="file"
-              id="student-file-input"
-              style={{ display: 'none' }}
-              onChange={(e) => e.target.files?.[0] && setSelectedFile(e.target.files[0])}
-            />
-
-            {!selectedFile && (
-              <label
-                htmlFor="student-file-input"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  padding: '9px 16px',
-                  borderRadius: '24px',
-                  border: '1px solid #dadce0',
-                  backgroundColor: '#ffffff',
-                  color: '#1a73e8',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  marginBottom: '12px',
-                  transition: 'background-color 0.15s ease',
-                }}
-              >
-                <Plus size={16} />
-                <span>{hasSubmission ? 'Attach replacement file' : 'Add or create'}</span>
-              </label>
-            )}
-
-            {/* Main Action Button ("Turn in" / "Mark as done" / "Unsubmit") */}
-            <form onSubmit={handleSubmit}>
-              <button
-                type="submit"
-                disabled={submitting || (!selectedFile && !hasSubmission)}
-                className="btn btn-primary"
-                style={{ width: '100%' }}
-              >
-                {submitting
-                  ? 'Submitting...'
-                  : hasSubmission && !selectedFile
-                  ? 'Re-submit Work'
-                  : 'Turn in'}
-              </button>
-            </form>
-          </div>
-
-          {/* CARD 2: "Private comments" Card */}
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '12px',
-              border: '1px solid #dadce0',
-              padding: '18px 20px',
-              boxShadow: '0 1px 3px rgba(60,64,67,0.12)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 500, color: '#202124', marginBottom: '12px' }}>
-              <User size={18} style={{ color: '#5f6368' }} />
-              <span>Private comments</span>
-            </div>
-
-            <div>
-              <textarea
-                rows={3}
-                placeholder="Add comment to instructor..."
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #dadce0',
-                  fontSize: '13px',
-                  color: '#202124',
-                  resize: 'vertical',
-                  outline: 'none',
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  const unsubmit = async () => {
+    if (!window.confirm('Unsubmit this shared group submission? Every member will see it as not submitted.')) return;
+    setBusy(true);
+    try { await studentIterationsApi.unsubmit(id, task.submission.id || task.submission._id); setNotice('Group work unsubmitted.'); await load(); }
+    catch (err) { setError(err.response?.data?.message || 'Unsubmission was not confirmed. Refresh before retrying.'); }
+    finally { setBusy(false); }
+  };
+  const download = async (url, name) => { try { await downloadFile(url, name); } catch (err) { setError(err.response?.data?.message || 'File could not be downloaded.'); } };
+  if (loading) return <ContentLoader label="Loading milestone…" />;
+  const beforeDeadline = task && now < new Date(task.deadline).getTime();
+  const submission = task?.submission; const grade = task?.grade || task?.student_evaluation;
+  const rubrics = grade?.rubric_snapshot || task?.rubrics || [];
+  return <main className="page-frame-container">
+    <BackButton to="/student/iterations" label="Back to Milestones" />
+    {error && <p role="alert" className="workflow-error">{error} <button className="btn btn-secondary btn-sm" onClick={load}>Refresh</button></p>}
+    {notice && <p role="status">{notice}</p>}
+    {task && <div className="classroom-grid"><div>
+      <section className="workflow-card"><h1>{task.title}</h1>{task.deadline_invalid && <p role="alert">The deadline needs Manager correction. Submission controls are unavailable.</p>}<p>{task.course} · {task.sprint_name}</p><DeadlineInfo value={task.deadline} /><p className="preserve-lines">{task.details || 'No additional instructions.'}</p>
+        {task.document_url && <button className="btn btn-secondary" onClick={() => download(task.document_url, task.document_name)}>Download Instructions</button>}
+        <p>Late penalty: {submission?.late_penalty_percent ?? task.late_penalty_percent ?? 0}% of earned marks.</p>
+      </section>
+      <section className="workflow-card"><h3>Evaluation Rubric</h3>{!rubrics.length ? <p>Rubric not configured. Grading is unavailable.</p> : rubrics.map((r) => <article key={r.id}><h4>{r.question} · {r.weight} marks</h4><ul>{Object.entries(r.levels || {}).map(([score, description]) => <li key={score}>{score}: {description}</li>)}</ul></article>)}
+        {grade && <div><h3>Group Performance</h3><p>Raw marks: {grade.raw_score ?? grade.total_weighted_score} · Deduction: {grade.deduction || 0} · Final: {grade.final_score ?? grade.total_weighted_score}/{grade.max_possible_score}</p><p className="preserve-lines">{grade.feedback}</p></div>}
+      </section>
+      <PrivateComments taskId={id} recipients={task.comment_recipients || []} />
+    </div><aside className="workflow-card" style={{ alignSelf: 'start' }}>
+      <h3>Your Group's Work</h3><p>{grade ? 'Graded and locked' : submission ? submission.is_late ? 'Submitted late' : 'Submitted on time' : beforeDeadline ? 'Not submitted' : 'Not submitted — late'}</p>
+      {task.group_status !== 'approved' && <p>All members can view this milestone. Manager approval is required before submission.</p>}
+      {submission && <><p>Submitted by {submission.submitted_by_name}</p><button className="btn btn-secondary" onClick={() => download(submission.file_url, submission.file_name)}>{submission.file_name}</button><p>{submission.note}</p></>}
+      {submission && task.can_unsubmit && beforeDeadline && <button className="btn btn-secondary" disabled={busy} onClick={unsubmit}>Unsubmit Group Work</button>}
+      {task.can_submit && !task.deadline_invalid && task.group_status === 'approved' && (!submission || beforeDeadline) && <form onSubmit={submit} className="workflow-form">
+        <label>{submission ? 'Replace Group File' : 'Submission File'}<input type="file" required accept=".pdf,.docx,.xlsx,.zip" disabled={busy} onChange={(e) => setFile(e.target.files?.[0] || null)} /></label>
+        <label>Submission Note<textarea value={note} disabled={busy} onChange={(e) => setNote(e.target.value)} maxLength={20000} /></label>
+        {busy ? <button type="button" className="btn btn-secondary" onClick={() => controller.current?.abort()}>Cancel Upload</button> : <button className="btn btn-primary" disabled={!file}>{beforeDeadline ? 'Submit Group Work' : 'Submit Late with Penalty'}</button>}
+      </form>}
+      {submission && !beforeDeadline && <p>The deadline has passed. This submission cannot be changed or removed.</p>}
+    </aside></div>}
+  </main>;
 };

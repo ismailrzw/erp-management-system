@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, ArrowLeft, CheckCircle2, AlertCircle, Upload, Download, RefreshCw, Mail } from 'lucide-react';
+import { UserPlus, CheckCircle2, AlertCircle, Upload, Download, RefreshCw, Mail } from 'lucide-react';
 import { studentsApi } from '../../../api/studentsApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { coursesApi } from '../../../api/coursesApi';
-import { teachersApi } from '../../../api/teachersApi';
 import { Toast } from '../../../components/ui/Toast';
 import { Modal } from '../../../components/ui/Modal';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export const AddStudentPage = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     roll: '',
@@ -16,13 +18,11 @@ export const AddStudentPage = () => {
     section: '',
     session: '',
     course: '',
-    teacher: '',
     recovery_email: '',
   });
 
   const [departments, setDepartments] = useState([]);
   const [courses, setCourses] = useState([]);
-  const [teachers, setTeachers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdStudent, setCreatedStudent] = useState(null);
   const [formError, setFormError] = useState('');
@@ -32,16 +32,13 @@ export const AddStudentPage = () => {
   const [importLoading, setImportLoading] = useState(false);
   const [importReport, setImportReport] = useState(null);
 
-  const navigate = useNavigate();
-
   useEffect(() => {
     let isMounted = true;
     const loadRefs = async () => {
       try {
-        const [dRes, cRes, tRes] = await Promise.all([
+        const [dRes, cRes] = await Promise.all([
           departmentsApi.list({ limit: 100 }),
           coursesApi.list({ limit: 100 }),
-          teachersApi.list({ limit: 100 }),
         ]);
 
         if (isMounted) {
@@ -53,13 +50,9 @@ export const AddStudentPage = () => {
             const cItems = cRes.data.items || cRes.data || [];
             setCourses(cItems);
           }
-          if (tRes.success && tRes.data) {
-            const tItems = tRes.data.items || tRes.data || [];
-            setTeachers(tItems);
-          }
         }
       } catch {
-        // Dropdowns will default to user entry
+        if (isMounted) setFormError('Academic lists could not be loaded. Reload this page to retry.');
       }
     };
     loadRefs();
@@ -75,8 +68,8 @@ export const AddStudentPage = () => {
     const cleanName = formData.name.trim();
     const cleanRoll = formData.roll.trim().toLowerCase();
 
-    if (!cleanName || !cleanRoll) {
-      setFormError('Name and Roll Number are mandatory.');
+    if (!cleanName || !cleanRoll || !formData.dept || !formData.session.trim()) {
+      setFormError('Full Name, Roll Number, Department, and Academic Session are mandatory.');
       return;
     }
 
@@ -95,7 +88,6 @@ export const AddStudentPage = () => {
         section: formData.section.trim() || undefined,
         session: formData.session.trim() || undefined,
         course: formData.course.trim() || undefined,
-        teacher: formData.teacher.trim() || undefined,
         recovery_email: formData.recovery_email.trim() || undefined,
       };
 
@@ -125,9 +117,9 @@ export const AddStudentPage = () => {
 
   const handleDownloadTemplate = () => {
     const csvContent =
-      'Name,Roll,Department,Section,Session,Course,Teacher,Recovery Email\n' +
-      'Muhammad Ali,f2023-101,CS,A,Fall 2025,Final Year Project,Dr. Sarah Ahmed,ali@example.com\n' +
-      'Fatima Zahra,f2023-102,CS,B,Fall 2025,Final Year Project,Dr. Sarah Ahmed,fatima@example.com\n';
+      'Name,Roll,Department,Section,Session,Course,Recovery Email\n' +
+      'Muhammad Ali,f2023-101,CS,A,Fall 2025,Final Year Project,ali@example.com\n' +
+      'Fatima Zahra,f2023-102,CS,B,Fall 2025,Final Year Project,fatima@example.com\n';
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -170,39 +162,35 @@ export const AddStudentPage = () => {
   };
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+    <div className="page-frame-container">
       <Toast
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
-      <div style={{ marginBottom: '20px' }}>
+      <BackButton to="/manager/students/view" label="Back to Students List" />
+
+      <PageHeader
+        title="Add New Student"
+        subtitle="Create an individual student account or bulk import students via spreadsheet. A password setup email is dispatched automatically."
+        breadcrumbs={[
+          { label: 'Home', to: '/manager/dashboard' },
+          { label: 'Students', to: '/manager/students/view' },
+          { label: 'Add New Student' },
+        ]}
+      >
         <button
           type="button"
-          onClick={() => navigate('/manager/students/view')}
-          className="btn btn-back"
-          style={{ marginBottom: '10px' }}
+          onClick={() => { setImportReport(null); setImportFile(null); setIsImportModalOpen(true); }}
+          className="btn btn-primary"
         >
-          <ArrowLeft size={16} />
-          <span>Back to Students List</span>
+          <Upload size={15} />
+          <span>Bulk Import Students</span>
         </button>
-        <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
-          Add New Student
-        </h1>
-        <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-          Create an individual student account or bulk import students via spreadsheet. A password setup email is dispatched automatically.
-        </div>
-        <div style={{ marginTop: '14px', display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <button
-            type="button"
-            onClick={() => { setImportReport(null); setImportFile(null); setIsImportModalOpen(true); }}
-            className="btn btn-primary"
-          >
-            <Upload size={15} />
-            <span>Bulk Import Students</span>
-          </button>
-        </div>
+      </PageHeader>
+
+      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
 
         {/* Bulk Import Modal */}
         <Modal
@@ -274,7 +262,7 @@ export const AddStudentPage = () => {
 
               <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', marginBottom: '16px', fontSize: '12.5px', color: '#475569' }}>
                 <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '4px' }}>Required Columns:</div>
-                <code>Name, Roll, Department, Section, Session, Course, Teacher, Recovery Email</code>
+                <code>Name, Roll, Department, Section, Session, Course, Recovery Email</code>
                 <div style={{ marginTop: '8px' }}>
                   <button
                     type="button"
@@ -338,9 +326,8 @@ export const AddStudentPage = () => {
             </form>
           )}
         </Modal>
-      </div>
 
-      {formError && (
+        {formError && (
         <div
           style={{
             backgroundColor: '#fdecea',
@@ -431,7 +418,6 @@ export const AddStudentPage = () => {
                   section: '',
                   session: '',
                   course: '',
-                  teacher: '',
                   recovery_email: '',
                 });
               }}
@@ -492,11 +478,12 @@ export const AddStudentPage = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '6px' }}>
-                  Department Code (Optional)
+                  Department *
                 </label>
                 <select
                   value={formData.dept}
-                  onChange={(e) => setFormData({ ...formData, dept: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, dept: e.target.value, course: '' })}
+                  required
                   style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
                 >
                   <option value="">-- Select Department --</option>
@@ -506,6 +493,11 @@ export const AddStudentPage = () => {
                     </option>
                   ))}
                 </select>
+                {departments.length === 0 && (
+                  <p style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                    No departments available. <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigate('/manager/departments/add')}>Create Department</button>
+                  </p>
+                )}
               </div>
 
               <div>
@@ -523,11 +515,12 @@ export const AddStudentPage = () => {
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '6px' }}>
-                  Academic Session (Optional)
+                  Academic Session *
                 </label>
                 <input
                   type="text"
                   value={formData.session}
+                  required
                   onChange={(e) => setFormData({ ...formData, session: e.target.value })}
                   placeholder="e.g. Fall 2025"
                   style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
@@ -546,7 +539,7 @@ export const AddStudentPage = () => {
                   style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
                 >
                   <option value="">-- Select Course --</option>
-                  {courses.map((c) => (
+                  {courses.filter((c) => c.dept === formData.dept).map((c) => (
                     <option key={c.id || c._id || c.name} value={c.name}>
                       {c.name}
                     </option>
@@ -556,34 +549,16 @@ export const AddStudentPage = () => {
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '6px' }}>
-                  Assigned Teacher / Evaluator (Optional)
+                  Recovery Email Address (Optional)
                 </label>
-                <select
-                  value={formData.teacher}
-                  onChange={(e) => setFormData({ ...formData, teacher: e.target.value })}
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none', backgroundColor: '#ffffff' }}
-                >
-                  <option value="">-- Select Teacher --</option>
-                  {teachers.map((t) => (
-                    <option key={t.id || t._id || t.email} value={t.name}>
-                      {t.name} ({t.dept || 'Faculty'})
-                    </option>
-                  ))}
-                </select>
+                <input
+                  type="email"
+                  value={formData.recovery_email}
+                  onChange={(e) => setFormData({ ...formData, recovery_email: e.target.value })}
+                  placeholder="e.g. personal.email@gmail.com"
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
+                />
               </div>
-            </div>
-
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '6px' }}>
-                Recovery Email Address (Optional)
-              </label>
-              <input
-                type="email"
-                value={formData.recovery_email}
-                onChange={(e) => setFormData({ ...formData, recovery_email: e.target.value })}
-                placeholder="e.g. personal.email@gmail.com"
-                style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
-              />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
@@ -606,6 +581,7 @@ export const AddStudentPage = () => {
           </form>
         </div>
       )}
+      </div>
     </div>
   );
 };

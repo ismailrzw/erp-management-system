@@ -11,8 +11,24 @@ import io
 from datetime import datetime, timezone
 
 import openpyxl
+import pytest
 
+from app.extensions import mongo
 from app.services.auth_service import AuthService
+
+
+@pytest.fixture(autouse=True)
+def configured_fyp_parents(app):
+    with app.app_context():
+        for code in ("CS", "SE"):
+            mongo.db.departments.insert_one({"code": code, "name": code, "deleted": False})
+        for name, code in (("Final Year Project", "CS"), ("CS-FYP", "CS")):
+            mongo.db.courses.insert_one({"name": name, "dept": code, "min_group": 1, "max_group": 4, "deleted": False})
+        mongo.db.sprints.insert_one({"name": "Sprint 1", "deleted": False})
+
+
+def form_group(client, headers, title):
+    return client.post("/api/student/groups/", data={"project_title": title, "proposal": (io.BytesIO(b"proposal"), "proposal.pdf")}, content_type="multipart/form-data", headers=headers)
 
 
 def test_student_creation_password_set_and_login_flow(client, manager_headers):
@@ -23,6 +39,7 @@ def test_student_creation_password_set_and_login_flow(client, manager_headers):
         "roll": "f2024-551",
         "dept": "CS",
         "section": "A",
+        "session": "2026",
         "course": "Final Year Project",
     }
     res = client.post("/api/manager/students/", json=student_payload, headers=manager_headers)
@@ -75,7 +92,7 @@ def test_group_auto_naming_and_formation_status(client, manager_headers):
     # 2. Create a student enrolled in that course
     std_res = client.post(
         "/api/manager/students/",
-        json={"name": "Usman Ali", "roll": "f2024-701", "dept": "CS", "section": "A", "course": "PBL Capstone"},
+        json={"name": "Usman Ali", "roll": "f2024-701", "dept": "CS", "section": "A", "course": "PBL Capstone", "session": "2026"},
         headers=manager_headers,
     )
     assert std_res.status_code == 201
@@ -88,17 +105,13 @@ def test_group_auto_naming_and_formation_status(client, manager_headers):
     token = login_res.get_json()["data"]["token"]
     student_headers = {"Authorization": f"Bearer {token}"}
 
-    group_res = client.post(
-        "/api/student/groups/",
-        json={"project_title": "AI Autonomous Agent Platform"},
-        headers=student_headers,
-    )
+    group_res = form_group(client, student_headers, "AI Autonomous Agent Platform")
     assert group_res.status_code == 201, group_res.get_json()
     group_data = group_res.get_json()["data"]
 
     # Verify auto-generated name format GRP-YYYY-XXX
     current_year = datetime.now(timezone.utc).year
-    assert group_data["name"].startswith(f"GRP-{current_year}-")
+    assert group_data["name"].startswith(f"grp-{current_year}-")
     assert group_data["formation_status"] == "on_time"
     assert group_data["submission_status"] == "not_submitted"
 
@@ -113,7 +126,7 @@ def test_supervisor_workflow_and_capacity_cap(client, manager_headers):
         "name": "Dr. Farooq",
         "email": "dr.farooq@bnu.edu.pk",
         "dept": "CS",
-        "type": "Internal Faculty",
+
     }
     t_res = client.post("/api/manager/teachers/", json=teacher_payload, headers=manager_headers)
     assert t_res.status_code in (200, 201), t_res.get_json()
@@ -131,7 +144,7 @@ def test_supervisor_workflow_and_capacity_cap(client, manager_headers):
     # 2. Create student & group
     std_res = client.post(
         "/api/manager/students/",
-        json={"name": "Bilal Khan", "roll": "f2024-880", "dept": "CS", "section": "A", "course": "CS-FYP"},
+        json={"name": "Bilal Khan", "roll": "f2024-880", "dept": "CS", "section": "A", "course": "CS-FYP", "session": "2026"},
         headers=manager_headers,
     )
     std_id = std_res.get_json()["data"]["student_id"]
@@ -142,7 +155,7 @@ def test_supervisor_workflow_and_capacity_cap(client, manager_headers):
     std_token = std_login.get_json()["data"]["token"]
     student_headers = {"Authorization": f"Bearer {std_token}"}
 
-    grp = client.post("/api/student/groups/", json={"project_title": "Autonomous Drone Fleet"}, headers=student_headers)
+    grp = form_group(client, student_headers, "Autonomous Drone Fleet")
     assert grp.status_code == 201
 
     # 3. Student browses available supervisors
@@ -168,12 +181,12 @@ def test_supervisor_workflow_and_capacity_cap(client, manager_headers):
     eval_token = eval_login.get_json()["data"]["token"]
     eval_headers = {"Authorization": f"Bearer {eval_token}"}
 
-    inbox_res = client.get("/api/evaluator/supervisor-requests/", headers=eval_headers)
+    inbox_res = client.get("/api/teacher/supervisor-requests/", headers=eval_headers)
     assert inbox_res.status_code == 200
     req_items = inbox_res.get_json()["data"]["items"]
     assert any(r["id"] == request_id for r in req_items)
 
-    accept_res = client.post(f"/api/evaluator/supervisor-requests/{request_id}/accept", headers=eval_headers)
+    accept_res = client.post(f"/api/teacher/supervisor-requests/{request_id}/accept", headers=eval_headers)
     assert accept_res.status_code == 200, accept_res.get_json()
 
     # 6. Verify group now has supervisor
@@ -231,7 +244,7 @@ def test_targeted_announcements_by_scope(client, manager_headers):
     # 3. Create CS student
     cs_res = client.post(
         "/api/manager/students/",
-        json={"name": "CS Student", "roll": "f2024-999", "dept": "CS"},
+        json={"name": "CS Student", "roll": "f2024-999", "dept": "CS", "session": "2026"},
         headers=manager_headers,
     )
     cs_id = cs_res.get_json()["data"]["student_id"]
@@ -278,7 +291,7 @@ def test_course_decoupling_and_iteration_group_formation(client, manager_headers
     iter_res = client.post(
         "/api/manager/iterations",
         json={
-            "title": "Group Formation & Proposal Cutoff",
+            "title": "Group Formation & Proposal Cutoff", "sprint_name": "Sprint 1",
             "course": "Advanced Software Lab",
             "deadline": past_deadline,
             "details": "Groups must be formed by this milestone date.",
@@ -293,7 +306,7 @@ def test_course_decoupling_and_iteration_group_formation(client, manager_headers
     # 3. Create a student in this course
     std_res = client.post(
         "/api/manager/students/",
-        json={"name": "Sara Ahmed", "roll": "f2024-911", "dept": "SE", "section": "A", "course": "Advanced Software Lab"},
+        json={"name": "Sara Ahmed", "roll": "f2024-911", "dept": "SE", "section": "A", "course": "Advanced Software Lab", "session": "2026"},
         headers=manager_headers,
     )
     std_id = std_res.get_json()["data"]["student_id"]
@@ -304,11 +317,7 @@ def test_course_decoupling_and_iteration_group_formation(client, manager_headers
     student_headers = {"Authorization": f"Bearer {std_login.get_json()['data']['token']}"}
 
     # 4. Form group now (after the 2020 deadline) -> formation_status should be 'late'
-    grp_res = client.post(
-        "/api/student/groups/",
-        json={"project_title": "Healthcare Management System"},
-        headers=student_headers,
-    )
+    grp_res = form_group(client, student_headers, "Healthcare Management System")
     assert grp_res.status_code == 201, grp_res.get_json()
     grp_data = grp_res.get_json()["data"]
     assert grp_data["formation_status"] == "late"
@@ -316,7 +325,7 @@ def test_course_decoupling_and_iteration_group_formation(client, manager_headers
     # 5. Create another ungrouped student in this course
     client.post(
         "/api/manager/students/",
-        json={"name": "Zaid Defaulter", "roll": "f2024-912", "dept": "SE", "section": "A", "course": "Advanced Software Lab"},
+        json={"name": "Zaid Defaulter", "roll": "f2024-912", "dept": "SE", "section": "A", "course": "Advanced Software Lab", "session": "2026"},
         headers=manager_headers,
     )
 
@@ -330,7 +339,7 @@ def test_course_decoupling_and_iteration_group_formation(client, manager_headers
     assert any(u["roll"] == "f2024-912" for u in resp_data["ungrouped_students"])
 
 
-def test_supervisor_cap_enforced_per_course(client, manager_headers):
+def test_supervisor_cap_enforced_across_courses(client, manager_headers):
     """
     Verify:
     1. A supervisor can supervise up to 4 groups in Course Alpha.
@@ -338,11 +347,13 @@ def test_supervisor_cap_enforced_per_course(client, manager_headers):
     3. The supervisor CAN still be assigned to a group in Course Beta.
     """
     client.post("/api/manager/departments/", json={"name": "EE", "code": "EE"}, headers=manager_headers)
+    client.post("/api/manager/courses/", json={"name": "Course Alpha", "dept": "EE", "min_group": 1, "max_group": 5}, headers=manager_headers)
+    client.post("/api/manager/courses/", json={"name": "Course Beta", "dept": "EE", "min_group": 1, "max_group": 5}, headers=manager_headers)
 
     # Create Evaluator
     t_res = client.post(
         "/api/manager/teachers/",
-        json={"name": "Dr. PerCourse", "email": "dr.percourse@bnu.edu.pk", "dept": "EE", "type": "Internal Faculty"},
+        json={"name": "Dr. PerCourse", "email": "dr.percourse@bnu.edu.pk", "dept": "EE"},
         headers=manager_headers,
     )
     eval_id = t_res.get_json()["data"]["id"]
@@ -355,7 +366,7 @@ def test_supervisor_cap_enforced_per_course(client, manager_headers):
     def make_group(roll, course_name):
         res = client.post(
             "/api/manager/students/",
-            json={"name": f"Student {roll}", "roll": roll, "dept": "EE", "section": "A", "course": course_name},
+            json={"name": f"Student {roll}", "roll": roll, "dept": "EE", "section": "A", "course": course_name, "session": "2026"},
             headers=manager_headers,
         )
         sid = res.get_json()["data"]["student_id"]
@@ -363,7 +374,7 @@ def test_supervisor_cap_enforced_per_course(client, manager_headers):
         client.post("/api/auth/set-password", json={"token": t, "new_password": "Password123!"})
         lg = client.post("/api/auth/login", json={"email_or_roll": roll, "password": "Password123!"})
         sh = {"Authorization": f"Bearer {lg.get_json()['data']['token']}"}
-        grp = client.post("/api/student/groups/", json={"project_title": f"Project {roll}"}, headers=sh)
+        grp = form_group(client, sh, f"Project {roll}")
         return sh, grp.get_json()["data"]
 
     # Fill 4 groups in "Course Alpha"
@@ -372,7 +383,7 @@ def test_supervisor_cap_enforced_per_course(client, manager_headers):
         req_res = client.post("/api/student/supervisor-requests/", json={"evaluator_id": eval_id}, headers=s_headers)
         assert req_res.status_code == 201
         req_id = req_res.get_json()["data"]["id"]
-        acc_res = client.post(f"/api/evaluator/supervisor-requests/{req_id}/accept", headers=eval_headers)
+        acc_res = client.post(f"/api/teacher/supervisor-requests/{req_id}/accept", headers=eval_headers)
         assert acc_res.status_code == 200
 
     # 5th group in "Course Alpha" -> should fail
@@ -381,11 +392,8 @@ def test_supervisor_cap_enforced_per_course(client, manager_headers):
     assert req5_res.status_code == 400
     assert "maximum capacity of 4 projects for course 'Course Alpha'" in req5_res.get_json()["message"]
 
-    # Group in "Course Beta" -> SHOULD SUCCEED because cap is per course!
+    # The same total cap blocks a fifth active group in another Course.
     s_beta_headers, _ = make_group("f2024-606", "Course Beta")
     req_beta_res = client.post("/api/student/supervisor-requests/", json={"evaluator_id": eval_id}, headers=s_beta_headers)
-    assert req_beta_res.status_code == 201
-    req_beta_id = req_beta_res.get_json()["data"]["id"]
-    acc_beta = client.post(f"/api/evaluator/supervisor-requests/{req_beta_id}/accept", headers=eval_headers)
-    assert acc_beta.status_code == 200
-
+    assert req_beta_res.status_code == 400
+    assert "maximum capacity" in req_beta_res.get_json()["message"]

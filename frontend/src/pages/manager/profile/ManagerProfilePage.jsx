@@ -1,3 +1,4 @@
+import { BackButton } from '../../../components/ui/BackButton';
 import { useState, useEffect } from 'react';
 import {
   ShieldCheck,
@@ -135,6 +136,7 @@ export const ManagerProfilePage = () => {
   if (loading) {
     return (
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+      <BackButton to={user?.role === 'evaluator' ? '/evaluator/dashboard' : '/manager/dashboard'} label="Back to Dashboard" />
         <ContentLoader label="Loading settings..." />
       </div>
     );
@@ -150,6 +152,7 @@ export const ManagerProfilePage = () => {
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+      <BackButton to={user?.role === 'evaluator' ? '/evaluator/dashboard' : '/manager/dashboard'} label="Back to Dashboard" />
       {/* Toast Feedback */}
       {toast.message && (
         <Toast
@@ -437,7 +440,16 @@ export const ManagerProfilePage = () => {
                     <button
                       type="button"
                       onClick={() => handleRemoveDomain(idx)}
-                      className="btn btn-back"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#6d28d9',
+                        cursor: 'pointer',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                      aria-label="Remove domain"
                     >
                       <X size={13} />
                     </button>

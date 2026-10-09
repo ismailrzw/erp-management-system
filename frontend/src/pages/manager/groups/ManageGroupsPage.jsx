@@ -1,10 +1,10 @@
+import { useLiveRefresh } from '../../../hooks/useLiveRefresh';
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   FolderGit2,
   CheckCircle2,
   XCircle,
-  Eye,
   Search,
   RefreshCw,
   ChevronLeft,
@@ -14,8 +14,10 @@ import {
   FileText,
   UserCheck,
   UserX,
+  Users,
   Mail,
   Send,
+  ArrowRight,
 } from 'lucide-react';
 import { managerGroupsApi } from '../../../api/managerGroupsApi';
 import { studentsApi } from '../../../api/studentsApi';
@@ -32,6 +34,7 @@ import { formatDate } from '../../../utils/dateUtils';
 
 export const ManageGroupsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const initialTab = searchParams.get('tab') || 'all';
 
   const [groups, setGroups] = useState([]);
@@ -337,16 +340,10 @@ export const ManageGroupsPage = () => {
     }
   };
 
-  const handleOpenDetail = async (group) => {
-    try {
-      const res = await managerGroupsApi.getGroupDetail(group.id);
-      if (res.success && res.data) {
-        setSelectedGroupDetail(res.data);
-      } else {
-        setSelectedGroupDetail(group);
-      }
-    } catch {
-      setSelectedGroupDetail(group);
+  const handleOpenDetail = (group) => {
+    const gId = group.id || group._id;
+    if (gId) {
+      navigate(`/manager/groups/${gId}`);
     }
   };
 
@@ -394,6 +391,8 @@ export const ManageGroupsPage = () => {
     );
   };
 
+  useLiveRefresh(() => fetchGroups());
+
   if (loading && !refreshing && groups.length === 0 && ungroupedStudents.length === 0) {
     return (
       <div className="page-frame-container">
@@ -422,7 +421,17 @@ export const ManageGroupsPage = () => {
         title="Manage Project Groups"
         subtitle="Review, approve, or provide revision feedback on student group formation requests."
       >
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => navigate('/manager/groups/broadcast')}
+            className="btn btn-secondary"
+            title="Send broadcast email notification to project groups"
+          >
+            <Mail size={14} />
+            <span>Broadcast Mail</span>
+          </button>
+
           {statusFilter === 'ungrouped' ? (
             <button
               type="button"
@@ -978,6 +987,9 @@ export const ManageGroupsPage = () => {
                       <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '150px' }}>
                         LEADER & SUPERVISOR
                       </th>
+                      <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '90px' }}>
+                        MEMBERS
+                      </th>
                       <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#475569', minWidth: '130px' }}>
                         COURSE & DEPT
                       </th>
@@ -1005,7 +1017,16 @@ export const ManageGroupsPage = () => {
                         }}
                       >
                         <td style={{ padding: '14px 16px' }}>
-                          <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '13.5px' }}>
+                          <div
+                            onClick={() => handleOpenDetail(g)}
+                            style={{
+                              fontWeight: 600,
+                              color: '#2563eb',
+                              fontSize: '13.5px',
+                              cursor: 'pointer',
+                            }}
+                            title="Click to open project workspace"
+                          >
                             {g.name}
                           </div>
                           <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
@@ -1029,8 +1050,27 @@ export const ManageGroupsPage = () => {
                         </td>
 
                         <td style={{ padding: '14px 16px' }}>
+                          <span
+                            style={{
+                              backgroundColor: '#f1f5f9',
+                              color: '#334155',
+                              padding: '3px 9px',
+                              borderRadius: '12px',
+                              fontSize: '11.5px',
+                              fontWeight: 600,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <Users size={12} />
+                            {g.member_count || (g.members ? g.members.length : 1)}
+                          </span>
+                        </td>
+
+                        <td style={{ padding: '14px 16px' }}>
                           <div style={{ fontSize: '13px', color: '#334155' }}>
-                            {g.course_name}
+                            {g.course}
                           </div>
                           <div style={{ fontSize: '11.5px', color: '#64748b' }}>
                             {g.dept}
@@ -1054,11 +1094,13 @@ export const ManageGroupsPage = () => {
                             <button
                               type="button"
                               onClick={() => handleOpenDetail(g)}
-                              className="btn btn-ghost btn-sm"
-                              title="View group details"
+                              className="btn btn-primary-outline btn-sm"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                              title="Open Project Workspace"
                             >
-                              <Eye size={13} />
-                              <span>View</span>
+                              <FolderGit2 size={13} />
+                              <span>Workspace</span>
+                              <ArrowRight size={13} />
                             </button>
 
                             {g.status === 'pending' && (

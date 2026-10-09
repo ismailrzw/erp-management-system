@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 
 from app.extensions import mongo
 from app.models.attachment import COLLECTION, AttachmentFields
+from app.services.academic_write_service import academic_write
 
 MAX_FILE_SIZE = 10 * 1024 * 1024
 ALLOWED_EXTENSIONS = {"pdf", "docx", "xlsx", "zip"}
@@ -22,6 +23,7 @@ def _serialize(document: dict | None) -> dict | None:
     result = dict(document)
     result["id"] = str(result.pop(AttachmentFields.ID))
     result.pop(AttachmentFields.FILE_PATH, None)
+    result.pop(AttachmentFields.STORED_FILENAME, None)
     for key, value in list(result.items()):
         if isinstance(value, ObjectId):
             result[key] = str(value)
@@ -57,7 +59,7 @@ def _validate_file(file: FileStorage) -> tuple[str, int]:
     return filename, size
 
 
-def upload_attachment(file: FileStorage, title: str, uploaded_by: str) -> dict:
+def upload_attachment(file: FileStorage, title: str, uploaded_by: str, academic_private: bool = False) -> dict:
     """Persist an allowed upload and create its metadata document."""
     filename, size = _validate_file(file)
     title = title.strip()
@@ -69,6 +71,7 @@ def upload_attachment(file: FileStorage, title: str, uploaded_by: str) -> dict:
     path = UPLOAD_DIRECTORY / stored_filename
     now = datetime.now(timezone.utc)
     document = {
+        "academic_private": academic_private,
         AttachmentFields.TITLE: title,
         AttachmentFields.ORIGINAL_FILENAME: filename,
         AttachmentFields.STORED_FILENAME: stored_filename,
@@ -114,11 +117,26 @@ def update_attachment(attachment_id: str, title: str) -> dict | None:
     return _serialize(result)
 
 
+@academic_write
 def delete_attachment(attachment_id: str) -> dict | None:
     """Remove the metadata document, then its managed file if present."""
-    document = mongo.db[COLLECTION].find_one_and_delete({AttachmentFields.ID: _object_id(attachment_id)})
+    document = mongo.db[COLLECTION].find_one({AttachmentFields.ID: _object_id(attachment_id)})
+    from app.services.academic_integrity_service import AcademicConflict
+    reference = _object_id(attachment_id)
+    clauses = [
+        ("groups", {"proposal_attachment_id": {"$in": [reference, attachment_id]}}),
+        ("iterations", {"$or": [{"document_attachment_id": {"$in": [reference, attachment_id]}}, {"document_url": {"$regex": f"/{attachment_id}/download$"}}]}),
+        ("submissions", {"attachment_id": {"$in": [reference, attachment_id]}}),
+        ("submission_history", {"$or": [{"submission.attachment_id": {"$in": [reference, attachment_id]}}, {"attachment_id": {"$in": [reference, attachment_id]}}]}),
+        ("milestone_changes", {"previous.document_attachment_id": {"$in": [reference, attachment_id]}}),
+        ("supervisor_requests", {"proposal.attachment.id": attachment_id}),
+    ]
+    if any(mongo.db[collection].find_one(query) for collection, query in clauses):
+        raise AcademicConflict("This attachment is referenced by an academic record and cannot be deleted.")
+
     if document is None:
         return None
+    mongo.db[COLLECTION].delete_one({"_id": reference})
     path = Path(document[AttachmentFields.FILE_PATH]).resolve()
     uploads_root = UPLOAD_DIRECTORY.resolve()
     if uploads_root in path.parents:

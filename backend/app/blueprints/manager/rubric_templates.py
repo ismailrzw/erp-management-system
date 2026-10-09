@@ -9,6 +9,7 @@ from flask_restx import Namespace, Resource, fields
 
 from app.extensions import mongo
 from app.models.user import Role
+from app.services.academic_write_service import academic_write
 from app.utils.decorators import role_required
 from app.utils.responses import error_response, success_response
 
@@ -98,6 +99,7 @@ class RubricTemplateListResource(Resource):
     @role_required(Role.MANAGER)
     @rubric_templates_ns.doc(security='Bearer Auth')
     @rubric_templates_ns.expect(create_template_model)
+    @academic_write
     def post(self):
         """Create a new rubric template."""
         data = request.get_json() or {}
@@ -156,6 +158,7 @@ class RubricTemplateDetailResource(Resource):
     @role_required(Role.MANAGER)
     @rubric_templates_ns.doc(security='Bearer Auth')
     @rubric_templates_ns.expect(create_template_model)
+    @academic_write
     def put(self, template_id):
         """Update a rubric template (name, course, criteria)."""
         try:
@@ -194,6 +197,7 @@ class RubricTemplateDetailResource(Resource):
     @jwt_required()
     @role_required(Role.MANAGER)
     @rubric_templates_ns.doc(security='Bearer Auth')
+    @academic_write
     def delete(self, template_id):
         """Delete a rubric template (blocked if linked to iterations)."""
         try:

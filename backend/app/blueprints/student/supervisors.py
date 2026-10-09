@@ -49,10 +49,18 @@ class SupervisorBrowse(Resource):
 
             items = list_available_supervisors(
                 domain=domain,
-                dept=dept,
+                dept=(student.get("dept") if student else None) or dept,
                 course=student_course,
-                available_only=available_only,
+                available_only=False,
             )
+            group = mongo.db.groups.find_one({"member_ids": {"$in": [ObjectId(student_id), student_id]}, "status": {"$in": ["pending", "rejected"]}})
+            assigned = str(group.get("supervisor_id")) if group and group.get("supervisor_id") else None
+            if assigned:
+                for item in items:
+                    item["reviewing_existing_group"] = item["id"] == assigned
+                    item["is_available"] = item["reviewing_existing_group"]
+            if available_only:
+                items = [item for item in items if item["is_available"]]
             return {
                 "success": True,
                 "message": "Supervisors retrieved.",

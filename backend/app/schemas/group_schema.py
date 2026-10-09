@@ -12,12 +12,11 @@ Data lifecycle
 Nothing in this module touches MongoDB; it is a pure validation boundary.
 """
 
-import re
-
 from marshmallow import (
     Schema,
     ValidationError,
     fields,
+    pre_load,
     validate,
     validates,
     validates_schema,
@@ -27,51 +26,15 @@ from marshmallow import (
 
 
 class CreateGroupSchema(Schema):
-    """Validate the payload when a student creates a new group."""
-
-    name = fields.Str(
-        required=True,
-        validate=validate.Length(min=3, max=100),
-        metadata={"description": "Human-readable group name (3–100 chars)."},
-    )
-    project_title = fields.Str(
-        required=True,
-        validate=validate.Length(min=5, max=200),
-        metadata={"description": "Proposed project title (5–200 chars)."},
-    )
-
-    @validates("name")
-    def name_safe_chars(self, value: str) -> None:
-        """Allow letters, digits, spaces, hyphens, and underscores only."""
-        if not re.match(r"^[\w\s\-]+$", value.strip()):
-            raise ValidationError(
-                "Group name may only contain letters, numbers, spaces, hyphens, and underscores."
-            )
-
-    @validates("project_title")
-    def project_title_not_blank(self, value: str) -> None:
-        if not value.strip():
-            raise ValidationError("Project title must not be blank.")
+    """Project identity is assigned by the backend."""
+    project_title = fields.Str(required=True, validate=validate.Length(min=3, max=150))
 
 
 class UpdateGroupSchema(Schema):
-    """Validate the payload when a group leader updates group details."""
-
-    name = fields.Str(
-        validate=validate.Length(min=3, max=100),
-        load_default=None,
-    )
-    project_title = fields.Str(
-        validate=validate.Length(min=5, max=200),
-        load_default=None,
-    )
-
-    @validates("name")
-    def name_safe_chars(self, value: str) -> None:
-        if value and not re.match(r"^[\w\s\-]+$", value.strip()):
-            raise ValidationError(
-                "Group name may only contain letters, numbers, spaces, hyphens, and underscores."
-            )
+    """Only proposal content and an optimistic version may be edited."""
+    project_title = fields.Str(validate=validate.Length(min=3, max=150))
+    scope = fields.Str(validate=validate.Length(max=20000))
+    expected_version = fields.Int()
 
 
 # ── Invitation schemas ─────────────────────────────────────────────────────────
@@ -98,18 +61,21 @@ class InviteMemberSchema(Schema):
 class UpdateProfileSchema(Schema):
     """Validate the payload when a student updates their own profile."""
 
-    name = fields.Str(
-        validate=validate.Length(min=2, max=100),
-        load_default=None,
-        metadata={"description": "Full name (2–100 chars)."},
-    )
     recovery_email = fields.Email(
-        load_default=None,
         allow_none=True,
         metadata={"description": "Optional recovery / personal email address."},
     )
     # Immutable fields — listed here for documentation; not loaded
     # email, roll, dept, section, course, teacher, password_hash, role
+
+    @pre_load
+    def protect_identity(self, data, **kwargs):
+        if not isinstance(data, dict):
+            raise ValidationError({"_schema": ["Profile data must be an object."]})
+        errors = {key: ["This field is read-only."] for key in data if key != "recovery_email"}
+        if errors:
+            raise ValidationError(errors)
+        return data
 
 
 class ChangePasswordSchema(Schema):

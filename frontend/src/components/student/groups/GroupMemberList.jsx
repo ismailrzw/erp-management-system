@@ -1,18 +1,14 @@
-import { Crown, Trash2 } from 'lucide-react';
+import { Crown } from 'lucide-react';
 
 export const GroupMemberList = ({
   members = [],
-  isLeader = false,
   currentUserId,
-  onRemoveMember,
-  isGroupApproved = false,
 }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       {members.map((m) => {
         const isCurrentLeader = m.is_leader;
         const isSelf = m.id === currentUserId;
-        const canRemove = isLeader && !isCurrentLeader && !isGroupApproved;
 
         return (
           <div
@@ -22,7 +18,7 @@ export const GroupMemberList = ({
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '10px 14px',
-              backgroundColor: isCurrentLeader ? 'var(--primary-light)' : '#ffffff',
+              backgroundColor: isSelf ? 'var(--primary-light)' : '#ffffff',
               border: '1px solid #e2e8f0',
               borderRadius: '6px',
               gap: '12px',
@@ -35,7 +31,7 @@ export const GroupMemberList = ({
                   width: '34px',
                   height: '34px',
                   borderRadius: '50%',
-                  backgroundColor: isCurrentLeader ? 'var(--primary-light)' : '#f1f5f9',
+                  backgroundColor: isSelf ? 'var(--primary-light)' : '#f1f5f9',
                   color: isCurrentLeader ? 'var(--primary)' : '#64748b',
                   display: 'flex',
                   alignItems: 'center',
@@ -74,17 +70,7 @@ export const GroupMemberList = ({
               </div>
             </div>
 
-            {canRemove && onRemoveMember && (
-              <button
-                type="button"
-                className="btn btn-danger-outline btn-sm"
-                onClick={() => onRemoveMember(m)}
-                title="Remove member from group"
-              >
-                <Trash2 size={13} />
-                <span>Remove</span>
-              </button>
-            )}
+
           </div>
         );
       })}

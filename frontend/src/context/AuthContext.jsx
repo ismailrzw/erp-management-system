@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { authApi } from '../api/authApi';
 import { apiCache } from '../api/apiCache';
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
 import { AuthContext } from './AuthContextObject';
 
 export const AuthProvider = ({ children }) => {
@@ -35,14 +36,14 @@ export const AuthProvider = ({ children }) => {
       if (storedToken) {
         try {
           const res = await authApi.getMe();
-          if (isMounted && res.success && res.data) {
+          if (isMounted && storedToken === (localStorage.getItem('pbl_token') || sessionStorage.getItem('pbl_token')) && res.success && res.data) {
             setUser(res.data);
             const isLocal = !!localStorage.getItem('pbl_token');
             const storage = isLocal ? localStorage : sessionStorage;
             storage.setItem('pbl_user', JSON.stringify(res.data));
           }
-        } catch {
-          if (isMounted) {
+        } catch (error) {
+          if (isMounted && storedToken === (localStorage.getItem('pbl_token') || sessionStorage.getItem('pbl_token')) && error.response?.status === 401) {
             logout();
           }
         }
@@ -93,6 +94,12 @@ export const AuthProvider = ({ children }) => {
       return merged;
     });
   };
+
+  useLiveRefresh(async () => {
+    if (!token) return;
+    const res = await authApi.getMe();
+    if (res.success && res.data && token === (localStorage.getItem('pbl_token') || sessionStorage.getItem('pbl_token'))) updateUser(res.data);
+  });
 
   const value = {
     user,

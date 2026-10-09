@@ -648,16 +648,48 @@ html, body {
 }
 
 /* Back — text link style, no background */
+.page-back-slot {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+}
+
 .btn-back {
   background: none;
   border: none;
   color: #64748b;
-  padding: 0;
+  padding: 4px 0;
   font-weight: 500;
-  font-size: 13px;
+  font-size: 13.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: color 0.15s ease, transform 0.15s ease;
+  line-height: 1;
 }
+
 .btn-back:hover:not(:disabled) {
-  color: #334155;
+  color: #0f172a;
+}
+
+.btn-back:hover:not(:disabled) svg {
+  transform: translateX(-2px);
+}
+
+.btn-back svg {
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-back-label {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .btn-back-label {
+    display: inline;
+  }
 }
 
 /* Size modifiers */
@@ -779,3 +811,39 @@ html, body {
   margin-bottom: 16px;
 }
 
+
+/* Shared workflow surfaces use the established application palette. */
+.workflow-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 16px 0; min-width: 0; }
+.workflow-form { display: grid; gap: 16px; }
+.workflow-form label { display: grid; gap: 6px; font-size: 14px; font-weight: 600; }
+.workflow-form input, .workflow-form textarea, .workflow-form select { width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font: inherit; box-sizing: border-box; }
+.workflow-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 16px 0; }
+.workflow-error { color: #b91c1c; background: #fef2f2; border-radius: 6px; padding: 10px; }
+.preserve-lines { white-space: pre-wrap; overflow-wrap: anywhere; }
+.notification-wrapper { position: relative; }
+.notification-trigger { position: relative; border: 0; background: transparent; padding: 10px; color: #475569; cursor: pointer; }
+.notification-count { position: absolute; top: 0; right: 0; border-radius: 12px; background: #dc2626; color: white; font-size: 10px; padding: 2px 4px; }
+.notification-panel { position: absolute; right: 0; top: 42px; width: min(360px, calc(100vw - 28px)); background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 8px 28px #0002; padding: 16px; max-height: 75vh; overflow: auto; z-index: 1100; }
+.notification-panel h3 { margin: 0 0 12px; }
+.notification-item { display: grid; gap: 5px; text-align: left; width: 100%; border: 0; border-bottom: 1px solid #e2e8f0; background: white; padding: 12px; cursor: pointer; }
+.notification-item.unread, .announcement-unread { background: #eef6fb; border-left: 3px solid #0073aa; }
+.announcement-heading { display: flex; justify-content: space-between; gap: 16px; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px 0; font-size: 16px; cursor: pointer; }
+.workflow-columns { display: grid; grid-template-columns: minmax(230px, 1fr) minmax(0, 2fr); gap: 20px; }
+.supervisor-standard-card { max-width: 380px; width: 100%; box-sizing: border-box; }
+.classroom-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; }
+.deadline-info-mobile { display: none; }
+.iterations-page { width: 100%; box-sizing: border-box; }
+@media (max-width: 760px) {
+  .workflow-columns, .classroom-grid { grid-template-columns: minmax(0, 1fr); }
+  .workflow-card { padding: 14px; }
+  .deadline-info-desktop { display: none; }
+  .deadline-info-mobile { display: inline-block; }
+  .workflow-actions .btn { min-height: 40px; }
+  .iterations-page { padding-inline: 0 !important; }
+}
+
+.edit-menu { display: inline-block; position: relative; }
+.edit-menu summary { list-style: none; cursor: pointer; }
+.edit-menu-options { position: absolute; right: 0; top: 100%; display: grid; gap: 6px; background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; min-width: 180px; z-index: 20; box-shadow: 0 6px 15px #0002; text-align: left; }
+
+@media (min-width: 769px) { .dashboard-announcement-inline { display: none !important; } }

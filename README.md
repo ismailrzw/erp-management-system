@@ -55,7 +55,7 @@ Iteration Submissions
     ↓
 Evaluation
     ↓
-Exhibition
+Milestone Review
     ↓
 Reporting
 ```
@@ -81,7 +81,6 @@ Reporting
 | | Rubrics Builder | Weighted criteria with 0–5 levels |
 | | Submissions | File uploads with late detection |
 | **Evaluation** | Rubric Scoring | Weighted evaluation with auto-calculated totals |
-| | Exhibition Evaluation | Final project showcase evaluation |
 | | Locked Submissions | Once submitted, cannot be changed |
 | **Surveys** | Create Surveys | Custom questions with 1–5 scale |
 | | Student Responses | One response per student |
@@ -100,7 +99,7 @@ Reporting
 |------|-------------------|--------------|
 | **PBL Manager** | `manager@bnu.edu.pk` | Full CRUD on everything, approves groups, assigns evaluators, publishes announcements, surveys, and iterations |
 | **Student** | `ROLL-NO@BNU.EDU.PK` | Own profile, own group, create, browse, join groups, submit work, fill surveys |
-| **Evaluator** | Own email | Assigned groups only, rubric scoring, exhibition evaluation, meeting logs |
+| **Evaluator** | Own email | Assigned groups only, rubric scoring, meeting logs |
 | **HOD** | `hod@bnu.edu.pk` | Read-only, department-scoped oversight |
 | **HOD I&C** | `hodic@bnu.edu.pk` | Read-only, department-scoped oversight |
 | **Dean** | `dean@bnu.edu.pk` | Read-only, university-wide oversight |
@@ -322,14 +321,6 @@ pbl-management-system/
 
 ---
 
-## Exhibition Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/exhibition/evaluate` | Submit exhibition evaluation |
-| `GET` | `/api/exhibition/assignments` | Get evaluator assignments |
-
----
 
 ## Report Endpoints
 
@@ -348,7 +339,7 @@ pbl-management-system/
 | **Phase 2** | Week 2–3 | Department, Course, Student, Teacher CRUD | All CRUD operations working |
 | **Phase 3** | Week 3–4 | Group management (create, join, approve) | Group formation live |
 | **Phase 4** | Week 5–6 | Iterations, Rubrics, Submissions, Evaluation | Submission workflow complete |
-| **Phase 5** | Week 6–7 | Exhibition evaluation, Surveys, Reports | Exhibition and surveys working |
+| **Phase 5** | Week 6–7 | Milestone review, Surveys, Reports | Milestone review and surveys working |
 | **Phase 6** | Week 7–8 | Announcements, Meetings, Final polish | All features complete |
 | **Phase 7** | Week 8–9 | Testing, Bug fixes, Deployment | Production ready |
 

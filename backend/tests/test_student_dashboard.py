@@ -1,3 +1,5 @@
+import io
+
 # backend/tests/test_student_dashboard.py
 """
 Integration tests for the Student Dashboard endpoint.
@@ -26,19 +28,19 @@ def test_dashboard_no_group(client, real_student_headers, student_user):
 
 def test_dashboard_with_group(client, real_student_headers):
     """Dashboard returns the student's group when they are in one."""
-    client.post("/api/student/groups/", json={"name": "Team A", "project_title": "Smart System"}, headers=real_student_headers)
+    client.post("/api/student/groups/", data={"project_title": "Smart System", "proposal": (io.BytesIO(b"%PDF-1.4 proposal"), "proposal.pdf")}, content_type="multipart/form-data", headers=real_student_headers)
     r = client.get(DASHBOARD_URL, headers=real_student_headers)
     assert r.status_code == 200, r.get_json()
     data = r.get_json()["data"]
     assert data["group"] is not None
-    assert data["group"]["name"] == "Team A"
+    assert data["group"]["name"].startswith("grp-")
 
 
 def test_dashboard_with_pending_invitation(client, real_student_headers, second_student_headers, second_student_user):
     """pending_invitations_count reflects the actual number of pending invites."""
     group = client.post(
         "/api/student/groups/",
-        json={"name": "Team A", "project_title": "Smart System"},
+        data={"project_title": "Smart System", "proposal": (io.BytesIO(b"%PDF-1.4 proposal"), "proposal.pdf")}, content_type="multipart/form-data",
         headers=real_student_headers,
     ).get_json()["data"]
     client.post(

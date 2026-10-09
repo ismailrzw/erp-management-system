@@ -1,12 +1,12 @@
-﻿# backend/app/models/teacher.py
-"""Teacher/Evaluator constants — teachers live in the ``users`` collection."""
+# backend/app/models/teacher.py
+"""Evaluator constants — teachers and evaluators live in the ``users`` collection."""
 
 from typing import ClassVar
 
 
-class TeacherType:
-    """Type constants for teacher/evaluator users."""
+class EvaluatorType:
+    """Type constants for Project evaluator users."""
 
-    INTERNAL = "Internal Faculty"
-    EXTERNAL = "External Industry"
+    INTERNAL = "internal"
+    EXTERNAL = "external"
     ALL: ClassVar[tuple] = (INTERNAL, EXTERNAL)
