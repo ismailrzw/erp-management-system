@@ -3,7 +3,6 @@ import { ProposalSummary } from '../../../components/groups/ProposalSummary';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   FolderGit2,
   Users,
   Calendar,
@@ -13,17 +12,17 @@ import { PageHeader } from '../../../components/ui/PageHeader';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Toast } from '../../../components/ui/Toast';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
+import { BackButton } from '../../../components/ui/BackButton';
 import { formatDate } from '../../../utils/dateUtils';
 import { ProjectActivityTimeline } from '../../../components/groups/ProjectActivityTimeline';
 
 export const TeacherGroupDetailPage = () => {
   const { groupId } = useParams();
+  const navigate = useNavigate();
   const [error, setError] = useState('');
   const [group, setGroup] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ message: '', type: 'success' });
-
-  const navigate = useNavigate();
 
   const fetchDetail = useCallback(async () => {
     try {
@@ -49,6 +48,7 @@ export const TeacherGroupDetailPage = () => {
   if (loading) {
     return (
       <div className="page-frame-container">
+        <BackButton to="/teacher/groups" label="Back to Groups" />
         <PageHeader
           title="Project Group Details"
           subtitle="Supervisory overview of team members and deliverables."
@@ -66,12 +66,17 @@ export const TeacherGroupDetailPage = () => {
   if (!group) {
     return (
       <div className="page-frame-container">
+        <BackButton to="/teacher/groups" label="Back to Groups" />
         <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', padding: '30px', textAlign: 'center' }}>
           <FolderGit2 size={40} style={{ margin: '0 auto 10px', color: '#94a3b8' }} />
-          <h3>Group workspace unavailable</h3><p role="alert">{error || 'Group not found or access denied.'}</p><button className="btn btn-secondary" onClick={fetchDetail}>Retry</button>
-          <button type="button" onClick={() => navigate('/teacher/groups')} className="btn btn-back" style={{ marginTop: '12px' }}>
-            <ArrowLeft size={18} />Back to My Groups
-          </button>
+          <h3>Group workspace unavailable</h3>
+          <p role="alert">{error || 'Group not found or access denied.'}</p>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '14px' }}>
+            <button className="btn btn-secondary" onClick={fetchDetail}>Retry</button>
+            <button type="button" onClick={() => navigate('/teacher/groups')} className="btn btn-primary">
+              Return to Groups List
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -85,6 +90,8 @@ export const TeacherGroupDetailPage = () => {
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
+      <BackButton to="/teacher/groups" label="Back to Groups" />
+
       <PageHeader
         title={group.name}
         subtitle={group.project_title || 'FYP Project Group'}
@@ -93,16 +100,7 @@ export const TeacherGroupDetailPage = () => {
           { label: 'My Groups', to: '/teacher/groups' },
           { label: group.name },
         ]}
-      >
-        <button
-          type="button"
-          onClick={() => navigate('/teacher/groups')}
-          className="btn btn-back"
-        >
-          <ArrowLeft size={16} />
-          <span>Back to Groups</span>
-        </button>
-      </PageHeader>
+      />
 
       {/* Group Info Header Card */}
       <div

@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Building2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { Toast } from '../../../components/ui/Toast';
 import { PageHeader } from '../../../components/ui/PageHeader';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export const AddDepartmentPage = () => {
   const [formData, setFormData] = useState({ code: '', name: '' });
@@ -55,6 +56,8 @@ export const AddDepartmentPage = () => {
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
+      <BackButton to="/manager/departments/view" label="Back to Departments" />
+
       <PageHeader
         title="Add New Department"
         subtitle="Define a new academic department for the PBL portal."
@@ -63,16 +66,7 @@ export const AddDepartmentPage = () => {
           { label: 'Departments', to: '/manager/departments/view' },
           { label: 'Add New Department' },
         ]}
-      >
-        <button
-          type="button"
-          onClick={() => navigate('/manager/departments/view')}
-          className="btn btn-back"
-        >
-          <ArrowLeft size={15} />
-          <span>Back to Departments</span>
-        </button>
-      </PageHeader>
+      />
 
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
 

@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Trash2, RotateCcw, ArrowLeft, Search, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Trash2, RotateCcw, Search, RefreshCw, AlertTriangle } from 'lucide-react';
 import { evaluatorsApi } from '../../../api/evaluatorsApi';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export const EvaluatorTrashPage = () => {
   const [deletedEvaluators, setDeletedEvaluators] = useState([]);
@@ -17,8 +17,6 @@ export const EvaluatorTrashPage = () => {
   const [evaluatorToRestore, setEvaluatorToRestore] = useState(null);
   const [evaluatorToPermanentDelete, setEvaluatorToPermanentDelete] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
-
-  const navigate = useNavigate();
 
   const fetchDeleted = useCallback(
     async (isRefresh = false) => {
@@ -108,6 +106,8 @@ export const EvaluatorTrashPage = () => {
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
+      <BackButton to="/manager/evaluators/view" label="Back to Evaluators" />
+
       <PageHeader
         title="Evaluators Recycle Bin"
         subtitle="Restore or permanently delete archived project evaluators."
@@ -116,16 +116,7 @@ export const EvaluatorTrashPage = () => {
           { label: 'Evaluators', to: '/manager/evaluators/view' },
           { label: 'Recycle Bin' },
         ]}
-      >
-        <button
-          type="button"
-          onClick={() => navigate('/manager/evaluators/view')}
-          className="btn btn-back"
-        >
-          <ArrowLeft size={16} />
-          <span>Back to Evaluators</span>
-        </button>
-      </PageHeader>
+      />
 
       {/* Search & Actions */}
       <div

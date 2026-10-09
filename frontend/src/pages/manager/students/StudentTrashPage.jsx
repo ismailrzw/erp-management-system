@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Trash2, RotateCcw, ArrowLeft, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Trash2, RotateCcw, RefreshCw, AlertTriangle } from 'lucide-react';
 import { studentsApi } from '../../../api/studentsApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { PageHeader } from '../../../components/ui/PageHeader';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export const StudentTrashPage = () => {
   const [deletedStudents, setDeletedStudents] = useState([]);
@@ -14,8 +14,6 @@ export const StudentTrashPage = () => {
   const [studentToPermanentDelete, setStudentToPermanentDelete] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
-
-  const navigate = useNavigate();
 
   const fetchDeleted = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -106,6 +104,8 @@ export const StudentTrashPage = () => {
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
+      <BackButton to="/manager/students/view" label="Back to Active Students" />
+
       <PageHeader
         title="Students Recycle Bin"
         subtitle="Manage soft-deleted students. You can restore them or permanently remove them."
@@ -115,25 +115,15 @@ export const StudentTrashPage = () => {
           { label: 'View Recycle Bin' },
         ]}
       >
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => navigate('/manager/students/view')}
-            className="btn btn-back"
-          >
-            <ArrowLeft size={15} />
-            <span>Back to Active Students</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => fetchDeleted(true)}
-            disabled={refreshing}
-            className="btn btn-ghost btn-sm"
-          >
-            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-            <span>Refresh</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => fetchDeleted(true)}
+          disabled={refreshing}
+          className="btn btn-ghost btn-sm"
+        >
+          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+          <span>Refresh</span>
+        </button>
       </PageHeader>
 
       <div

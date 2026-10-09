@@ -440,7 +440,16 @@ export const ManagerProfilePage = () => {
                     <button
                       type="button"
                       onClick={() => handleRemoveDomain(idx)}
-                      className="btn btn-back"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#6d28d9',
+                        cursor: 'pointer',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                      aria-label="Remove domain"
                     >
                       <X size={13} />
                     </button>

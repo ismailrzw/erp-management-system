@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, FileText, Download, Calendar, Plus } from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import { Users, FileText, Download, Calendar, Plus } from 'lucide-react';
 import { evaluatorApi } from '../../../api/evaluatorApi';
 import { EvaluationSheet } from '../evaluations/EvaluationSheet';
 import { MeetingFormModal } from '../meetings/MeetingFormModal';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export function GroupEvalDetail() {
   const { groupId } = useParams();
-  const navigate = useNavigate();
 
   const [group, setGroup] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -45,15 +45,7 @@ export function GroupEvalDetail() {
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      <button
-        type="button"
-        className="btn btn-back"
-        style={{ marginBottom: '16px' }}
-        onClick={() => navigate('/evaluator/groups')}
-      >
-        <ArrowLeft size={16} />
-        <span>Back to Groups</span>
-      </button>
+      <BackButton to="/evaluator/groups" label="Back to Groups" />
 
       {/* Group Header Card */}
       <div style={{

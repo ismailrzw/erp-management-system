@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { BookOpen, CheckCircle2, AlertCircle } from 'lucide-react';
 import { coursesApi } from '../../../api/coursesApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { Toast } from '../../../components/ui/Toast';
 import { PageHeader } from '../../../components/ui/PageHeader';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export const AddCoursePage = () => {
   const [formData, setFormData] = useState({
@@ -97,6 +98,8 @@ export const AddCoursePage = () => {
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
+      <BackButton to="/manager/courses/view" label="Back to Courses List" />
+
       <PageHeader
         title="Add New Course"
         subtitle="Configure a course with department and student group size boundaries."
@@ -105,16 +108,7 @@ export const AddCoursePage = () => {
           { label: 'Courses', to: '/manager/courses/view' },
           { label: 'Add New Course' },
         ]}
-      >
-        <button
-          type="button"
-          onClick={() => navigate('/manager/courses/view')}
-          className="btn btn-back"
-        >
-          <ArrowLeft size={15} />
-          <span>Back to Courses List</span>
-        </button>
-      </PageHeader>
+      />
 
       <div style={{ maxWidth: '650px', margin: '0 auto' }}>
 

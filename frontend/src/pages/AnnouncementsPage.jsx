@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/useAuth';
 import { useLiveRefresh } from '../hooks/useLiveRefresh';
+import { BackButton } from '../components/ui/BackButton';
 
 const plainText = (value) => new DOMParser().parseFromString(value || '', 'text/html').body.textContent || '';
 export function AnnouncementsPage() {
-  const { user } = useAuth(); const [params] = useSearchParams(); const navigate = useNavigate();
+  const { user } = useAuth(); const [params] = useSearchParams();
   const [page, setPage] = useState(1); const [data, setData] = useState({ items: [], total: 0, unread_count: 0 });
   const [error, setError] = useState(''); const [expanded, setExpanded] = useState(params.get('announcement'));
   const load = useCallback(async () => {
@@ -27,7 +27,7 @@ export function AnnouncementsPage() {
   };
   const prefix = { pbl_manager: 'manager', teacher: 'teacher', evaluator: 'evaluator', student: 'student' }[user?.role];
   return <main className="page-frame-container">
-    <button className="btn btn-back" onClick={() => navigate(prefix ? `/${prefix}/dashboard` : '/')}><ArrowLeft size={18} />Back to Dashboard</button>
+    <BackButton to={prefix ? `/${prefix}/dashboard` : '/'} label="Back to Dashboard" />
     <h1>Announcement History</h1><p>{data.unread_count} unread announcements</p>
     {error && <p role="alert" className="workflow-error">{error} <button className="btn btn-secondary btn-sm" onClick={load}>Retry</button></p>}
     {!data.items.length && !error && <section className="workflow-card">No announcements yet.</section>}

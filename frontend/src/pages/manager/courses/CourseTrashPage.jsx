@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Trash2, RotateCcw, ArrowLeft, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Trash2, RotateCcw, RefreshCw, AlertTriangle } from 'lucide-react';
 import { coursesApi } from '../../../api/coursesApi';
 import { Modal } from '../../../components/ui/Modal';
 import { Toast } from '../../../components/ui/Toast';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { PageHeader } from '../../../components/ui/PageHeader';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export const CourseTrashPage = () => {
   const [deletedCourses, setDeletedCourses] = useState([]);
@@ -14,8 +14,6 @@ export const CourseTrashPage = () => {
   const [courseToPermanentDelete, setCourseToPermanentDelete] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
-
-  const navigate = useNavigate();
 
   const fetchDeleted = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -106,6 +104,8 @@ export const CourseTrashPage = () => {
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
+      <BackButton to="/manager/courses/view" label="Back to Courses" />
+
       <PageHeader
         title="Courses Recycle Bin"
         subtitle="Manage and restore soft-deleted courses or permanently purge them."
@@ -115,14 +115,6 @@ export const CourseTrashPage = () => {
           { label: 'Recycle Bin' },
         ]}
       >
-        <button
-          type="button"
-          onClick={() => navigate('/manager/courses/view')}
-          className="btn btn-back"
-        >
-          <ArrowLeft size={15} />
-          <span>Back to Courses</span>
-        </button>
         <button
           type="button"
           onClick={() => fetchDeleted(true)}

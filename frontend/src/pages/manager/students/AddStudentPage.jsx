@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, ArrowLeft, CheckCircle2, AlertCircle, Upload, Download, RefreshCw, Mail } from 'lucide-react';
+import { UserPlus, CheckCircle2, AlertCircle, Upload, Download, RefreshCw, Mail } from 'lucide-react';
 import { studentsApi } from '../../../api/studentsApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { coursesApi } from '../../../api/coursesApi';
 import { Toast } from '../../../components/ui/Toast';
 import { Modal } from '../../../components/ui/Modal';
 import { PageHeader } from '../../../components/ui/PageHeader';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export const AddStudentPage = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     roll: '',
@@ -29,8 +31,6 @@ export const AddStudentPage = () => {
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
   const [importReport, setImportReport] = useState(null);
-
-  const navigate = useNavigate();
 
   useEffect(() => {
     let isMounted = true;
@@ -169,6 +169,8 @@ export const AddStudentPage = () => {
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
+      <BackButton to="/manager/students/view" label="Back to Students List" />
+
       <PageHeader
         title="Add New Student"
         subtitle="Create an individual student account or bulk import students via spreadsheet. A password setup email is dispatched automatically."
@@ -178,24 +180,14 @@ export const AddStudentPage = () => {
           { label: 'Add New Student' },
         ]}
       >
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => { setImportReport(null); setImportFile(null); setIsImportModalOpen(true); }}
-            className="btn btn-primary"
-          >
-            <Upload size={15} />
-            <span>Bulk Import Students</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/manager/students/view')}
-            className="btn btn-back"
-          >
-            <ArrowLeft size={15} />
-            <span>Back to Students List</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => { setImportReport(null); setImportFile(null); setIsImportModalOpen(true); }}
+          className="btn btn-primary"
+        >
+          <Upload size={15} />
+          <span>Bulk Import Students</span>
+        </button>
       </PageHeader>
 
       <div style={{ maxWidth: '800px', margin: '0 auto' }}>

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   PlusCircle,
-  ArrowLeft,
   Info,
   AlertCircle,
   Loader2,
@@ -15,8 +14,10 @@ import {
 import { studentGroupApi } from '../../../api/studentGroupApi';
 import { Toast } from '../../../components/ui/Toast';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export const CreateGroupPage = () => {
+  const navigate = useNavigate();
   const [projectTitle, setProjectTitle] = useState('');
   const [proposalFile, setProposalFile] = useState(null);
   const [existingGroup, setExistingGroup] = useState(null);
@@ -30,7 +31,6 @@ export const CreateGroupPage = () => {
   const [createdGroup, setCreatedGroup] = useState(null);
   const [error, setError] = useState('');
   const [toast, setToast] = useState({ message: '', type: 'success' });
-  const navigate = useNavigate();
 
   useEffect(() => {
     let isMounted = true;
@@ -117,6 +117,7 @@ export const CreateGroupPage = () => {
   if (existingGroup) {
     return (
       <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+        <BackButton to="/student/dashboard" label="Back to Dashboard" />
         <div className="card-responsive" style={{ borderTop: '3px solid var(--warning)', textAlign: 'center', padding: '36px 20px' }}>
           <div
             style={{
@@ -149,10 +150,10 @@ export const CreateGroupPage = () => {
             </button>
             <button
               type="button"
-              className="btn btn-back"
+              className="btn btn-secondary"
               onClick={() => navigate('/student/dashboard')}
             >
-              <ArrowLeft size={18} />Back to Dashboard
+              Return to Dashboard
             </button>
           </div>
         </div>
@@ -230,23 +231,14 @@ export const CreateGroupPage = () => {
       )}
 
       {/* Back Button & Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-        <button
-          type="button"
-          className="btn btn-back"
-          onClick={() => navigate('/student/dashboard')}
-          title="Back to Dashboard"
-        >
-          <ArrowLeft size={18} />Back to Dashboard
-        </button>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: 'var(--heading)' }}>
-            Create Project Group
-          </h1>
-          <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--muted)' }}>
-            Enter your project proposal details to generate your official FYP group.
-          </p>
-        </div>
+      <BackButton to="/student/dashboard" label="Back to Dashboard" />
+      <div style={{ marginBottom: '20px' }}>
+        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: 'var(--heading)' }}>
+          Create Project Group
+        </h1>
+        <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--muted)' }}>
+          Enter your project proposal details to generate your official FYP group.
+        </p>
       </div>
 
       {/* Info Card */}

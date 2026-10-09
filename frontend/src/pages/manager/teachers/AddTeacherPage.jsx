@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { GraduationCap, CheckCircle2, AlertCircle } from 'lucide-react';
 import { teachersApi } from '../../../api/teachersApi';
 import { departmentsApi } from '../../../api/departmentsApi';
 import { Toast } from '../../../components/ui/Toast';
 import { PageHeader } from '../../../components/ui/PageHeader';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export const AddTeacherPage = () => {
   const [formData, setFormData] = useState({
@@ -91,6 +92,8 @@ export const AddTeacherPage = () => {
         onClose={() => setToast({ message: '', type: 'success' })}
       />
 
+      <BackButton to="/manager/teachers/view" label="Back to Teachers List" />
+
       <PageHeader
         title="Add New Teacher / Supervisor"
         subtitle="Create a university faculty member account. An initial login password will be generated."
@@ -99,16 +102,7 @@ export const AddTeacherPage = () => {
           { label: 'Teachers', to: '/manager/teachers/view' },
           { label: 'Add New Teacher' },
         ]}
-      >
-        <button
-          type="button"
-          onClick={() => navigate('/manager/teachers/view')}
-          className="btn btn-back"
-        >
-          <ArrowLeft size={15} />
-          <span>Back to Teachers List</span>
-        </button>
-      </PageHeader>
+      />
 
       <div style={{ maxWidth: '650px', margin: '0 auto' }}>
 

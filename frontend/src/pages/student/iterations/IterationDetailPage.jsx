@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { useParams } from 'react-router-dom';
 import { studentIterationsApi } from '../../../api/studentIterationsApi';
 import { downloadFile } from '../../../api/downloadFile';
 import { PrivateComments } from '../../../components/groups/PrivateComments';
 import { DeadlineInfo } from '../../../components/ui/DeadlineInfo';
 import { ContentLoader } from '../../../components/ui/ContentLoader';
+import { BackButton } from '../../../components/ui/BackButton';
 import { useLiveRefresh } from '../../../hooks/useLiveRefresh';
 
 export const IterationDetailPage = () => {
-  const { id } = useParams(); const navigate = useNavigate();
+  const { id } = useParams();
   const [task, setTask] = useState(null); const [loading, setLoading] = useState(true);
   const [file, setFile] = useState(null); const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
@@ -45,7 +45,7 @@ export const IterationDetailPage = () => {
   const submission = task?.submission; const grade = task?.grade || task?.student_evaluation;
   const rubrics = grade?.rubric_snapshot || task?.rubrics || [];
   return <main className="page-frame-container">
-    <button className="btn btn-back" onClick={() => navigate('/student/iterations')}><ArrowLeft size={18} />Back to Milestones</button>
+    <BackButton to="/student/iterations" label="Back to Milestones" />
     {error && <p role="alert" className="workflow-error">{error} <button className="btn btn-secondary btn-sm" onClick={load}>Refresh</button></p>}
     {notice && <p role="status">{notice}</p>}
     {task && <div className="classroom-grid"><div>
