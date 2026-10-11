@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { AlertTriangle } from 'lucide-react';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
+import { useAuth } from '../../context/useAuth';
+
+// TEMP DEV SWITCH: set true to preview the banner. Remove when the
+// backend flag is live.
+const FORCE_PASSWORD_BANNER = false;
 
 export const AppShell = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isMobileView, setIsMobileView] = useState(
@@ -30,6 +38,10 @@ export const AppShell = () => {
       setIsSidebarCollapsed((prev) => !prev);
     }
   };
+
+  const showPasswordBanner =
+    user?.role === 'student' &&
+    (FORCE_PASSWORD_BANNER || user.must_change_password);
 
   return (
     <div
@@ -74,6 +86,23 @@ export const AppShell = () => {
             : ''
         }`}
       >
+        {showPasswordBanner && (
+          <div className="temporary-password-banner" role="alert">
+            <div className="temporary-password-banner__message">
+              <AlertTriangle size={20} aria-hidden="true" />
+              <span>
+                Your password is still temporary. Please change it to keep your account safe.
+              </span>
+            </div>
+            <button
+              type="button"
+              className="temporary-password-banner__button"
+              onClick={() => navigate('/student/settings', { state: { openChangePassword: true } })}
+            >
+              Change Password
+            </button>
+          </div>
+        )}
         <Outlet />
       </main>
     </div>

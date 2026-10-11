@@ -6,7 +6,7 @@ import { authApi } from '../../api/authApi';
 import { useAuth } from '../../context/useAuth';
 
 export const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -79,6 +79,7 @@ export const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
       }
 
       setSuccess('Password changed successfully! Keep your credentials secure.');
+      updateUser({ must_change_password: false });
       if (typeof onSuccess === 'function') {
         onSuccess('Password updated successfully!');
       }
