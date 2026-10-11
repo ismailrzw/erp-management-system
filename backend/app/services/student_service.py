@@ -102,6 +102,7 @@ def create_student(data: dict) -> dict:
         UserFields.RECOVERY_EMAIL: (data.get("recovery_email") or "").strip().lower() or None,
         "password_set": False,
         "password_set_at": None,
+        "must_change_password": True,
         UserFields.DELETED: False,
         UserFields.DELETED_AT: None,
         UserFields.CREATED_AT: now,

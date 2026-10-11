@@ -1,4 +1,4 @@
-﻿# backend/app/blueprints/auth/routes.py
+# backend/app/blueprints/auth/routes.py
 """
 Authentication routes.
 
@@ -97,14 +97,19 @@ class Me(Resource):
     def get(self):
         """Return the current user's identity from the JWT claims."""
         verify_jwt_in_request()
-        claims  = get_jwt()
         user_id = get_jwt_identity()
+        user = AuthService.get_user_by_id(user_id)
+        if user:
+            return success_response("User data retrieved.", data=user)
+
+        claims = get_jwt()
         return success_response("User data retrieved.", data={
             "id":    user_id,
             "name":  claims.get("name"),
             "email": claims.get("email"),
             "role":  claims.get("role"),
             "dept":  claims.get("dept"),
+            "must_change_password": False,
         })
 
 

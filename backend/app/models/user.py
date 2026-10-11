@@ -48,6 +48,9 @@ class UserFields:
     LAST_LOGIN_AT = "last_login_at"
     CURRENT_LOGIN_AT = "current_login_at"
     RECENT_ANNOUNCEMENTS = "recent_announcements"
+    MUST_CHANGE_PASSWORD = "must_change_password"
+    PASSWORD_SET  = "password_set"
+    PASSWORD_SET_AT = "password_set_at"
 
 
 # ==================== SUPERVISION CONSTANTS ====================

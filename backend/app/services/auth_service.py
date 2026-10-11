@@ -160,6 +160,12 @@ class AuthService:
             except Exception as update_err:  # noqa: BLE001
                 current_app.logger.warning("Failed to update user login state: %s", update_err)
 
+            must_change = (
+                bool(user.get("must_change_password", not user.get("password_set", True)))
+                if user.get(UserFields.ROLE) == Role.STUDENT
+                else bool(user.get("must_change_password", False))
+            )
+
             return {
                 "token": token,
                 "user": {
@@ -167,9 +173,12 @@ class AuthService:
                     "name":  user.get(UserFields.NAME),
                     "email": user.get(UserFields.EMAIL),
                     "role":  user.get(UserFields.ROLE),
-                "dept": user.get("dept"), "course": user.get("course"),
-                "roll": user.get("roll"), "session": user.get("session"),
-                "group_id": str(user["group_id"]) if user.get("group_id") else None,
+                    "dept": user.get("dept"),
+                    "course": user.get("course"),
+                    "roll": user.get("roll"),
+                    "session": user.get("session"),
+                    "group_id": str(user["group_id"]) if user.get("group_id") else None,
+                    "must_change_password": must_change,
                 },
             }
 
@@ -254,6 +263,7 @@ class AuthService:
             {"$set": {
                 UserFields.PASSWORD_HASH: new_hash,
                 "password_set": True,
+                "must_change_password": False,
                 "email_verified": True,
                 "password_set_at": now,
                 UserFields.UPDATED_AT: now,
@@ -278,14 +288,22 @@ class AuthService:
             user = mongo.db.users.find_one({"_id": ObjectId(user_id), "deleted": {"$ne": True}})
             if not user:
                 return None
+            must_change = (
+                bool(user.get("must_change_password", not user.get("password_set", True)))
+                if user.get(UserFields.ROLE) == Role.STUDENT
+                else bool(user.get("must_change_password", False))
+            )
             return {
                 "id":    str(user["_id"]),
                 "name":  user.get(UserFields.NAME),
                 "email": user.get(UserFields.EMAIL),
                 "role":  user.get(UserFields.ROLE),
-                "dept": user.get("dept"), "course": user.get("course"),
-                "roll": user.get("roll"), "session": user.get("session"),
+                "dept": user.get("dept"),
+                "course": user.get("course"),
+                "roll": user.get("roll"),
+                "session": user.get("session"),
                 "group_id": str(user["group_id"]) if user.get("group_id") else None,
+                "must_change_password": must_change,
             }
         except (ValueError, TypeError) as exc:
             current_app.logger.error("Invalid user ID format: %s", exc)
@@ -304,14 +322,22 @@ class AuthService:
             })
             if not user:
                 return None
+            must_change = (
+                bool(user.get("must_change_password", not user.get("password_set", True)))
+                if user.get(UserFields.ROLE) == Role.STUDENT
+                else bool(user.get("must_change_password", False))
+            )
             return {
                 "id":    str(user["_id"]),
                 "name":  user.get(UserFields.NAME),
                 "email": user.get(UserFields.EMAIL),
                 "role":  user.get(UserFields.ROLE),
-                "dept": user.get("dept"), "course": user.get("course"),
-                "roll": user.get("roll"), "session": user.get("session"),
+                "dept": user.get("dept"),
+                "course": user.get("course"),
+                "roll": user.get("roll"),
+                "session": user.get("session"),
                 "group_id": str(user["group_id"]) if user.get("group_id") else None,
+                "must_change_password": must_change,
             }
         except (ValueError, TypeError) as exc:
             current_app.logger.error("Invalid email format: %s", exc)
@@ -339,11 +365,15 @@ class AuthService:
                 bcrypt.gensalt(),
             ).decode("utf-8")
 
+            now = datetime.now(timezone.utc)
             mongo.db.users.update_one(
                 {"_id": ObjectId(user_id)},
                 {"$set": {
                     UserFields.PASSWORD_HASH: new_hash,
-                    UserFields.UPDATED_AT: datetime.now(timezone.utc),
+                    "password_set": True,
+                    "must_change_password": False,
+                    "password_set_at": now,
+                    UserFields.UPDATED_AT: now,
                 }},
             )
             return True, "Password changed successfully."

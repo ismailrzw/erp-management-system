@@ -5,10 +5,6 @@ import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '../../context/useAuth';
 
-// TEMP DEV SWITCH: set true to preview the banner. Remove when the
-// backend flag is live.
-const FORCE_PASSWORD_BANNER = false;
-
 export const AppShell = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -39,9 +35,7 @@ export const AppShell = () => {
     }
   };
 
-  const showPasswordBanner =
-    user?.role === 'student' &&
-    (FORCE_PASSWORD_BANNER || user.must_change_password);
+  const showPasswordBanner = user?.role === 'student' && !!user.must_change_password;
 
   return (
     <div
