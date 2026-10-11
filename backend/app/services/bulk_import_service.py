@@ -170,8 +170,14 @@ def bulk_create_students(rows: list[dict]) -> dict:
             UserFields.UPDATED_AT: now,
             "import_batch_id": batch_id,
         })
+        recovery = data.get("recovery_email")
+        recipients = [student_email]
+        if recovery and recovery not in recipients:
+            recipients.append(recovery)
+
         created_credentials.append({
             "email": student_email,
+            "recipients": recipients,
             "name": data["name"],
             "roll": data["roll"],
             "password": password,
@@ -190,10 +196,11 @@ def bulk_create_students(rows: list[dict]) -> dict:
     for cred in created_credentials:
         try:
             send_student_credentials_email(
-                to_email=cred["email"],
+                to_email=cred.get("recipients", [cred["email"]]),
                 student_name=cred["name"],
                 roll=cred["roll"],
                 temporary_password=cred["password"],
+                portal_email=cred["email"],
             )
         except Exception:
             logging.getLogger(__name__).exception("Student import email delivery failed")

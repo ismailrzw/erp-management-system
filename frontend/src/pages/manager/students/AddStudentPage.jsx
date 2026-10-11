@@ -384,9 +384,14 @@ export const AddStudentPage = () => {
             <div style={{ marginBottom: '8px' }}>
               <strong>Roll No:</strong> <code style={{ backgroundColor: '#e2e8f0', padding: '2px 6px', borderRadius: '3px' }}>{createdStudent.roll}</code>
             </div>
-            <div style={{ marginBottom: '12px' }}>
+            <div style={{ marginBottom: createdStudent.recovery_email ? '8px' : '12px' }}>
               <strong>System Email:</strong> <code style={{ backgroundColor: '#e2e8f0', padding: '2px 6px', borderRadius: '3px' }}>{createdStudent.email}</code>
             </div>
+            {createdStudent.recovery_email && (
+              <div style={{ marginBottom: '12px' }}>
+                <strong>Personal / Recovery Email:</strong> <code style={{ backgroundColor: '#e2e8f0', padding: '2px 6px', borderRadius: '3px' }}>{createdStudent.recovery_email}</code>
+              </div>
+            )}
             <div
               style={{
                 backgroundColor: '#ecfdf5',
@@ -401,7 +406,14 @@ export const AddStudentPage = () => {
               }}
             >
               <Mail size={16} color="#059669" />
-              <span>Password setup email dispatched to {createdStudent.email}</span>
+              <span>
+                Password setup email dispatched to:{' '}
+                <strong>
+                  {Array.isArray(createdStudent.notified_emails) && createdStudent.notified_emails.length > 0
+                    ? createdStudent.notified_emails.join(' and ')
+                    : (createdStudent.recovery_email ? `${createdStudent.email} and ${createdStudent.recovery_email}` : createdStudent.email)}
+                </strong>
+              </span>
             </div>
           </div>
 
@@ -549,7 +561,7 @@ export const AddStudentPage = () => {
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '6px' }}>
-                  Recovery Email Address (Optional)
+                  Student Personal / Recovery Email (Optional)
                 </label>
                 <input
                   type="email"
@@ -558,6 +570,9 @@ export const AddStudentPage = () => {
                   placeholder="e.g. personal.email@gmail.com"
                   style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '9px 12px', fontSize: '13.5px', outline: 'none' }}
                 />
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                  Account credentials and the password setup link will be delivered here in addition to the institutional email.
+                </div>
               </div>
             </div>
 

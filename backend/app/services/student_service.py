@@ -35,10 +35,9 @@ def generate_student_email(roll: str, domain: str = "bnu.edu.pk") -> str:
     return f"{roll.strip().upper()}@{domain}"
 
 
-def generate_initial_password(roll: str) -> str:
-    """Generate a readable initial fallback password."""
-    suffix = "".join(random.choices(string.digits, k=4))
-    return f"BNU@{roll.lower()[:8]}{suffix}"
+def generate_initial_password(roll: str = "") -> str:
+    """Generate a standard easy-login initial fallback password (11223344)."""
+    return "11223344"
 
 
 def _serialize_doc(document: dict | None) -> dict | None:
@@ -112,17 +111,32 @@ def create_student(data: dict) -> dict:
     result = mongo.db.users.insert_one(student_doc)
     student_id = str(result.inserted_id)
 
+    # Collect all destination email addresses: institutional email + personal recovery email
+    recipients = [email]
+    recovery_email = student_doc.get(UserFields.RECOVERY_EMAIL)
+    if recovery_email and recovery_email not in recipients:
+        recipients.append(recovery_email)
+
     # Generate one-time setup token and dispatch email with credentials + setup link
     email_sent = False
     try:
         raw_token = AuthService.create_password_set_token(student_id)
         setup_link = f"{Config.FRONTEND_URL}/set-password?token={raw_token}"
         email_sent = send_student_credentials_email(
-            to_email=email,
+            to_email=recipients,
             student_name=student_doc[UserFields.NAME],
             roll=student_doc[UserFields.ROLL],
             temporary_password=raw_temp_password,
             setup_link=setup_link,
+            portal_email=email,
+        )
+        mongo.db.users.update_one(
+            {"_id": result.inserted_id},
+            {"$set": {
+                "notified_emails": recipients,
+                "password_set_email_sent": email_sent,
+                "email_sent_at": datetime.now(timezone.utc),
+            }}
         )
     except Exception as email_err:  # noqa: BLE001
         mongo.db.users.update_one({"_id": result.inserted_id}, {"$set": {"email_error": str(email_err)}})
@@ -136,6 +150,8 @@ def create_student(data: dict) -> dict:
         "section": student_doc[UserFields.SECTION],
         "course": student_doc[UserFields.COURSE],
         "email": email,
+        "recovery_email": recovery_email,
+        "notified_emails": recipients,
         "temporary_password": raw_temp_password,
         "password_set_email_sent": email_sent,
     }
@@ -321,16 +337,32 @@ def resend_password_set_email(student_id: str) -> dict:
         raise ValueError("Student not found.")
 
     email = student.get(UserFields.EMAIL)
+    recovery_email = student.get(UserFields.RECOVERY_EMAIL)
+    recipients = [email] if email else []
+    if recovery_email and recovery_email not in recipients:
+        recipients.append(recovery_email)
+
     name = student.get(UserFields.NAME, "Student")
 
     raw_token = AuthService.create_password_set_token(student_id)
     setup_link = f"{Config.FRONTEND_URL}/set-password?token={raw_token}"
-    sent = send_password_set_email(email, name, setup_link)
+    sent = send_password_set_email(recipients, name, setup_link)
+
+    mongo.db.users.update_one(
+        {"_id": ObjectId(student_id)},
+        {"$set": {
+            "notified_emails": recipients,
+            "password_set_email_sent": sent,
+            "resend_email_at": datetime.now(timezone.utc),
+        }}
+    )
 
     return {
         "success": True,
         "student_id": student_id,
         "email": email,
+        "recovery_email": recovery_email,
+        "notified_emails": recipients,
         "email_sent": sent,
     }
 

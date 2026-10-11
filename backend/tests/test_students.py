@@ -24,6 +24,19 @@ def test_create_student_returns_generated_credentials(client, manager_headers):
     assert data["student_id"]
     assert data["email"] == "F2024-001@bnu.edu.pk"
     assert "password_set_email_sent" in data
+    assert "notified_emails" in data
+    assert "F2024-001@bnu.edu.pk" in data["notified_emails"]
+    assert "ada@example.com" in data["notified_emails"]
+
+
+def test_resend_password_email_notifies_all_recipients(client, manager_headers):
+    data = create_student(client, manager_headers, roll="f2024-002")
+    res = client.post(f"{STUDENTS_URL}{data['student_id']}/resend-password-email", headers=manager_headers)
+    assert res.status_code == 200, res.get_json()
+    res_data = res.get_json()["data"]
+    assert "notified_emails" in res_data
+    assert "F2024-002@bnu.edu.pk" in res_data["notified_emails"]
+    assert "ada@example.com" in res_data["notified_emails"]
 
 
 def test_create_student_rejects_duplicate_roll(client, manager_headers):

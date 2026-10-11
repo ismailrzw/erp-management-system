@@ -1,4 +1,4 @@
-﻿# backend/app/utils/jwt_handlers.py
+# backend/app/utils/jwt_handlers.py
 """JWT error handlers - return dictionaries for flask_restx compatibility."""
 
 
@@ -14,7 +14,7 @@ def register_jwt_handlers(jwt):
         return {"success": False, "message": "Invalid token"}, 401
 
     @jwt.expired_token_loader
-    def expired_token_loader(callback):
+    def expired_token_loader(*args, **kwargs):
         return {"success": False, "message": "Token has expired"}, 401
 
     @jwt.revoked_token_loader

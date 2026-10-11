@@ -108,16 +108,30 @@ def _dispatch_email(to_email: str, subject: str, text_content: str, html_content
 
 
 def send_student_credentials_email(
-    to_email: str,
+    to_email: str | list[str],
     student_name: str,
     roll: str,
     temporary_password: str,
     setup_link: str | None = None,
+    portal_email: str | None = None,
 ) -> bool:
     """
     Sends the student account creation credentials (email, roll, and temporary password).
     Optionally also provides a one-time setup/activation link.
+    Supports delivering to multiple recipients (e.g. institutional email and recovery email).
     """
+    if isinstance(to_email, str):
+        recipients = [e.strip() for e in to_email.split(",") if e.strip()]
+    elif isinstance(to_email, (list, tuple)):
+        recipients = [str(e).strip() for e in to_email if e and str(e).strip()]
+    else:
+        recipients = []
+
+    recipients = list(dict.fromkeys(recipients))
+    if not recipients:
+        return False
+
+    display_portal_email = portal_email or recipients[0]
     from_name = getattr(Config, "MAIL_FROM_NAME", "PBL Portal - BNU")
     frontend_url = getattr(Config, "FRONTEND_URL", "http://localhost:5173")
     subject = "Beaconhouse National University — Your PBL Portal Student Account & Password"
@@ -137,7 +151,7 @@ Here are your official login credentials:
 --------------------------------------------------
 Portal URL:         {frontend_url}/login
 Roll Number:        {roll}
-Registered Email:   {to_email}
+Registered Email:   {display_portal_email}
 Temporary Password: {temporary_password}
 --------------------------------------------------
 {link_section}
@@ -174,7 +188,7 @@ Beaconhouse National University
           </tr>
           <tr>
             <td style="padding: 6px 0; color: #64748b;">Portal Email:</td>
-            <td style="padding: 6px 0; font-weight: 600; color: #0f172a;">{to_email}</td>
+            <td style="padding: 6px 0; font-weight: 600; color: #0f172a;">{display_portal_email}</td>
           </tr>
           <tr>
             <td style="padding: 6px 0; color: #64748b;">Temporary Password:</td>
@@ -206,13 +220,30 @@ Beaconhouse National University
 </body>
 </html>
 """
-    return _dispatch_email(to_email, subject, text_content, html_content)
+    all_dispatched = True
+    for r in recipients:
+        ok = _dispatch_email(r, subject, text_content, html_content)
+        if not ok:
+            all_dispatched = False
+    return all_dispatched
 
 
-def send_password_set_email(to_email: str, student_name: str, set_link: str) -> bool:
+def send_password_set_email(to_email: str | list[str], student_name: str, set_link: str) -> bool:
     """
     Sends the account activation / password-set email to a new student.
+    Supports delivering to multiple recipients (institutional email and recovery email).
     """
+    if isinstance(to_email, str):
+        recipients = [e.strip() for e in to_email.split(",") if e.strip()]
+    elif isinstance(to_email, (list, tuple)):
+        recipients = [str(e).strip() for e in to_email if e and str(e).strip()]
+    else:
+        recipients = []
+
+    recipients = list(dict.fromkeys(recipients))
+    if not recipients:
+        return False
+
     from_name = getattr(Config, "MAIL_FROM_NAME", "PBL Portal - BNU")
     subject = "Beaconhouse National University — Set Up Your PBL Portal Password"
 
@@ -258,10 +289,6 @@ Beaconhouse National University
         Or copy and paste this link into your browser:<br>
         <a href="{set_link}" style="color: #2563eb; word-break: break-all;">{set_link}</a>
       </p>
-
-      <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 12px; font-size: 12px; color: #991b1b; margin-top: 20px;">
-        <strong>Notice:</strong> This password setup link is valid for 24 hours.
-      </div>
     </div>
     <div style="background-color: #f1f5f9; padding: 16px 24px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0;">
       © {from_name}. Beaconhouse National University.
@@ -270,7 +297,12 @@ Beaconhouse National University
 </body>
 </html>
 """
-    return _dispatch_email(to_email, subject, text_content, html_content)
+    all_dispatched = True
+    for r in recipients:
+        ok = _dispatch_email(r, subject, text_content, html_content)
+        if not ok:
+            all_dispatched = False
+    return all_dispatched
 
 
 def send_ungrouped_notification(to_email: str, student_name: str, deadline: str, custom_message: str | None = None) -> bool:
