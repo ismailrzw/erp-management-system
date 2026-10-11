@@ -37,10 +37,17 @@ export const AuthProvider = ({ children }) => {
         try {
           const res = await authApi.getMe();
           if (isMounted && storedToken === (localStorage.getItem('pbl_token') || sessionStorage.getItem('pbl_token')) && res.success && res.data) {
-            setUser(res.data);
-            const isLocal = !!localStorage.getItem('pbl_token');
-            const storage = isLocal ? localStorage : sessionStorage;
-            storage.setItem('pbl_user', JSON.stringify(res.data));
+            setUser((currentUser) => {
+              const nextUser = {
+                ...res.data,
+                must_change_password:
+                  res.data.must_change_password ?? currentUser?.must_change_password ?? false,
+              };
+              const isLocal = !!localStorage.getItem('pbl_token');
+              const storage = isLocal ? localStorage : sessionStorage;
+              storage.setItem('pbl_user', JSON.stringify(nextUser));
+              return nextUser;
+            });
           }
         } catch (error) {
           if (isMounted && storedToken === (localStorage.getItem('pbl_token') || sessionStorage.getItem('pbl_token')) && error.response?.status === 401) {
@@ -67,8 +74,12 @@ export const AuthProvider = ({ children }) => {
     const res = await authApi.login(email, password);
     if (res.success && res.data) {
       const { token: authToken, user: userData } = res.data;
+      const nextUser = {
+        ...userData,
+        must_change_password: userData.must_change_password ?? false,
+      };
       setToken(authToken);
-      setUser(userData);
+      setUser(nextUser);
 
       const storage = rememberMe ? localStorage : sessionStorage;
       localStorage.removeItem('pbl_token');
@@ -77,8 +88,8 @@ export const AuthProvider = ({ children }) => {
       sessionStorage.removeItem('pbl_user');
 
       storage.setItem('pbl_token', authToken);
-      storage.setItem('pbl_user', JSON.stringify(userData));
-      return userData;
+      storage.setItem('pbl_user', JSON.stringify(nextUser));
+      return nextUser;
     }
     throw new Error(res.message || 'Login failed');
   };

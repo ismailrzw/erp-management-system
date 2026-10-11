@@ -1,5 +1,6 @@
 import { BackButton } from '../../../components/ui/BackButton';
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   GraduationCap,
   AlertCircle,
@@ -13,12 +14,21 @@ import { ContentLoader } from '../../../components/ui/ContentLoader';
 import { ChangePasswordModal } from '../../../components/profile/ChangePasswordModal';
 
 export const StudentProfilePage = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ message: '', type: 'success' });
 
   // Modal State
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.openChangePassword) {
+      setIsPasswordModalOpen(true);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   // Profile Form States
   const [isEditingProfile, setIsEditingProfile] = useState(false);
